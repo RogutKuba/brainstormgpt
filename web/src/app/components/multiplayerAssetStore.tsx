@@ -1,10 +1,5 @@
+import { API_URL } from '@/lib/constants';
 import { TLAssetStore, uniqueId } from 'tldraw';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
-
-if (!API_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL is not set');
-}
 
 // How does our server handle assets like images and videos?
 export const multiplayerAssetStore: TLAssetStore = {

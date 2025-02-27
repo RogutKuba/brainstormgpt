@@ -1,13 +1,10 @@
 import { BrainstormToolCalls } from '@/app/components/brainstorm-tool/toolCalls';
-import { roomId } from '@/app/components/Whiteboard';
+import { GOAL_STORAGE_KEY } from '@/app/components/SystemGoalDialog';
+import { API_URL } from '@/lib/constants';
+import { useParams } from 'next/navigation';
 import { Box, StateNode, atom, copyAs, exportAs } from 'tldraw';
 
 // There's a guide at the bottom of this file!
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
-if (!API_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL is not set');
-}
 
 export class BrainstormDragging extends StateNode {
   static override id = 'dragging';
@@ -70,6 +67,11 @@ export class BrainstormDragging extends StateNode {
     const { editor } = this;
     const box = this.brainstormBox.get();
 
+    // Don't use useParams() here - it won't work in a class method
+    // Instead, get roomId from the URL directly
+    const pathname = window.location.pathname;
+    const roomId = pathname.split('/').pop();
+
     // get all shapes contained by or intersecting the box
     const shapes = editor.getCurrentPageShapes().filter((s) => {
       const pageBounds = editor.getShapeMaskedPageBounds(s);
@@ -94,15 +96,19 @@ export class BrainstormDragging extends StateNode {
     // send prompt to backend
     const url = `${API_URL}/brainstorm/${roomId}`;
 
+    const goal = localStorage.getItem(GOAL_STORAGE_KEY);
+
     (async () => {
-      console.log('sending prompt', text, shapes);
       try {
         const response = await fetch(url, {
           method: 'POST',
-          body: JSON.stringify({ prompt: text, shapes }),
+          body: JSON.stringify({
+            prompt: text,
+            shapes,
+            goal: goal ?? undefined,
+          }),
         });
         const data = await response.json();
-        console.log('brainstorm result', data);
 
         // handle the result
         BrainstormToolCalls.handleBrainstormResult({

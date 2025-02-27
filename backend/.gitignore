@@ -3,3 +3,5 @@ node_modules
 .yarn/
 .wrangler/
 dist/
+.open-next/
+wrangler.toml

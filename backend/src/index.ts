@@ -60,10 +60,11 @@ app.get('/uploads/:uploadId', async (ctx) => {
 
 // make an ai route that takes in a prompt and then will make changes to the room
 app.post('/brainstorm/:roomId', async (ctx) => {
-  const { prompt, shapes } = await ctx.req.json();
+  const { prompt, shapes, goal } = await ctx.req.json();
 
   const result = await BrainstormService.generateBrainstorm({
     prompt,
+    goal,
     shapes,
     ctx,
   });

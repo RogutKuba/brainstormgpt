@@ -12,12 +12,16 @@ type BrainStormResult = {
 export const BrainstormService = {
   generateBrainstorm: async (params: {
     prompt: string;
+    goal?: string;
     shapes: TLShape[];
     ctx: Context<AppContext>;
   }): Promise<BrainStormResult[]> => {
-    const { prompt, shapes, ctx } = params;
+    const { prompt, shapes, ctx, goal } = params;
 
-    console.log('shapes', shapes);
+    console.log('params', {
+      prompt,
+      goal,
+    });
 
     // Extract text content with shape IDs
     const shapesWithText = (() => {
@@ -41,7 +45,7 @@ export const BrainstormService = {
       .join('\n');
 
     const newIdeasResult = await LLMService.generateMessage({
-      prompt: `You are a whiteboard brainstorming assistant that helps users develop their ideas through iterative thinking. You are given a user prompt and a list of current whiteboard bubbles with their shape IDs.
+      prompt: `You are a whiteboard brainstorming assistant that helps users develop their ideas through iterative thinking by giving unique and concise ideas. You are given a user prompt and a list of current whiteboard bubbles with their shape IDs.
       
 Based on these whiteboard bubbles:
 
@@ -52,14 +56,22 @@ ${formattedShapes}
 <user-prompt>
 ${prompt}
 </user-prompt>
+${
+  goal
+    ? `
+<brainstorming-goal>
+${goal}
+</brainstorming-goal>`
+    : ''
+}
 
-Generate new whiteboard bubbles that represent the next iteration of thinking. Each new bubble should advance the brainstorming process by introducing new perspectives or directions to explore.
+Generate new whiteboard bubbles that represent the next iteration of thinking. Each new bubble should be concise and formatted as a brief idea unless the user specifically requests detailed explanations.
 
 Format your response as:
-<bubble parent="shape-id-1">Bubble content1</bubble>
-<bubble parent="shape-id-2">Bubble content 2</bubble>
+<bubble parent="shape-id-1">Key idea 1</bubble>
+<bubble parent="shape-id-2">Key idea 2</bubble>
 
-Only use parent attributes for bubbles that directly relate to an existing shape. Focus on advancing the overall brainstorming process rather than drilling down into specifics. You should be aiding in the creative process, not just generating ideas.`,
+Only use parent attributes for bubbles that directly relate to an existing shape. Focus on advancing the overall brainstorming process with concise, actionable ideas. Keep each bubble brief.`,
       ctx,
     });
 

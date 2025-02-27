@@ -1,13 +1,24 @@
 import { useSync } from '@tldraw/sync';
 import {
   Box,
+  DefaultMainMenu,
+  DefaultMainMenuContent,
+  DefaultQuickActions,
+  DefaultQuickActionsContent,
   DefaultToolbar,
   DefaultToolbarContent,
   TLComponents,
   TLUiAssetUrlOverrides,
   TLUiOverrides,
   Tldraw,
+  TldrawUiDropdownMenuContent,
+  TldrawUiDropdownMenuGroup,
+  TldrawUiDropdownMenuRoot,
+  TldrawUiDropdownMenuTrigger,
+  TldrawUiMenuActionItem,
+  TldrawUiMenuGroup,
   TldrawUiMenuItem,
+  useDialogs,
   useEditor,
   useIsToolSelected,
   useTools,
@@ -16,12 +27,10 @@ import {
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/app/components/brainstorm-tool/BrainstormTool';
 import { BrainstormDragging } from '@/app/components/brainstorm-tool/child-states/Dragging';
-
-// Where is our worker located? Configure this in `vite.config.ts`
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// In this example, the room ID is hard-coded. You can set this however you like though.
-export const roomId = 'test-room';
+import { useParams } from 'next/navigation';
+import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { API_URL } from '@/lib/constants';
 
 const customTools = [BrainstormTool];
 
@@ -112,6 +121,31 @@ function AiBrainstormBox() {
 const customComponents: TLComponents = {
   InFrontOfTheCanvas: AiBrainstormBox,
   Toolbar: CustomToolbar,
+  MainMenu: () => {
+    const { addDialog } = useDialogs();
+
+    return (
+      <DefaultMainMenu>
+        <TldrawUiMenuGroup id='example'>
+          <TldrawUiMenuItem
+            id='system-goal'
+            label='Edit System Goal'
+            icon='external-link'
+            readonlyOk
+            onSelect={() => {
+              addDialog({
+                component: SystemGoalDialog,
+                onClose() {
+                  void null;
+                },
+              });
+            }}
+          />
+        </TldrawUiMenuGroup>
+        <DefaultMainMenuContent />
+      </DefaultMainMenu>
+    );
+  },
 };
 
 export const Whiteboard = ({ roomId }: { roomId: string }) => {
