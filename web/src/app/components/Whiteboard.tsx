@@ -114,7 +114,7 @@ const customComponents: TLComponents = {
   Toolbar: CustomToolbar,
 };
 
-export const Whiteboard = () => {
+export const Whiteboard = ({ roomId }: { roomId: string }) => {
   // Create a store connected to multiplayer.
   const store = useSync({
     // We need to know the websockets URI...

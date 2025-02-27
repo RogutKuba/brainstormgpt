@@ -79,6 +79,14 @@ export class BrainstormDragging extends StateNode {
     // make the editor have all the shapes selected
     editor.setSelectedShapes(shapes.map((s) => s.id));
 
+    // get bindings connecteed to the shapes
+    for (const shape of shapes) {
+      const bindings = editor.getBindingsInvolvingShape(shape.id);
+      console.log('bindings for shape', shape.id, bindings);
+    }
+
+    // return;
+
     // get prompt from user
     console.log('getting prompt', shapes);
     const text = prompt('Enter a prompt');

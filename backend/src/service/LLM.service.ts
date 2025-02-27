@@ -16,7 +16,7 @@ export const LLMService = {
 
     // Call OpenAI API
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo', // You can change this to other models like "gpt-4" if needed
+      model: 'o3-mini', // You can change this to other models like "gpt-4" if needed
       messages: [{ role: 'user', content: prompt }],
     });
 
