@@ -6,6 +6,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { googleAuthRouter } from './endpoint/oauth.endpoint';
 import { UserEntity, SessionEntity } from './db/user.db';
 import { authMiddleware } from './middleware/auth.middleware';
+import { workspaceRouter } from './endpoint/workspace.endpoint';
+import { authRouter } from './endpoint/auth.endpoint';
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './TldrawDurableObject';
@@ -56,52 +58,37 @@ app
   .use(
     '*',
     cors({
-      origin: '*',
-      // Add other CORS options as needed
+      origin: ['http://localhost:3000'],
+      credentials: true,
     })
   )
   .get('/health', async (ctx) => {
     return ctx.text('ok');
   })
+  .route('/auth', authRouter)
   .route('/auth/google', googleAuthRouter)
-  .use(authMiddleware);
+  .use(authMiddleware)
+  .route('/workspace', workspaceRouter)
+  .post('/uploads/:uploadId', async (ctx) => {
+    const result = await handleAssetUpload(ctx);
+    return ctx.json(result, 200);
+  })
+  .get('/uploads/:uploadId', async (ctx) => {
+    const result = await handleAssetDownload(ctx);
+    return ctx.json(result, 200);
+  })
+  .post('/brainstorm/:roomId', async (ctx) => {
+    const { prompt, shapes, goal } = await ctx.req.json();
 
-// Error handling middleware
-app.onError((err, c) => {
-  console.error(err);
-  return c.json({ error: err.message }, 500);
-});
+    const result = await BrainstormService.generateBrainstorm({
+      prompt,
+      goal,
+      shapes,
+      ctx,
+    });
 
-// health check
-app.get('/health', async (ctx) => {
-  return ctx.json({ ok: true });
-});
-
-// assets can be uploaded to the bucket under /uploads:
-app.post('/uploads/:uploadId', async (ctx) => {
-  const result = await handleAssetUpload(ctx);
-  return ctx.json(result, 200);
-});
-
-// they can be retrieved from the bucket too:
-app.get('/uploads/:uploadId', async (ctx) => {
-  const result = await handleAssetDownload(ctx);
-  return ctx.json(result, 200);
-});
-
-// make an ai route that takes in a prompt and then will make changes to the room
-app.post('/brainstorm/:roomId', async (ctx) => {
-  const { prompt, shapes, goal } = await ctx.req.json();
-
-  const result = await BrainstormService.generateBrainstorm({
-    prompt,
-    goal,
-    shapes,
-    ctx,
+    return ctx.json(result, 200);
   });
-
-  return ctx.json(result, 200);
-});
 
 // export our app for cloudflare
 export default app;

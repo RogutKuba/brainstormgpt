@@ -20,47 +20,16 @@ import {
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 import { JoinWorkspaceDialog } from '@/components/workspace/JoinWorkspaceDialog';
 import { useRouter } from 'next/navigation';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown';
-// Updated mock data to represent workspaces
-const mockWorkspaces: {
-  name: string;
-  code: string;
-  created: string;
-  participants: number;
-}[] = [
-  {
-    name: 'Meeting Workspace A',
-    code: '123456',
-    created: '2023-09-15',
-    participants: 5,
-  },
-  {
-    name: 'Project Brainstorm',
-    code: '123456',
-    created: '2023-10-02',
-    participants: 3,
-  },
-  {
-    name: 'Team Standup',
-    code: '123456',
-    created: '2023-10-10',
-    participants: 8,
-  },
-  {
-    name: 'Client Presentation',
-    code: '123456',
-    created: '2023-10-12',
-    participants: 4,
-  },
-];
+import { useWorkspaces } from '@/app/query/workspace.query';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useLogout, useUserData } from '@/app/query/auth.query';
 
 export default function DashboardPage() {
   const router = useRouter();
+
+  const { user, isLoading: isUserLoading } = useUserData();
+  const { workspaces, isLoading } = useWorkspaces();
+  const { logout } = useLogout();
 
   return (
     <>
@@ -69,13 +38,25 @@ export default function DashboardPage() {
         <div className='container max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-4 md:px-0'>
           <div className='flex items-center'>
             <span className='text-xl font-bold flex items-center gap-1'>
-              <RiBrain2Fill className='w-6 h-6 text-pink-400' /> BrainstormGPT
+              <RiBrain2Fill className='w-6 h-6 text-pink-400' />
+              BrainstormGPT
             </span>
           </div>
-          <Button variant='secondary' className='flex items-center gap-2'>
-            <RiLogoutBoxLine className='w-4 h-4' />
-            <span className='hidden md:inline'>Logout</span>
-          </Button>
+
+          <div className='flex items-center gap-2'>
+            {isUserLoading ? (
+              <Skeleton className='w-24 h-8' />
+            ) : (
+              <Button
+                variant='secondary'
+                className='flex items-center gap-2'
+                onClick={() => logout()}
+              >
+                <RiLogoutBoxLine className='w-4 h-4' />
+                <span className='hidden md:inline'>Logout</span>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -130,37 +111,76 @@ export default function DashboardPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {mockWorkspaces.map((workspace, index) => (
-                <TableRow key={index} className='hover:bg-gray-50'>
-                  <TableCell className='font-medium'>
-                    {workspace.name}
-                  </TableCell>
-                  <TableCell>{workspace.code}</TableCell>
-                  <TableCell className='text-right'>
-                    <Button
-                      variant='secondary'
-                      onClick={() =>
-                        router.push(`/app/workspace/${workspace.code}`)
-                      }
-                      className='text-xs sm:text-sm'
-                    >
-                      <span className='hidden md:inline'>Enter Workspace</span>
-                      <span className='inline md:hidden'>Enter</span>
-                      <RiArrowRightLine className='w-4 h-4' />
-                    </Button>
+              {isLoading ? (
+                <>
+                  <TableRow>
+                    <TableCell>
+                      <Skeleton className='w-full h-4' />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className='w-full h-4' />
+                    </TableCell>
+                    <TableCell className='flex justify-end'>
+                      <Skeleton className='w-4/5 h-4' />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>
+                      <Skeleton className='w-full h-4' />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className='w-full h-4' />
+                    </TableCell>
+                    <TableCell className='flex justify-end'>
+                      <Skeleton className='w-4/5 h-4' />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>
+                      <Skeleton className='w-full h-4' />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className='w-full h-4' />
+                    </TableCell>
+                    <TableCell className='flex justify-end'>
+                      <Skeleton className='w-4/5 h-4' />
+                    </TableCell>
+                  </TableRow>
+                </>
+              ) : workspaces && workspaces.length > 0 ? (
+                workspaces.map((workspace, index) => (
+                  <TableRow key={index} className='hover:bg-gray-50'>
+                    <TableCell className='font-medium'>
+                      {workspace.name}
+                    </TableCell>
+                    <TableCell>{workspace.id}</TableCell>
+                    <TableCell className='text-right'>
+                      <Button
+                        variant='secondary'
+                        onClick={() =>
+                          router.push(`/app/workspace/${workspace.id}`)
+                        }
+                        className='text-xs sm:text-sm'
+                      >
+                        <span className='hidden md:inline'>
+                          Enter Workspace
+                        </span>
+                        <span className='inline md:hidden'>Enter</span>
+                        <RiArrowRightLine className='w-4 h-4' />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className='text-center'>
+                    You have not created any workspaces yet.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
-
-        {mockWorkspaces.length === 0 && (
-          <div className='text-center py-8 md:py-12 bg-gray-50 rounded-lg'>
-            <p className='text-gray-500'>You don't have any workspaces yet.</p>
-            <Button className='mt-4'>Create Your First Workspace</Button>
-          </div>
-        )}
       </div>
     </>
   );

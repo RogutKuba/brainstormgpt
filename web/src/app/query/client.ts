@@ -1,4 +1,3 @@
-import { hc } from 'hono/client';
 import {
   Mutation,
   MutationCache,

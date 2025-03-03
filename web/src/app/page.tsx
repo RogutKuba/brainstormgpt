@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { RiBrain2Fill, RiBrainFill } from '@remixicon/react';
 
@@ -18,7 +17,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <RiBrainFill className='h-16 w-16 sm:h-24 sm:w-24 text-pink-400' />
+          <RiBrain2Fill className='h-16 w-16 sm:h-24 sm:w-24 text-pink-400' />
           <h1 className='text-4xl sm:text-6xl md:text-8xl font-black text-gray-900'>
             BrainstormGPT
           </h1>

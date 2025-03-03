@@ -41,9 +41,6 @@ export const authMiddleware = createMiddleware<AppContext>(
       throw new HTTPException(401, { message: 'Unauthorized' });
     }
 
-    console.log('user', user);
-    console.log('session', session);
-
     ctx.set('user', user);
     ctx.set('session', session);
     return next();
