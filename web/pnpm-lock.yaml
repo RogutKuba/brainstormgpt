@@ -77,6 +77,9 @@ importers:
       '@tailwindcss/forms':
         specifier: ^0.5.10
         version: 0.5.10(tailwindcss@3.4.17)
+      '@tanstack/react-query':
+        specifier: ^5.66.11
+        version: 5.66.11(react@19.0.0)
       '@tldraw/sync':
         specifier: ^3.8.1
         version: 3.8.1(@types/react-dom@19.0.4(@types/react@19.0.10))(@types/react@19.0.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -86,6 +89,9 @@ importers:
       date-fns:
         specifier: 3.6.0
         version: 3.6.0
+      hono:
+        specifier: ^4.7.2
+        version: 4.7.2
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -107,6 +113,9 @@ importers:
       recharts:
         specifier: ^2.15.1
         version: 2.15.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      sonner:
+        specifier: ^2.0.1
+        version: 2.0.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       tailwind-merge:
         specifier: ^3.0.2
         version: 3.0.2
@@ -2180,6 +2189,14 @@ packages:
     peerDependencies:
       tailwindcss: '>=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1'
 
+  '@tanstack/query-core@5.66.11':
+    resolution: {integrity: sha512-ZEYxgHUcohj3sHkbRaw0gYwFxjY5O6M3IXOYXEun7E1rqNhsP8fOtqjJTKPZpVHcdIdrmX4lzZctT4+pts0OgA==}
+
+  '@tanstack/react-query@5.66.11':
+    resolution: {integrity: sha512-uPDiQbZScWkAeihmZ9gAm3wOBA1TmLB1KCB1fJ1hIiEKq3dTT+ja/aYM7wGUD+XiEsY4sDSE7p8VIz/21L2Dow==}
+    peerDependencies:
+      react: ^18 || ^19
+
   '@tldraw/editor@3.8.1':
     resolution: {integrity: sha512-9eCXXdiUFt3iwf8W2E9zx+KQLwuzda43dGadhxEUIOgX8wpWln63NhjWdTbD0QLfV2On1+QZs3eC8Zac60A+og==}
     peerDependencies:
@@ -3200,6 +3217,10 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
+  hono@4.7.2:
+    resolution: {integrity: sha512-8V5XxoOF6SI12jkHkzX/6aLBMU5GEF5g387EjVSQipS0DlxWgWGSMeEayY3CRBjtTUQYwLHx9JYouWqKzy2Vng==}
+    engines: {node: '>=16.9.0'}
+
   hotkeys-js@3.13.9:
     resolution: {integrity: sha512-3TRCj9u9KUH6cKo25w4KIdBfdBfNRjfUwrljCLDC2XhmPDG0SjAZFcFZekpUZFmXzfYoGhFDcdx2gX/vUVtztQ==}
 
@@ -4102,6 +4123,12 @@ packages:
 
   simple-swizzle@0.2.2:
     resolution: {integrity: sha512-JA//kQgZtbuY83m+xT+tXJkmJncGMTFT+C+g2h2R9uxkYIrE2yy9sgmcLhCnw57/WSD+Eh3J97FPEDFnbXnDUg==}
+
+  sonner@2.0.1:
+    resolution: {integrity: sha512-FRBphaehZ5tLdLcQ8g2WOIRE+Y7BCfWi5Zyd8bCvBjiW8TxxAyoWZIxS661Yz6TGPqFQ4VLzOF89WEYhfynSFQ==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+      react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -7337,6 +7364,13 @@ snapshots:
       mini-svg-data-uri: 1.4.4
       tailwindcss: 3.4.17
 
+  '@tanstack/query-core@5.66.11': {}
+
+  '@tanstack/react-query@5.66.11(react@19.0.0)':
+    dependencies:
+      '@tanstack/query-core': 5.66.11
+      react: 19.0.0
+
   '@tldraw/editor@3.8.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@tldraw/state': 3.8.1
@@ -8626,6 +8660,8 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  hono@4.7.2: {}
+
   hotkeys-js@3.13.9: {}
 
   http-errors@2.0.0:
@@ -9561,6 +9597,11 @@ snapshots:
     dependencies:
       is-arrayish: 0.3.2
     optional: true
+
+  sonner@2.0.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+    dependencies:
+      react: 19.0.0
+      react-dom: 19.0.0(react@19.0.0)
 
   source-map-js@1.2.1: {}
 

@@ -75,8 +75,6 @@ export const GoogleOauthService = {
       .then(takeUnique);
 
     if (existingEmail) {
-      console.log('existingEmail', existingEmail);
-
       // need to create oauth account
       await db.transaction(async (tx) => {
         const oauthAccount: OauthAccountEntity = {
@@ -113,8 +111,6 @@ export const GoogleOauthService = {
 
       await tx.insert(userTable).values(newUser);
 
-      console.log('newUser inserted', newUser);
-
       const oauthAccount: OauthAccountEntity = {
         createdAt: new Date().toISOString(),
         providerId: 'google',
@@ -123,8 +119,6 @@ export const GoogleOauthService = {
       };
 
       await tx.insert(oauthAccountsTable).values(oauthAccount);
-
-      console.log('oauthAccount inserted', oauthAccount);
 
       const token = SessionService.generateSessionToken();
       const session = await SessionService.createSession({

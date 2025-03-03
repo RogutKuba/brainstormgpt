@@ -4,6 +4,8 @@ import { handleAssetDownload, handleAssetUpload } from './assetUploads';
 import { BrainstormService } from './service/Brainstorm.service';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { googleAuthRouter } from './endpoint/oauth.endpoint';
+import { UserEntity, SessionEntity } from './db/user.db';
+import { authMiddleware } from './middleware/auth.middleware';
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './TldrawDurableObject';
@@ -21,18 +23,21 @@ export type AppContext = {
     GOOGLE_REDIRECT_URI: string;
 
     DATABASE_URL: string;
-
     WEB_APP_URL: string;
 
     NODE_ENV: 'development' | 'production';
   };
   Variables: {
     db: PostgresJsDatabase;
+
+    // session
+    session: SessionEntity;
+    user: UserEntity;
   };
 };
 
 // Create a new Hono app
-const app = new Hono<AppContext>().route('/auth/google', googleAuthRouter);
+const app = new Hono<AppContext>();
 
 // requests to /connect are routed to the Durable Object, and handle realtime websocket syncing
 app.get('/connect/:roomId', async (ctx) => {
@@ -47,13 +52,19 @@ app.get('/connect/:roomId', async (ctx) => {
 });
 
 // Add CORS middleware
-app.use(
-  '*',
-  cors({
-    origin: '*',
-    // Add other CORS options as needed
+app
+  .use(
+    '*',
+    cors({
+      origin: '*',
+      // Add other CORS options as needed
+    })
+  )
+  .get('/health', async (ctx) => {
+    return ctx.text('ok');
   })
-);
+  .route('/auth/google', googleAuthRouter)
+  .use(authMiddleware);
 
 // Error handling middleware
 app.onError((err, c) => {
