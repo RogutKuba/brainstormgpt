@@ -12,23 +12,34 @@
 	"scripts": {
 		"dev": "wrangler dev",
 		"cf-types": "wrangler types",
-		"cf-deploy": "wrangler deploy"
+		"cf-deploy": "wrangler deploy",
+		"db-push": "drizzle-kit push"
 	},
 	"dependencies": {
 		"@cloudflare/types": "^6.29.0",
+		"@hono/zod-openapi": "^0.19.2",
+		"@oslojs/crypto": "^1.0.1",
+		"@oslojs/encoding": "^1.1.0",
 		"@tldraw/sync": "3.8.1",
 		"@tldraw/sync-core": "3.8.1",
 		"@tldraw/tlschema": "3.8.1",
+		"arctic": "^3.4.0",
 		"cloudflare-workers-unfurl": "^0.0.7",
+		"dotenv": "^16.4.7",
+		"drizzle-kit": "^0.30.5",
+		"drizzle-orm": "^0.40.0",
 		"hono": "^4.7.2",
 		"itty-router": "^5.0.17",
 		"lodash.throttle": "^4.1.1",
 		"openai": "^4.85.4",
-		"tldraw": "3.8.1"
+		"postgres": "^3.4.5",
+		"tldraw": "3.8.1",
+		"zod": "^3.24.2"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240909.0",
 		"@types/lodash.throttle": "^4",
+		"@types/node": "^22.13.8",
 		"@typescript-eslint/eslint-plugin": "^8.11.0",
 		"@typescript-eslint/parser": "^8.11.0",
 		"@vitejs/plugin-react-swc": "^3.7.0",

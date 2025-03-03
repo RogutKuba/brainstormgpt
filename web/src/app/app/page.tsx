@@ -66,7 +66,7 @@ export default function DashboardPage() {
     <>
       {/* Header */}
       <header className='w-full border-b border-gray-200 py-4'>
-        <div className='container max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-0'>
+        <div className='container max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-4 md:px-0'>
           <div className='flex items-center'>
             <span className='text-xl font-bold flex items-center gap-1'>
               <RiBrain2Fill className='w-6 h-6 text-pink-400' /> BrainstormGPT
@@ -74,51 +74,53 @@ export default function DashboardPage() {
           </div>
           <Button variant='secondary' className='flex items-center gap-2'>
             <RiLogoutBoxLine className='w-4 h-4' />
-            <span className='hidden sm:inline'>Logout</span>
+            <span className='hidden md:inline'>Logout</span>
           </Button>
         </div>
       </header>
 
-      <div className='container max-w-3xl mx-auto py-6 sm:py-8 px-4 sm:px-0'>
-        <div className='flex flex-row justify-between items-center gap-4 sm:gap-0 mb-6 sm:mb-2'>
-          <h1 className='text-3xl font-bold text-gray-900'>Your Workspaces</h1>
+      <div className='container max-w-3xl mx-auto py-6 md:py-8 px-4 sm:px-4 md:px-0'>
+        <div className='flex flex-row justify-between items-center gap-4 md:gap-0 mb-6 md:mb-2'>
+          <h1 className='text-2xl sm:text-3xl font-bold text-gray-900'>
+            Your Workspaces
+          </h1>
 
           {/* Desktop buttons */}
-          <div className='hidden sm:flex items-center gap-2'>
+          <div className='hidden md:flex items-center gap-2'>
             <JoinWorkspaceDialog>
               <Button variant='light'>
                 <RiUserSharedLine className='w-4 h-4' />
-                <span>Join</span>
+                <span>Join Workspace</span>
               </Button>
             </JoinWorkspaceDialog>
 
             <CreateWorkspaceDialog>
               <Button className='flex items-center gap-2'>
                 <RiAddLine className='w-4 h-4' />
-                <span>Add Workspace</span>
+                <span>Create Workspace</span>
               </Button>
             </CreateWorkspaceDialog>
           </div>
 
-          {/* Mobile buttons - replacing dropdown */}
-          <div className='flex sm:hidden items-center gap-2 w-full justify-end'>
+          {/* Mobile buttons - for sm to md screens */}
+          <div className='flex md:hidden items-center gap-2 w-full justify-end'>
             <JoinWorkspaceDialog>
-              <Button variant='light' className='text-xs'>
+              <Button variant='light' className='text-xs sm:text-sm'>
                 <RiUserSharedLine className='w-3 h-3 mr-1' />
                 Join
               </Button>
             </JoinWorkspaceDialog>
 
             <CreateWorkspaceDialog>
-              <Button className='text-xs'>
+              <Button className='text-xs sm:text-sm'>
                 <RiAddLine className='w-3 h-3 mr-1' />
-                Add
+                Create
               </Button>
             </CreateWorkspaceDialog>
           </div>
         </div>
 
-        <div className='overflow-x-auto -mx-4 sm:mx-0'>
+        <div className='overflow-x-auto -mx-4 sm:-mx-4 md:mx-0'>
           <Table>
             <TableHead>
               <TableRow>
@@ -142,8 +144,8 @@ export default function DashboardPage() {
                       }
                       className='text-xs sm:text-sm'
                     >
-                      <span className='hidden sm:inline'>Enter Workspace</span>
-                      <span className='inline sm:hidden'>Enter</span>
+                      <span className='hidden md:inline'>Enter Workspace</span>
+                      <span className='inline md:hidden'>Enter</span>
                       <RiArrowRightLine className='w-4 h-4' />
                     </Button>
                   </TableCell>
@@ -154,7 +156,7 @@ export default function DashboardPage() {
         </div>
 
         {mockWorkspaces.length === 0 && (
-          <div className='text-center py-8 sm:py-12 bg-gray-50 rounded-lg'>
+          <div className='text-center py-8 md:py-12 bg-gray-50 rounded-lg'>
             <p className='text-gray-500'>You don't have any workspaces yet.</p>
             <Button className='mt-4'>Create Your First Workspace</Button>
           </div>

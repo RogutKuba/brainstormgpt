@@ -1,18 +1,38 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { handleAssetDownload, handleAssetUpload } from './assetUploads';
-import { Environment } from './types';
 import { BrainstormService } from './service/Brainstorm.service';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { googleAuthRouter } from './endpoint/oauth.endpoint';
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './TldrawDurableObject';
 
 export type AppContext = {
-  Bindings: Environment;
+  Bindings: {
+    TLDRAW_BUCKET: R2Bucket;
+    TLDRAW_DURABLE_OBJECT: DurableObjectNamespace;
+
+    // API KEYS
+    OPENAI_API_KEY: string;
+
+    GOOGLE_CLIENT_ID: string;
+    GOOGLE_CLIENT_SECRET: string;
+    GOOGLE_REDIRECT_URI: string;
+
+    DATABASE_URL: string;
+
+    WEB_APP_URL: string;
+
+    NODE_ENV: 'development' | 'production';
+  };
+  Variables: {
+    db: PostgresJsDatabase;
+  };
 };
 
 // Create a new Hono app
-const app = new Hono<AppContext>();
+const app = new Hono<AppContext>().route('/auth/google', googleAuthRouter);
 
 // requests to /connect are routed to the Durable Object, and handle realtime websocket syncing
 app.get('/connect/:roomId', async (ctx) => {
