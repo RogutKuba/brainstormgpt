@@ -6,16 +6,32 @@ import {
   createTLSchema,
   // defaultBindingSchemas,
   defaultShapeSchemas,
+  createShapeValidator,
+  TLBaseShape,
+  TLDefaultColorStyle,
 } from '@tldraw/tlschema';
 import { AutoRouter, IRequest, error } from 'itty-router';
 import throttle from 'lodash.throttle';
 import { Environment } from './types';
-import { LLMService } from './service/LLM.service';
 import { DurableObject } from 'cloudflare:workers';
+
+type LinkShapeProps = {
+  url: string;
+  text: string;
+  w: number;
+  h: number;
+};
+
+type LinkShape = TLBaseShape<'link', LinkShapeProps>;
 
 // add custom shapes and bindings here if needed:
 const schema = createTLSchema({
-  shapes: { ...defaultShapeSchemas },
+  shapes: {
+    ...defaultShapeSchemas,
+    // link: {
+    //   props: LinkShape.
+    // },
+  },
 });
 
 // there's only ever one durable object instance per room. it keeps all the room state in memory and
@@ -150,6 +166,32 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     }
 
     return this.roomPromise;
+  }
+
+  async getState() {
+    const room = await this.getRoom();
+    return room.getCurrentSnapshot();
+  }
+
+  async addShape(shape: TLShape) {
+    const room = await this.getRoom();
+    room.updateStore((store) => {
+      store.put(shape);
+    });
+  }
+
+  async updateShape(shape: TLShape) {
+    const room = await this.getRoom();
+    room.updateStore((store) => {
+      store.put(shape);
+    });
+  }
+
+  async removeShape(shape: TLShape) {
+    const room = await this.getRoom();
+    room.updateStore((store) => {
+      store.delete(shape.id);
+    });
   }
 
   // we throttle persistance so it only happens every 10 seconds

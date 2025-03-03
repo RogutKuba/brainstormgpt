@@ -3,21 +3,15 @@ import {
   Box,
   DefaultMainMenu,
   DefaultMainMenuContent,
-  DefaultQuickActions,
-  DefaultQuickActionsContent,
   DefaultToolbar,
   DefaultToolbarContent,
   TLComponents,
   TLUiAssetUrlOverrides,
   TLUiOverrides,
   Tldraw,
-  TldrawUiDropdownMenuContent,
-  TldrawUiDropdownMenuGroup,
-  TldrawUiDropdownMenuRoot,
-  TldrawUiDropdownMenuTrigger,
-  TldrawUiMenuActionItem,
   TldrawUiMenuGroup,
   TldrawUiMenuItem,
+  defaultShapeUtils,
   useDialogs,
   useEditor,
   useIsToolSelected,
@@ -27,12 +21,11 @@ import {
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/app/components/brainstorm-tool/BrainstormTool';
 import { BrainstormDragging } from '@/app/components/brainstorm-tool/child-states/Dragging';
-import { useParams } from 'next/navigation';
 import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { API_URL } from '@/lib/constants';
-
-const customTools = [BrainstormTool];
+import { LinkShapeUtil } from '@/app/components/shape/link/LinkShape';
+import { LinkTool } from '@/app/components/shape/link/LinkTool';
+import { useMemo } from 'react';
 
 const customUiOverrides: TLUiOverrides = {
   tools: (editor, tools) => {
@@ -47,6 +40,15 @@ const customUiOverrides: TLUiOverrides = {
           editor.setCurrentTool('brainstorm');
         },
       },
+      link: {
+        id: LinkTool.id,
+        label: 'Link',
+        icon: 'link',
+        kbd: 'l',
+        onSelect() {
+          editor.setCurrentTool('link');
+        },
+      },
     };
   },
 };
@@ -54,12 +56,14 @@ const customUiOverrides: TLUiOverrides = {
 function CustomToolbar() {
   const tools = useTools();
   const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
+  const isLinkSelected = useIsToolSelected(tools['link']);
   return (
     <DefaultToolbar>
       <TldrawUiMenuItem
         {...tools['brainstorm']}
         isSelected={isAiBrainstormSelected}
       />
+      <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
       <DefaultToolbarContent />
     </DefaultToolbar>
   );
@@ -71,6 +75,9 @@ const customAssetUrls: TLUiAssetUrlOverrides = {
     brainstorm: '/ai-brainstorm.svg',
   },
 };
+
+const customTools = [BrainstormTool, LinkTool];
+const customShapes = [LinkShapeUtil];
 
 function AiBrainstormBox() {
   const editor = useEditor();
@@ -148,11 +155,14 @@ const customComponents: TLComponents = {
   },
 };
 
-export const Whiteboard = ({ roomId }: { roomId: string }) => {
+export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
+  const shapeUtils = useMemo(() => [...customShapes, ...defaultShapeUtils], []);
+
   // Create a store connected to multiplayer.
   const store = useSync({
+    shapeUtils,
     // We need to know the websockets URI...
-    uri: `${API_URL}/connect/${roomId}`,
+    uri: `${API_URL}/connect/${workspaceId}`,
     // ...and how to handle static assets like images & videos
     assets: multiplayerAssetStore,
   });
@@ -167,6 +177,7 @@ export const Whiteboard = ({ roomId }: { roomId: string }) => {
         // we can pass the connected store into the Tldraw component which will handle
         // loading states & enable multiplayer UX like cursors & a presence menu
         store={store}
+        shapeUtils={customShapes}
       />
     </div>
   );
