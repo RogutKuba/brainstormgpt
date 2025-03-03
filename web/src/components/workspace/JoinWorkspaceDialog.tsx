@@ -55,15 +55,17 @@ export function JoinWorkspaceDialog({ children }: JoinWorkspaceDialogProps) {
           </div>
 
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant='light' type='button'>
-                Cancel
+            <div className='flex flex-row justify-end gap-2'>
+              <DialogClose asChild>
+                <Button variant='light' type='button'>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type='submit'>
+                Join Workspace
+                <RiArrowRightLine className='w-4 h-4' />
               </Button>
-            </DialogClose>
-            <Button type='submit'>
-              Join Workspace
-              <RiArrowRightLine className='w-4 h-4' />
-            </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

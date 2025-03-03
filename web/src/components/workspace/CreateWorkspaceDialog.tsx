@@ -70,12 +70,14 @@ export function CreateWorkspaceDialog({
           </div>
 
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant='light' type='button'>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type='submit'>Create Workspace</Button>
+            <div className='flex flex-row justify-end gap-2'>
+              <DialogClose asChild>
+                <Button variant='light' type='button'>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type='submit'>Create Workspace</Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
