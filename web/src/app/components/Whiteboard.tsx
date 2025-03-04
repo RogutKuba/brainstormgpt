@@ -1,10 +1,18 @@
 import { useSync } from '@tldraw/sync';
 import {
+  ArrowToolbarItem,
   Box,
+  CloudToolbarItem,
   DefaultMainMenu,
   DefaultMainMenuContent,
   DefaultToolbar,
   DefaultToolbarContent,
+  EllipseToolbarItem,
+  EraserToolbarItem,
+  HandToolbarItem,
+  OvalToolbarItem,
+  RectangleToolbarItem,
+  SelectToolbarItem,
   TLComponents,
   TLUiAssetUrlOverrides,
   TLUiOverrides,
@@ -27,10 +35,22 @@ import { LinkShapeUtil } from '@/app/components/shape/link/LinkShape';
 import { LinkTool } from '@/app/components/shape/link/LinkTool';
 import { useMemo } from 'react';
 
+const ALLOWED_TOOLS = [
+  'select',
+  'hand',
+  'eraser',
+  'rectangle',
+  'ellipse',
+  'arrow',
+];
+
 const customUiOverrides: TLUiOverrides = {
   tools: (editor, tools) => {
     return {
-      ...tools,
+      // ...tools,
+      ...Object.fromEntries(
+        Object.entries(tools).filter(([key]) => ALLOWED_TOOLS.includes(key))
+      ),
       brainstorm: {
         id: BrainstormTool.id,
         label: 'AI Brainstorm',
@@ -56,18 +76,51 @@ const customUiOverrides: TLUiOverrides = {
 function CustomToolbar() {
   const tools = useTools();
   const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
-  const isLinkSelected = useIsToolSelected(tools['link']);
+  // const isLinkSelected = useIsToolSelected(tools['link']);
+
   return (
     <DefaultToolbar>
+      <SelectToolbarItem />
+      <HandToolbarItem />
+      <EraserToolbarItem />
+      <ArrowToolbarItem />
+      <RectangleToolbarItem />
+      <EllipseToolbarItem />
       <TldrawUiMenuItem
         {...tools['brainstorm']}
         isSelected={isAiBrainstormSelected}
       />
-      <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
-      <DefaultToolbarContent />
+      {/* <DefaultToolbarContent /> */}
+      {/* <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} /> */}
     </DefaultToolbar>
   );
 }
+
+const CustomMainMenu = () => {
+  const { addDialog } = useDialogs();
+
+  return (
+    <DefaultMainMenu>
+      <TldrawUiMenuGroup id='example'>
+        <TldrawUiMenuItem
+          id='system-goal'
+          label='Edit System Goal'
+          icon='external-link'
+          readonlyOk
+          onSelect={() => {
+            addDialog({
+              component: SystemGoalDialog,
+              onClose() {
+                void null;
+              },
+            });
+          }}
+        />
+      </TldrawUiMenuGroup>
+      <DefaultMainMenuContent />
+    </DefaultMainMenu>
+  );
+};
 
 // [3]
 const customAssetUrls: TLUiAssetUrlOverrides = {
@@ -128,31 +181,10 @@ function AiBrainstormBox() {
 const customComponents: TLComponents = {
   InFrontOfTheCanvas: AiBrainstormBox,
   Toolbar: CustomToolbar,
-  MainMenu: () => {
-    const { addDialog } = useDialogs();
-
-    return (
-      <DefaultMainMenu>
-        <TldrawUiMenuGroup id='example'>
-          <TldrawUiMenuItem
-            id='system-goal'
-            label='Edit System Goal'
-            icon='external-link'
-            readonlyOk
-            onSelect={() => {
-              addDialog({
-                component: SystemGoalDialog,
-                onClose() {
-                  void null;
-                },
-              });
-            }}
-          />
-        </TldrawUiMenuGroup>
-        <DefaultMainMenuContent />
-      </DefaultMainMenu>
-    );
-  },
+  MainMenu: CustomMainMenu,
+  PageMenu: null,
+  // MenuPanel: null,
+  // QuickActions: null,
 };
 
 export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
