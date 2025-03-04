@@ -5,6 +5,8 @@ import {
   CloudToolbarItem,
   DefaultMainMenu,
   DefaultMainMenuContent,
+  DefaultMenuPanel,
+  DefaultQuickActions,
   DefaultToolbar,
   DefaultToolbarContent,
   EditSubmenu,
@@ -24,20 +26,29 @@ import {
   TldrawUiMenuItem,
   ViewSubmenu,
   defaultShapeUtils,
+  useBreakpoint,
   useDialogs,
   useEditor,
+  usePassThroughWheelEvents,
   useIsToolSelected,
   useTools,
   useValue,
+  useTldrawUiComponents,
+  PORTRAIT_BREAKPOINT,
+  TldrawUiButtonIcon,
+  TldrawUiButton,
+  DefaultQuickActionsContent,
+  TldrawUiMenuActionItem,
+  useToasts,
 } from 'tldraw';
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/app/components/brainstorm-tool/BrainstormTool';
 import { BrainstormDragging } from '@/app/components/brainstorm-tool/child-states/Dragging';
-import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
 import { API_URL } from '@/lib/constants';
 import { LinkShapeUtil } from '@/app/components/shape/link/LinkShape';
 import { LinkTool } from '@/app/components/shape/link/LinkTool';
-import { useMemo } from 'react';
+import { memo, useMemo, useRef } from 'react';
+import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -185,13 +196,72 @@ function AiBrainstormBox() {
   );
 }
 
+const CustomMenuPanel = memo(function MenuPanel() {
+  const breakpoint = useBreakpoint();
+
+  const ref = useRef<HTMLDivElement>(null);
+  usePassThroughWheelEvents(ref as React.RefObject<HTMLElement>);
+
+  const { MainMenu, QuickActions, ActionsMenu, PageMenu } =
+    useTldrawUiComponents();
+  const { addToast } = useToasts();
+
+  const editor = useEditor();
+  const isSinglePageMode = useValue(
+    'isSinglePageMode',
+    () => editor.options.maxPages <= 1,
+    [editor]
+  );
+
+  const showQuickActions =
+    editor.options.actionShortcutsLocation === 'menu'
+      ? true
+      : editor.options.actionShortcutsLocation === 'toolbar'
+      ? false
+      : breakpoint >= PORTRAIT_BREAKPOINT.TABLET;
+
+  if (!MainMenu && !PageMenu && !showQuickActions) return null;
+
+  return (
+    <div ref={ref} className='tlui-menu-zone'>
+      <div className='tlui-buttons__horizontal'>
+        {MainMenu && <MainMenu />}
+        {PageMenu && !isSinglePageMode && <PageMenu />}
+        {showQuickActions ? (
+          <>
+            {QuickActions && <QuickActions />}
+            {ActionsMenu && <ActionsMenu />}
+          </>
+        ) : null}
+
+        <TldrawUiButton
+          type='normal'
+          onClick={() => {
+            // copy current page url
+            const url = window.location.href;
+            navigator.clipboard.writeText(url);
+
+            addToast({
+              title: 'Copied to clipboard',
+              description: 'Share this link with your team',
+              severity: 'success',
+            });
+          }}
+        >
+          <TldrawUiButtonIcon icon='external-link' />
+        </TldrawUiButton>
+      </div>
+    </div>
+  );
+});
+
 const customComponents: TLComponents = {
   InFrontOfTheCanvas: AiBrainstormBox,
   Toolbar: CustomToolbar,
   MainMenu: CustomMainMenu,
   PageMenu: null,
-  // MenuPanel: null,
-  // QuickActions: null,
+  ActionsMenu: null,
+  MenuPanel: CustomMenuPanel,
 };
 
 export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
