@@ -8,6 +8,7 @@ import { UserEntity, SessionEntity } from './db/user.db';
 import { authMiddleware } from './middleware/auth.middleware';
 import { workspaceRouter } from './endpoint/workspace.endpoint';
 import { authRouter } from './endpoint/auth.endpoint';
+import { VisitedService } from './service/Visited.service';
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './TldrawDurableObject';
@@ -41,20 +42,25 @@ export type AppContext = {
 // Create a new Hono app
 const app = new Hono<AppContext>();
 
-// requests to /connect are routed to the Durable Object, and handle realtime websocket syncing
-app.get('/connect/:roomId', async (ctx) => {
-  const roomId = ctx.req.param('roomId');
-  const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(roomId);
-  const room = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
-
-  return room.fetch(ctx.req.url, {
-    headers: ctx.req.raw.headers,
-    body: ctx.req.raw.body,
-  });
-});
-
 // Add CORS middleware
 app
+  // THIS ROUTE DOESNT NEED AUTH OR CORS
+  .get('/connect/:workspaceId', async (ctx) => {
+    const workspaceId = ctx.req.param('workspaceId');
+
+    // save visitor to db for some sort of user analytics
+    ctx.executionCtx.waitUntil(
+      new VisitedService(ctx).handleVisitedWorkspace(ctx)
+    );
+
+    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const room = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
+
+    return room.fetch(ctx.req.url, {
+      headers: ctx.req.raw.headers,
+      body: ctx.req.raw.body,
+    });
+  })
   .use(
     '*',
     cors({
