@@ -49,6 +49,7 @@ import { LinkShapeUtil } from '@/app/components/shape/link/LinkShape';
 import { LinkTool } from '@/app/components/shape/link/LinkTool';
 import { memo, useMemo, useRef } from 'react';
 import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
+import { ChatWindowPlugin } from '@/app/components/chat/ChatWindow';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -135,6 +136,16 @@ const CustomMainMenu = () => {
       <EditSubmenu />
       <ViewSubmenu />
       <ExportFileContentSubMenu />
+      <TldrawUiMenuGroup id='exit'>
+        <TldrawUiMenuItem
+          id='exit'
+          label='Exit workspace'
+          icon='exit'
+          onSelect={() => {
+            window.location.href = '/app';
+          }}
+        />
+      </TldrawUiMenuGroup>
       {/* <ExtrasGroup /> */}
     </DefaultMainMenu>
   );
@@ -255,13 +266,23 @@ const CustomMenuPanel = memo(function MenuPanel() {
   );
 });
 
+function InFrontOfTheCanvas() {
+  return (
+    <>
+      <AiBrainstormBox />
+      <ChatWindowPlugin />
+    </>
+  );
+}
+
 const customComponents: TLComponents = {
-  InFrontOfTheCanvas: AiBrainstormBox,
+  InFrontOfTheCanvas: () => <InFrontOfTheCanvas />,
   Toolbar: CustomToolbar,
   MainMenu: CustomMainMenu,
   PageMenu: null,
   ActionsMenu: null,
   MenuPanel: CustomMenuPanel,
+  StylePanel: null,
 };
 
 export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
@@ -277,17 +298,15 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
   });
 
   return (
-    <div style={{ position: 'fixed', inset: 0 }}>
-      <Tldraw
-        tools={customTools}
-        overrides={customUiOverrides}
-        assetUrls={customAssetUrls}
-        components={customComponents}
-        // we can pass the connected store into the Tldraw component which will handle
-        // loading states & enable multiplayer UX like cursors & a presence menu
-        store={store}
-        shapeUtils={customShapes}
-      />
-    </div>
+    <Tldraw
+      tools={customTools}
+      overrides={customUiOverrides}
+      assetUrls={customAssetUrls}
+      components={customComponents}
+      // we can pass the connected store into the Tldraw component which will handle
+      // loading states & enable multiplayer UX like cursors & a presence menu
+      store={store}
+      shapeUtils={customShapes}
+    />
   );
 };
