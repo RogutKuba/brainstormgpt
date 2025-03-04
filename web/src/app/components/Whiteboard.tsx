@@ -7,8 +7,11 @@ import {
   DefaultMainMenuContent,
   DefaultToolbar,
   DefaultToolbarContent,
+  EditSubmenu,
   EllipseToolbarItem,
   EraserToolbarItem,
+  ExportFileContentSubMenu,
+  ExtrasGroup,
   HandToolbarItem,
   OvalToolbarItem,
   RectangleToolbarItem,
@@ -19,6 +22,7 @@ import {
   Tldraw,
   TldrawUiMenuGroup,
   TldrawUiMenuItem,
+  ViewSubmenu,
   defaultShapeUtils,
   useDialogs,
   useEditor,
@@ -104,7 +108,7 @@ const CustomMainMenu = () => {
       <TldrawUiMenuGroup id='example'>
         <TldrawUiMenuItem
           id='system-goal'
-          label='Edit System Goal'
+          label='Edit Workspace Goal'
           icon='external-link'
           readonlyOk
           onSelect={() => {
@@ -117,7 +121,10 @@ const CustomMainMenu = () => {
           }}
         />
       </TldrawUiMenuGroup>
-      <DefaultMainMenuContent />
+      <EditSubmenu />
+      <ViewSubmenu />
+      <ExportFileContentSubMenu />
+      {/* <ExtrasGroup /> */}
     </DefaultMainMenu>
   );
 };

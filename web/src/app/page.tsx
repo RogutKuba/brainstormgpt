@@ -39,7 +39,7 @@ export default function Home() {
         </motion.div>
 
         {/* Demo Image */}
-        <motion.div
+        {/* <motion.div
           className='rounded-lg border border-gray-200 shadow-lg overflow-hidden'
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -84,7 +84,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </motion.div> */}
       </div>
     </div>
   );
