@@ -34,8 +34,8 @@ export default function DashboardPage() {
   return (
     <>
       {/* Header */}
-      <header className='w-full border-b border-gray-200 py-4'>
-        <div className='container max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-4 md:px-0'>
+      <header className='w-full border-b border-gray-200 py-4 px-2 md:px-0'>
+        <div className='container max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-4 lg:px-0'>
           <div className='flex items-center'>
             <span className='text-xl font-bold flex items-center gap-1'>
               <RiBrain2Fill className='w-6 h-6 text-pink-400' />

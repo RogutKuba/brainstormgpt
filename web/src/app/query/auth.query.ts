@@ -7,22 +7,28 @@ export const useUserData = (params?: { shouldRedirect?: boolean }) => {
   const query = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      const res = await clientFetch('/auth/current-user');
+      try {
+        const res = await clientFetch('/auth/current-user');
 
-      if (res.ok) {
-        const data = await res.json();
-        return data as {
-          id: string;
-          createdAt: string;
-          email: string;
-          name: string;
-        };
-      } else {
-        // if status is 401 or 403, redirect to login
-        if (res.status === 401 || res.status === 403) {
-          router.push('/app/login');
+        if (res.ok) {
+          const data = await res.json();
+          return data as {
+            id: string;
+            createdAt: string;
+            email: string;
+            name: string;
+          };
+        } else {
+          // if status is 401 or 403, redirect to login
+          if (res.status === 401 || res.status === 403) {
+            router.push('/app/login');
+          }
+
+          return undefined;
         }
-
+      } catch (error) {
+        console.error(error);
+        router.push('/app/login');
         return undefined;
       }
     },

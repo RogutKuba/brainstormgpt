@@ -100,7 +100,7 @@ export const SessionService = {
         sameSite: 'lax',
         path: '/',
         secure: true,
-        domain: 'wallstreetwrapped.com',
+        domain: '.rogutkuba.com',
       });
     } else {
       setCookie(ctx, SESSION_COOKIE_NAME, token, {

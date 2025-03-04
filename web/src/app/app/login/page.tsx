@@ -2,7 +2,6 @@
 
 import { Button } from '@/components/ui/button';
 import { RiBrain2Fill, RiGoogleFill } from '@remixicon/react';
-import { useState } from 'react';
 
 const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!NEXT_PUBLIC_API_URL) {
