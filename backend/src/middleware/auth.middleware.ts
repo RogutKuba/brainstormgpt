@@ -22,16 +22,6 @@ export const authMiddleware = createMiddleware<AppContext>(
       ctx
     );
 
-    // pretend to be user u_41165e887c4fe44e
-    // const db = getDbConnection(ctx);
-    // const user = await db
-    //   .select()
-    //   .from(userTable)
-    //   .where(eq(userTable.id, 'u_5c7ae817f7ae8584'))
-    //   .then(takeUniqueOrThrow);
-
-    // const session = {} as any;
-
     if (!session) {
       SessionService.deleteSessionTokenCookie(ctx);
     }

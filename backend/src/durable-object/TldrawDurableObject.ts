@@ -4,16 +4,18 @@ import {
   TLShape,
   TLTextShape,
   createTLSchema,
-  // defaultBindingSchemas,
   defaultShapeSchemas,
-  createShapeValidator,
   TLBaseShape,
-  TLDefaultColorStyle,
+  TLDocument,
+  TLParentId,
+  TLShapeId,
 } from '@tldraw/tlschema';
 import { AutoRouter, IRequest, error } from 'itty-router';
 import throttle from 'lodash.throttle';
-import { Environment } from './types';
+import { Environment } from '../types';
 import { DurableObject } from 'cloudflare:workers';
+import { IndexKey, RecordId } from 'tldraw';
+import { ShapeService } from '../service/Shape.service';
 
 type LinkShapeProps = {
   url: string;
@@ -39,7 +41,7 @@ const schema = createTLSchema({
 export class TldrawDurableObject extends DurableObject<Environment> {
   private r2: R2Bucket;
   // the room ID will be missing while the room is being initialized
-  private roomId: string | null = null;
+  private workspaceId: string | null = null;
   // when we load the room from the R2 bucket, we keep it here. it's a promise so we only ever
   // load it once.
   private roomPromise: Promise<TLSocketRoom<TLRecord, void>> | null = null;
@@ -52,9 +54,8 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     this.r2 = env.TLDRAW_BUCKET;
 
     ctx.blockConcurrencyWhile(async () => {
-      this.roomId = ((await this.ctx.storage.get('roomId')) ?? null) as
-        | string
-        | null;
+      this.workspaceId = ((await this.ctx.storage.get('workspaceId')) ??
+        null) as string | null;
     });
   }
 
@@ -65,17 +66,17 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     },
   })
     // when we get a connection request, we stash the room id if needed and handle the connection
-    .get('/connect/:roomId', async (request) => {
-      if (!this.roomId) {
+    .get('/connect/:workspaceId', async (request) => {
+      if (!this.workspaceId) {
         await this.ctx.blockConcurrencyWhile(async () => {
-          await this.ctx.storage.put('roomId', request.params.roomId);
-          this.roomId = request.params.roomId;
+          await this.ctx.storage.put('workspaceId', request.params.workspaceId);
+          this.workspaceId = request.params.workspaceId;
         });
       }
       return this.handleConnect(request);
     })
-    .post('/brainstorm/:roomId', async (request) => {
-      if (!this.roomId) return error(400, 'Missing roomId');
+    .post('/brainstorm/:workspaceId', async (request) => {
+      if (!this.workspaceId) return error(400, 'Missing workspaceId');
       return this.handleBrainstorm(request);
     });
 
@@ -109,7 +110,7 @@ export class TldrawDurableObject extends DurableObject<Environment> {
       prompt: string;
       shapes: TLShape[];
     }>();
-    console.log('brainstorm', prompt, shapes);
+    // console.log('brainstorm', prompt, shapes);
 
     // I want to transform the shapes into a text prompt
     const shapeTexts = (() => {
@@ -121,31 +122,66 @@ export class TldrawDurableObject extends DurableObject<Environment> {
       return textShapes.map((shape) => shape.props.text?.trim() ?? '');
     })();
 
-    // Combine shape texts with the original prompt
-    const enhancedPrompt = `Based on these ideas: ${shapeTexts
-      .map((text) => `- ${text}`)
-      .join('\n')}. ${prompt}`;
+    const room = await this.getRoom();
+    const snapshot = room.getCurrentSnapshot();
 
-    // send call to LLM and ask to generate new bullet point
-    // const result = await LLMService.generateMessage({
-    //   prompt: enhancedPrompt,
-    //   env: this.env,
+    const currentDocuments = snapshot.documents;
+
+    // get only typeName = shape
+    const currentShapes = currentDocuments.filter(
+      (shape) => shape.state.typeName === 'shape'
+    );
+
+    console.log(currentShapes);
+
+    // currentShapes.forEach((shape) => {
+    //   console.dir(shape.state, { depth: null });
+    //   console.log(shape.state.props);
+    //   console.log('--------------------------------');
     // });
 
-    // add a new shape to the room
-    const room = await this.getRoom();
+    // get some new shapes
+    const shapeService = new ShapeService(snapshot);
+    const newShapes = await shapeService.addBubbles([
+      {
+        text: prompt,
+        parentId: null,
+      },
+      {
+        text: "Hey this is a test. You're absolutely right. The current implementation doesn't account for newly added shapes when placing multiple bubbles, which could lead to overlaps. Let's fix that by updating the grid as we place each new shape.",
+        parentId: null,
+      },
+      {
+        text: 'Hey this is a test 2',
+        parentId: null,
+      },
+      {
+        text: 'Hey this is a test 3',
+        parentId: null,
+      },
+    ]);
 
-    return new Response(JSON.stringify({}));
+    console.log('newShapes', newShapes);
+
+    room.updateStore((store) => {
+      newShapes.forEach((shape) => {
+        store.put(shape);
+      });
+    });
+
+    // console.log('snapshot', snapshot.documents);
+
+    return new Response(JSON.stringify([]));
   }
 
   getRoom() {
-    const roomId = this.roomId;
-    if (!roomId) throw new Error('Missing roomId');
+    const workspaceId = this.workspaceId;
+    if (!workspaceId) throw new Error('Missing workspaceId');
 
     if (!this.roomPromise) {
       this.roomPromise = (async () => {
         // fetch the room from R2
-        const roomFromBucket = await this.r2.get(`rooms/${roomId}`);
+        const roomFromBucket = await this.r2.get(`rooms/${workspaceId}`);
 
         // if it doesn't exist, we'll just create a new empty room
         const initialSnapshot = roomFromBucket
@@ -196,11 +232,11 @@ export class TldrawDurableObject extends DurableObject<Environment> {
 
   // we throttle persistance so it only happens every 10 seconds
   private schedulePersistToR2 = throttle(async () => {
-    if (!this.roomPromise || !this.roomId) return;
+    if (!this.roomPromise || !this.workspaceId) return;
     const room = await this.getRoom();
 
     // convert the room to JSON and upload it to R2
     const snapshot = JSON.stringify(room.getCurrentSnapshot());
-    await this.r2.put(`rooms/${this.roomId}`, snapshot);
+    await this.r2.put(`rooms/${this.workspaceId}`, snapshot);
   }, 10_000);
 }

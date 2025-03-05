@@ -18,6 +18,8 @@ export const BrainstormService = {
   }): Promise<BrainStormResult[]> => {
     const { prompt, shapes, ctx, goal } = params;
 
+    return [];
+
     console.log('params', {
       prompt,
       goal,

@@ -40,27 +40,7 @@ export const ChatWindow: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! How can I help you today?',
-      sender: 'system',
-      timestamp: new Date(),
-    },
-    {
-      id: '2',
-      content: 'I have a question about my workspace.',
-      sender: 'user',
-      timestamp: new Date(),
-    },
-    {
-      id: '3',
-      content:
-        "Sure, I'd be happy to help with your workspace. What would you like to know?",
-      sender: 'system',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Track selected items from TLDraw
   const selectedItems = useValue(
@@ -274,30 +254,32 @@ export const ChatWindow: React.FC = () => {
           </div>
 
           {/* Chat history - scrollable middle section */}
-          <CardContent className='p-0.5 bg-white grow overflow-y-auto'>
-            <div className='flex flex-col p-3 space-y-4'>
-              {messages.map((message) => (
-                <div key={message.id} className='flex flex-col'>
-                  <div className='flex items-center mb-1'>
-                    <span className='text-xs font-medium text-gray-500'>
-                      {message.sender === 'user' ? 'You' : 'AI Assistant'}
-                    </span>
+          <CardContent className='p-0 bg-white grow overflow-y-auto'>
+            {messages.length > 0 ? (
+              <div className='flex flex-col p-3 space-y-4'>
+                {messages.map((message) => (
+                  <div key={message.id} className='flex flex-col'>
+                    <div className='flex items-center mb-1'>
+                      <span className='text-xs font-medium text-gray-500'>
+                        {message.sender === 'user' ? 'You' : 'AI Assistant'}
+                      </span>
+                    </div>
+                    <div
+                      className={cx(
+                        'p-3 rounded-lg',
+                        message.sender === 'user'
+                          ? 'bg-blue-50 border border-blue-100 text-gray-800'
+                          : 'bg-white border border-gray-200 text-gray-800'
+                      )}
+                    >
+                      <p className='text-sm whitespace-pre-wrap'>
+                        {message.content}
+                      </p>
+                    </div>
                   </div>
-                  <div
-                    className={cx(
-                      'p-3 rounded-lg',
-                      message.sender === 'user'
-                        ? 'bg-blue-50 border border-blue-100 text-gray-800'
-                        : 'bg-white border border-gray-200 text-gray-800'
-                    )}
-                  >
-                    <p className='text-sm whitespace-pre-wrap'>
-                      {message.content}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
 
           {/* Input section - fixed at bottom */}

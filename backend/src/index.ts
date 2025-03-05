@@ -11,7 +11,7 @@ import { authRouter } from './endpoint/auth.endpoint';
 import { VisitedService } from './service/Visited.service';
 
 // make sure our sync durable object is made available to cloudflare
-export { TldrawDurableObject } from './TldrawDurableObject';
+export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
 
 export type AppContext = {
   Bindings: {
@@ -61,20 +61,6 @@ app
       body: ctx.req.raw.body,
     });
   })
-  .use(
-    '*',
-    cors({
-      origin: ['http://localhost:3000', 'https://brainstorm.rogutkuba.com'],
-      credentials: true,
-    })
-  )
-  .get('/health', async (ctx) => {
-    return ctx.text('ok');
-  })
-  .route('/auth', authRouter)
-  .route('/auth/google', googleAuthRouter)
-  .use(authMiddleware)
-  .route('/workspace', workspaceRouter)
   .post('/uploads/:uploadId', async (ctx) => {
     const result = await handleAssetUpload(ctx);
     return ctx.json(result, 200);
@@ -83,7 +69,24 @@ app
     const result = await handleAssetDownload(ctx);
     return ctx.json(result, 200);
   })
-  .post('/brainstorm/:roomId', async (ctx) => {
+  .use(
+    '*',
+    cors({
+      origin: ['http://localhost:3000', 'https://brainstorm.rogutkuba.com'],
+      credentials: true,
+    })
+  )
+  .post('/brainstorm/:workspaceId', async (ctx) => {
+    const workspaceId = ctx.req.param('workspaceId');
+    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const room = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
+
+    return room.fetch(ctx.req.url, {
+      method: ctx.req.method,
+      headers: ctx.req.raw.headers,
+      body: ctx.req.raw.body,
+    });
+
     const { prompt, shapes, goal } = await ctx.req.json();
 
     const result = await BrainstormService.generateBrainstorm({
@@ -94,7 +97,14 @@ app
     });
 
     return ctx.json(result, 200);
-  });
+  })
+  .get('/health', async (ctx) => {
+    return ctx.text('ok');
+  })
+  .route('/auth', authRouter)
+  .route('/auth/google', googleAuthRouter)
+  .use(authMiddleware)
+  .route('/workspace', workspaceRouter);
 
 // export our app for cloudflare
 export default app;
