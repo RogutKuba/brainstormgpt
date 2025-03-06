@@ -75,12 +75,18 @@ export const useSendMessage = () => {
   const currentWorkspaceId = useCurrentWorkspaceId();
 
   const mutation = useMutation({
-    mutationFn: async (params: { message: string }) => {
+    mutationFn: async (params: {
+      message: string;
+      chatHistory: { content: string; sender: 'user' | 'system' }[];
+    }) => {
       const response = await clientFetch(
         `/workspace/${currentWorkspaceId}/chat`,
         {
           method: 'POST',
           body: JSON.stringify(params),
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
       );
 

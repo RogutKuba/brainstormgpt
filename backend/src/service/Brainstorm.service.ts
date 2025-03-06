@@ -1,22 +1,29 @@
 import { Context } from 'hono';
 import { AppContext } from '..';
 import { LLMService } from './LLM.service';
-import { TLGeoShape, TLShape, TLTextShape } from '@tldraw/tlschema';
+import { TLGeoShape, TLShape, TLShapeId, TLTextShape } from '@tldraw/tlschema';
 
 type BrainStormResult = {
   type: 'add-text';
   text: string;
-  parentId?: string; // Optional parent shape ID to connect to
+  parentId?: TLShapeId; // Optional parent shape ID to connect to
 };
 
 export const BrainstormService = {
   generateBrainstorm: async (params: {
     prompt: string;
+    chatHistory: {
+      content: string;
+      sender: 'user' | 'system';
+    }[];
     goal?: string;
     shapes: TLShape[];
     ctx: Context<AppContext>;
-  }): Promise<BrainStormResult[]> => {
-    const { prompt, shapes, ctx, goal } = params;
+  }): Promise<{
+    newShapes: BrainStormResult[];
+    explanation: string;
+  }> => {
+    const { prompt, shapes, ctx, goal, chatHistory } = params;
 
     console.log('params', {
       prompt,
@@ -65,13 +72,15 @@ ${goal}
     : ''
 }
 
-Generate new whiteboard bubbles that represent the next iteration of thinking. Each new bubble should be concise and formatted as a brief idea unless the user specifically requests detailed explanations.
+First, provide a brief explanation of what you're doing based on the user's prompt and existing content. Then, generate new whiteboard bubbles that represent the next iteration of thinking. Each new bubble should be concise and formatted as a brief idea unless the user specifically requests detailed explanations.
 
 Format your response as:
+<explanation>Brief overview of what you're doing and how these ideas connect to the user's prompt</explanation>
 <bubble parent="shape-id-1">Key idea 1</bubble>
 <bubble parent="shape-id-2">Key idea 2</bubble>
 
 Only use parent attributes for bubbles that directly relate to an existing shape. Focus on advancing the overall brainstorming process with concise, actionable ideas. Keep each bubble brief.`,
+      chatHistory,
       ctx,
     });
 
@@ -81,6 +90,11 @@ Only use parent attributes for bubbles that directly relate to an existing shape
 
     // Parse the LLM response to extract bubbles and their parent relationships
     const results: BrainStormResult[] = [];
+
+    // Extract the explanation if present
+    const explanationMatch = newIdeasResult.match(
+      /<explanation>([^<]+)<\/explanation>/
+    );
 
     // Simple regex to extract bubbles and their parents
     const bubbleRegex = /<bubble(?:\s+parent="([^"]+)")?>([^<]+)<\/bubble>/g;
@@ -92,8 +106,8 @@ Only use parent attributes for bubbles that directly relate to an existing shape
 
       results.push({
         type: 'add-text',
-        text,
-        ...(parentId && { parentId }),
+        text: text.trim(),
+        ...(parentId && { parentId: parentId as TLShapeId }),
       });
     }
 
@@ -101,10 +115,14 @@ Only use parent attributes for bubbles that directly relate to an existing shape
     if (results.length === 0) {
       results.push({
         type: 'add-text',
-        text: newIdeasResult,
+        text: newIdeasResult.trim(),
       });
     }
 
-    return results;
+    return {
+      newShapes: results,
+      explanation:
+        explanationMatch?.[1].trim() ?? 'I generated some new ideas:',
+    };
   },
 };

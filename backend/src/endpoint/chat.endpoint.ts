@@ -22,6 +22,16 @@ const sendMessageRoute = createRoute({
             message: z.string().min(3).openapi({
               description: 'Message to send',
             }),
+            chatHistory: z
+              .array(
+                z.object({
+                  content: z.string(),
+                  sender: z.enum(['user', 'system']),
+                })
+              )
+              .openapi({
+                description: 'Previous chat messages for context',
+              }),
           }),
         },
       },
@@ -48,16 +58,16 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
     const { workspaceId } = ctx.req.valid('param');
-    const { message } = ctx.req.valid('json');
-
-    const response = 'Hey this is a test message';
+    const { message, chatHistory } = ctx.req.valid('json');
 
     // make fake delay of 2 seconds
-    const newShapes = await BrainstormService.generateBrainstorm({
-      prompt: message,
-      shapes: [],
-      ctx,
-    });
+    const { newShapes, explanation } =
+      await BrainstormService.generateBrainstorm({
+        prompt: message,
+        chatHistory,
+        shapes: [],
+        ctx,
+      });
 
     const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
     const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
@@ -70,7 +80,7 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     const shapePlacements = await shapeService.getShapePlacements(
       newShapes.map((shape) => ({
         text: shape.text,
-        parentId: null,
+        parentId: shape.parentId ?? null,
       }))
     );
 
@@ -79,6 +89,6 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
 
     console.log(shapePlacements);
 
-    return ctx.json({ message: response }, 200);
+    return ctx.json({ message: explanation }, 200);
   }
 );

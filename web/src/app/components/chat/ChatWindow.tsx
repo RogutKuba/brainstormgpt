@@ -46,7 +46,6 @@ export const ChatWindow: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { sendMessage } = useSendMessage();
   const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Track selected items from TLDraw
   const selectedItems = useValue(
@@ -175,8 +174,17 @@ export const ChatWindow: React.FC = () => {
         // Get selected text content for context
         const context = selectedItems.map((item) => item.text).join('\n');
 
+        console.log('userMessage', userMessage);
+
+        // Format chat history for the API
+        const formattedChatHistory = messages.map((msg) => ({
+          content: msg.content,
+          sender: msg.sender,
+        }));
+
         const response = await sendMessage({
           message: userMessage.content,
+          chatHistory: formattedChatHistory,
         });
 
         setMessages((prev) => [
@@ -206,11 +214,6 @@ export const ChatWindow: React.FC = () => {
       }
     }
   };
-
-  // Auto-scroll to bottom when messages change or loading state changes
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
 
   if (!isOpen) {
     return (
@@ -298,7 +301,10 @@ export const ChatWindow: React.FC = () => {
             {messages && messages.length > 0 ? (
               <div className='flex flex-col p-3 space-y-4'>
                 {messages.map((message) => (
-                  <div key={message.id} className={cx('flex flex-col')}>
+                  <div
+                    key={message.id}
+                    className={cx('flex flex-col select-auto')}
+                  >
                     {/* <div className='flex items-center mb-1'>
                       <span className='text-xs font-medium text-gray-500'>
                         {message.sender === 'user' ? 'You' : 'AI Assistant'}
@@ -306,7 +312,7 @@ export const ChatWindow: React.FC = () => {
                     </div> */}
                     <div
                       className={cx(
-                        'p-3 rounded-lg',
+                        'p-3 rounded-lg select-auto',
                         message.sender === 'user'
                           ? 'bg-blue-50 border border-blue-100 text-gray-800'
                           : message.level === 'error'
@@ -316,7 +322,7 @@ export const ChatWindow: React.FC = () => {
                     >
                       <p
                         className={cx(
-                          'text-sm whitespace-pre-wrap',
+                          'text-sm whitespace-pre-wrap select-auto',
                           message.level === 'error' &&
                             'text-red-800 font-medium'
                         )}
@@ -345,9 +351,6 @@ export const ChatWindow: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Invisible element to scroll to */}
-                <div ref={messagesEndRef} />
               </div>
             ) : null}
           </CardContent>
@@ -355,24 +358,33 @@ export const ChatWindow: React.FC = () => {
           {/* Input section - fixed at bottom */}
           <CardFooter className='p-2 border-t border-gray-200 bg-white shrink-0'>
             <form onSubmit={handleSendMessage} className='w-full'>
-              <div className='flex items-center gap-2'>
-                <Input
-                  type='text'
+              <div className='relative'>
+                <textarea
                   placeholder={
                     isLoading ? 'Waiting for response...' : 'Ask AI anything...'
                   }
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  className='flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  className='w-full resize-none border rounded-md p-3 pr-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 min-h-[50px] text-sm no-scrollbar'
                   disabled={isLoading}
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
                 />
                 <Button
                   type='submit'
-                  className='p-2 bg-blue-600 hover:bg-blue-700 text-white rounded'
+                  className='absolute right-2 bottom-2 p-1.5 bg-transparent hover:bg-gray-100 text-gray-600 rounded-md'
                   disabled={!inputValue.trim() || isLoading}
                 >
                   <RiSendPlaneFill className='w-4 h-4' />
                 </Button>
+                <div className='absolute bottom-2 left-3 text-xs text-gray-400 hidden'>
+                  Press Enter to send, Shift+Enter for new line
+                </div>
               </div>
             </form>
           </CardFooter>
