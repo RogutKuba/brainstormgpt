@@ -9,6 +9,8 @@ import { authMiddleware } from './middleware/auth.middleware';
 import { workspaceRouter } from './endpoint/workspace.endpoint';
 import { authRouter } from './endpoint/auth.endpoint';
 import { VisitedService } from './service/Visited.service';
+import { TldrawDurableObject } from './durable-object/TldrawDurableObject';
+import { chatRouter } from './endpoint/chat.endpoint';
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -16,7 +18,7 @@ export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
 export type AppContext = {
   Bindings: {
     TLDRAW_BUCKET: R2Bucket;
-    TLDRAW_DURABLE_OBJECT: DurableObjectNamespace;
+    TLDRAW_DURABLE_OBJECT: DurableObjectNamespace<TldrawDurableObject>;
 
     // API KEYS
     OPENAI_API_KEY: string;
@@ -76,28 +78,7 @@ app
       credentials: true,
     })
   )
-  .post('/brainstorm/:workspaceId', async (ctx) => {
-    const workspaceId = ctx.req.param('workspaceId');
-    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
-    const room = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
-
-    return room.fetch(ctx.req.url, {
-      method: ctx.req.method,
-      headers: ctx.req.raw.headers,
-      body: ctx.req.raw.body,
-    });
-
-    const { prompt, shapes, goal } = await ctx.req.json();
-
-    const result = await BrainstormService.generateBrainstorm({
-      prompt,
-      goal,
-      shapes,
-      ctx,
-    });
-
-    return ctx.json(result, 200);
-  })
+  .route('/workspace/:workspaceId/chat', chatRouter)
   .get('/health', async (ctx) => {
     return ctx.text('ok');
   })

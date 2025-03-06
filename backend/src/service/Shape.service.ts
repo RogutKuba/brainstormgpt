@@ -1,4 +1,4 @@
-import { RoomSnapshot, TLSocketRoom } from '@tldraw/sync-core';
+import { RoomSnapshot } from '@tldraw/sync-core';
 import {
   IndexKey,
   TLDocument,
@@ -52,7 +52,7 @@ export class ShapeService {
     this.shapes = _shapes;
   }
 
-  async addBubbles(shapesToCreate: CreateBubbleParams[]) {
+  async getShapePlacements(shapesToCreate: CreateBubbleParams[]) {
     // need to figure out empty space to put the new bubbles
     const positions: { x: number; y: number }[] = [];
     const canvasBounds = this.getCanvasBounds();

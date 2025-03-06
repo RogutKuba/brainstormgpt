@@ -20,12 +20,14 @@ import {
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
+import { useSendMessage } from '@/app/query/workspace.query';
 
 type Message = {
   id: string;
   content: string;
   sender: 'user' | 'system';
   timestamp: Date;
+  level?: 'error' | 'info' | 'warning';
 };
 
 export const ChatWindow: React.FC = () => {
@@ -40,7 +42,11 @@ export const ChatWindow: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+
   const [messages, setMessages] = useState<Message[]>([]);
+  const { sendMessage } = useSendMessage();
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Track selected items from TLDraw
   const selectedItems = useValue(
@@ -147,10 +153,10 @@ export const ChatWindow: React.FC = () => {
     };
   }, [isDragging]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (inputValue.trim()) {
+    if (inputValue.trim() && !isLoading) {
       // Add user message
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -159,18 +165,52 @@ export const ChatWindow: React.FC = () => {
         timestamp: new Date(),
       };
 
-      // Add placeholder response
-      const systemResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: 'This is a placeholder response to your message.',
-        sender: 'system',
-        timestamp: new Date(),
-      };
-
-      setMessages([...messages, userMessage, systemResponse]);
+      // Clear input field
       setInputValue('');
+
+      try {
+        setIsLoading(true);
+        setMessages((prev) => [...prev, userMessage]);
+
+        // Get selected text content for context
+        const context = selectedItems.map((item) => item.text).join('\n');
+
+        const response = await sendMessage({
+          message: userMessage.content,
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            content: response.message,
+            sender: 'system',
+            timestamp: new Date(),
+          },
+        ]);
+      } catch (error) {
+        console.error('Error fetching chat response:', error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            content:
+              "Sorry, I couldn't process your request. Please try again.",
+            sender: 'system',
+            timestamp: new Date(),
+            level: 'error',
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
+
+  // Auto-scroll to bottom when messages change or loading state changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
 
   if (!isOpen) {
     return (
@@ -255,29 +295,59 @@ export const ChatWindow: React.FC = () => {
 
           {/* Chat history - scrollable middle section */}
           <CardContent className='p-0 bg-white grow overflow-y-auto'>
-            {messages.length > 0 ? (
+            {messages && messages.length > 0 ? (
               <div className='flex flex-col p-3 space-y-4'>
                 {messages.map((message) => (
-                  <div key={message.id} className='flex flex-col'>
-                    <div className='flex items-center mb-1'>
+                  <div key={message.id} className={cx('flex flex-col')}>
+                    {/* <div className='flex items-center mb-1'>
                       <span className='text-xs font-medium text-gray-500'>
                         {message.sender === 'user' ? 'You' : 'AI Assistant'}
                       </span>
-                    </div>
+                    </div> */}
                     <div
                       className={cx(
                         'p-3 rounded-lg',
                         message.sender === 'user'
                           ? 'bg-blue-50 border border-blue-100 text-gray-800'
+                          : message.level === 'error'
+                          ? 'bg-red-50 border border-red-200 text-red-800'
                           : 'bg-white border border-gray-200 text-gray-800'
                       )}
                     >
-                      <p className='text-sm whitespace-pre-wrap'>
+                      <p
+                        className={cx(
+                          'text-sm whitespace-pre-wrap',
+                          message.level === 'error' &&
+                            'text-red-800 font-medium'
+                        )}
+                      >
                         {message.content}
                       </p>
                     </div>
                   </div>
                 ))}
+
+                {/* Loading indicator bubble */}
+                {isLoading && (
+                  <div className='flex flex-col'>
+                    <div className='bg-white border border-gray-200 text-gray-800 p-3 rounded-lg'>
+                      <div className='flex space-x-2'>
+                        <div className='w-2 h-2 rounded-full bg-gray-300 animate-pulse'></div>
+                        <div
+                          className='w-2 h-2 rounded-full bg-gray-300 animate-pulse'
+                          style={{ animationDelay: '0.2s' }}
+                        ></div>
+                        <div
+                          className='w-2 h-2 rounded-full bg-gray-300 animate-pulse'
+                          style={{ animationDelay: '0.4s' }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Invisible element to scroll to */}
+                <div ref={messagesEndRef} />
               </div>
             ) : null}
           </CardContent>
@@ -288,15 +358,18 @@ export const ChatWindow: React.FC = () => {
               <div className='flex items-center gap-2'>
                 <Input
                   type='text'
-                  placeholder='Ask AI anything...'
+                  placeholder={
+                    isLoading ? 'Waiting for response...' : 'Ask AI anything...'
+                  }
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   className='flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  disabled={isLoading}
                 />
                 <Button
                   type='submit'
                   className='p-2 bg-blue-600 hover:bg-blue-700 text-white rounded'
-                  disabled={!inputValue.trim()}
+                  disabled={!inputValue.trim() || isLoading}
                 >
                   <RiSendPlaneFill className='w-4 h-4' />
                 </Button>

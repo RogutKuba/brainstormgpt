@@ -1,7 +1,9 @@
 import { clientFetch } from '@/app/query/client';
+import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useMutation } from '@tanstack/react-query';
+import { useToasts } from 'tldraw';
 
 type WorkspaceEntity = {
   id: string;
@@ -9,6 +11,14 @@ type WorkspaceEntity = {
   ownerId: string;
   name: string;
   goalPrompt: string | null;
+};
+
+type Message = {
+  id: string;
+  content: string;
+  sender: 'user' | 'system';
+  timestamp: string;
+  level: 'error' | 'info' | 'warning';
 };
 
 export const useWorkspaces = () => {
@@ -57,6 +67,35 @@ export const useCreateWorkspace = () => {
 
   return {
     createWorkspace: mutation.mutateAsync,
+    ...mutation,
+  };
+};
+
+export const useSendMessage = () => {
+  const currentWorkspaceId = useCurrentWorkspaceId();
+
+  const mutation = useMutation({
+    mutationFn: async (params: { message: string }) => {
+      const response = await clientFetch(
+        `/workspace/${currentWorkspaceId}/chat`,
+        {
+          method: 'POST',
+          body: JSON.stringify(params),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      return response.json() as Promise<{
+        message: string;
+      }>;
+    },
+  });
+
+  return {
+    sendMessage: mutation.mutateAsync,
     ...mutation,
   };
 };

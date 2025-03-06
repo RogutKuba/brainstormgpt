@@ -6,15 +6,11 @@ import {
   createTLSchema,
   defaultShapeSchemas,
   TLBaseShape,
-  TLDocument,
-  TLParentId,
-  TLShapeId,
 } from '@tldraw/tlschema';
 import { AutoRouter, IRequest, error } from 'itty-router';
 import throttle from 'lodash.throttle';
 import { Environment } from '../types';
 import { DurableObject } from 'cloudflare:workers';
-import { IndexKey, RecordId } from 'tldraw';
 import { ShapeService } from '../service/Shape.service';
 
 type LinkShapeProps = {
@@ -142,7 +138,7 @@ export class TldrawDurableObject extends DurableObject<Environment> {
 
     // get some new shapes
     const shapeService = new ShapeService(snapshot);
-    const newShapes = await shapeService.addBubbles([
+    const newShapes = await shapeService.getShapePlacements([
       {
         text: prompt,
         parentId: null,
@@ -239,4 +235,19 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     const snapshot = JSON.stringify(room.getCurrentSnapshot());
     await this.r2.put(`rooms/${this.workspaceId}`, snapshot);
   }, 10_000);
+
+  // EXTERNAL METHODS
+  async getCurrentSnapshot(): Promise<RoomSnapshot> {
+    const room = await this.getRoom();
+    return room.getCurrentSnapshot() as RoomSnapshot;
+  }
+
+  async addShapes(shapes: TLShape[]) {
+    const room = await this.getRoom();
+    room.updateStore((store) => {
+      shapes.forEach((shape) => {
+        store.put(shape);
+      });
+    });
+  }
 }
