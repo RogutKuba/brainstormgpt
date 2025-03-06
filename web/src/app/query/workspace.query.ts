@@ -78,6 +78,7 @@ export const useSendMessage = () => {
     mutationFn: async (params: {
       message: string;
       chatHistory: { content: string; sender: 'user' | 'system' }[];
+      selectedItems: string[];
     }) => {
       const response = await clientFetch(
         `/workspace/${currentWorkspaceId}/chat`,

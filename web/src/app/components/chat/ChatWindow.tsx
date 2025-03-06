@@ -155,7 +155,8 @@ export const ChatWindow: React.FC = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (inputValue.trim() && !isLoading) {
+    // Check if input has more than 3 characters
+    if (inputValue.trim().length > 3 && !isLoading) {
       // Add user message
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -171,9 +172,6 @@ export const ChatWindow: React.FC = () => {
         setIsLoading(true);
         setMessages((prev) => [...prev, userMessage]);
 
-        // Get selected text content for context
-        const context = selectedItems.map((item) => item.text).join('\n');
-
         console.log('userMessage', userMessage);
 
         // Format chat history for the API
@@ -185,6 +183,7 @@ export const ChatWindow: React.FC = () => {
         const response = await sendMessage({
           message: userMessage.content,
           chatHistory: formattedChatHistory,
+          selectedItems: selectedItems.map((item) => item.id),
         });
 
         setMessages((prev) => [
@@ -361,7 +360,9 @@ export const ChatWindow: React.FC = () => {
               <div className='relative'>
                 <textarea
                   placeholder={
-                    isLoading ? 'Waiting for response...' : 'Ask AI anything...'
+                    isLoading
+                      ? 'Waiting for response...'
+                      : 'Generate some ideas...'
                   }
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -378,7 +379,11 @@ export const ChatWindow: React.FC = () => {
                 <Button
                   type='submit'
                   className='absolute right-2 bottom-2 p-1.5 bg-transparent hover:bg-gray-100 text-gray-600 rounded-md'
-                  disabled={!inputValue.trim() || isLoading}
+                  disabled={
+                    !inputValue.trim() ||
+                    inputValue.trim().length <= 3 ||
+                    isLoading
+                  }
                 >
                   <RiSendPlaneFill className='w-4 h-4' />
                 </Button>

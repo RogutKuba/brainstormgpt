@@ -1,6 +1,8 @@
 import { RoomSnapshot } from '@tldraw/sync-core';
 import {
   IndexKey,
+  TLArrowBinding,
+  TLArrowShape,
   TLDocument,
   TLGeoShape,
   TLPage,
@@ -14,10 +16,16 @@ export type CreateBubbleParams = {
   parentId: TLShapeId | null;
 };
 
+type TreeNode = {
+  id: string;
+  children: TreeNode[];
+};
+
 export class ShapeService {
   private document: TLDocument;
   private page: TLPage;
   private shapes: TLShape[];
+  private bindings: TLArrowBinding[];
 
   constructor(snapshot: RoomSnapshot) {
     // this.snapshot = snapshot;
@@ -32,12 +40,17 @@ export class ShapeService {
       (doc) => doc.state.typeName === 'page'
     )?.state as TLPage | undefined;
 
+    // find bindings
+    const _bindings = snapshot.documents
+      .filter((doc) => doc.state.typeName === 'binding')
+      .map((doc) => doc.state as TLArrowBinding);
+
     // find shapes
     const _shapes = snapshot.documents
-      .filter((doc) => !['page', 'document'].includes(doc.state.typeName))
+      .filter(
+        (doc) => !['page', 'document', 'binding'].includes(doc.state.typeName)
+      )
       .map((doc) => doc.state as TLShape);
-
-    console.log(_shapes);
 
     if (!_document || !_page || !_shapes) {
       throw new Error(
@@ -50,9 +63,162 @@ export class ShapeService {
     this.document = _document;
     this.page = _page;
     this.shapes = _shapes;
+    this.bindings = _bindings;
   }
 
-  async getShapePlacements(shapesToCreate: CreateBubbleParams[]) {
+  getSelectedTree(selectedItemIds: string[]) {
+    // need to construct tree of shapes from the ids and bindings between them
+    const tree: TreeNode[] = [];
+
+    console.log('shapes', this.shapes);
+    console.log('bindings', this.bindings);
+
+    // understand which shapes are arrows
+    const arrowShapes = new Set<string>();
+    for (const shape of this.shapes) {
+      if (shape.type === 'arrow') {
+        arrowShapes.add(shape.id);
+      }
+    }
+
+    console.log('arrowShapes', arrowShapes);
+
+    // build a map of arrow to shape
+    /*
+
+    {
+    meta: {},
+    id: 'binding:_2oFffiFZLXFm7xI09Jwm',
+    type: 'arrow',
+    fromId: 'shape:H54mIcaMJv8nrTkcxNpQW',
+    toId: 'shape:bb3a5ea8-0135-42e0-a960-6a32384785de',
+    props: {
+      isPrecise: false,
+      isExact: false,
+      normalizedAnchor: [Object],
+      terminal: 'start'
+    },
+    typeName: 'binding'
+  },
+  {
+    meta: {},
+    id: 'binding:yhbyD-fffzy7IisBxOzyC',
+    type: 'arrow',
+    fromId: 'shape:H54mIcaMJv8nrTkcxNpQW',
+    toId: 'shape:10FObKLmJQ5B5tYxQC3aU',
+    props: {
+      isPrecise: true,
+      isExact: false,
+      normalizedAnchor: [Object],
+      terminal: 'end'
+    },
+    typeName: 'binding'
+  }*/
+    const arrowStartMap = new Map<string, string>();
+    const arrowEndMap = new Map<string, string>();
+    for (const binding of this.bindings) {
+      const isStart = binding.props.terminal === 'start';
+
+      if (isStart) {
+        arrowStartMap.set(binding.fromId, binding.toId);
+      } else {
+        arrowEndMap.set(binding.fromId, binding.toId);
+      }
+    }
+
+    console.log('arrowStartMap', arrowStartMap);
+    console.log('arrowEndMap', arrowEndMap);
+
+    // build a map of direct parent relationships from the arrow to shape map
+    const childToParentsMap = new Map<string, string[]>();
+
+    for (const [arrowId, fromShapeId] of arrowStartMap.entries()) {
+      const toShapeId = arrowEndMap.get(arrowId);
+
+      if (toShapeId) {
+        if (!childToParentsMap.has(toShapeId)) {
+          childToParentsMap.set(toShapeId, []);
+        }
+        childToParentsMap.get(toShapeId)?.push(fromShapeId);
+      }
+    }
+
+    console.log('childToParentsMap', childToParentsMap);
+
+    // Create a map of shape id to shape for efficient lookup
+    const shapeMap = new Map<string, TLShape>();
+    for (const shape of this.shapes) {
+      shapeMap.set(shape.id, shape);
+    }
+
+    // Find root nodes (shapes that are selected but have no parents or their parents are not selected)
+    for (const selectedId of selectedItemIds) {
+      // Skip arrows
+      if (arrowShapes.has(selectedId)) continue;
+
+      // Check if this shape has a parent in the selection
+      let hasSelectedParent = false;
+      for (const [parentId, children] of childToParentsMap.entries()) {
+        if (
+          children.includes(selectedId) &&
+          selectedItemIds.includes(parentId)
+        ) {
+          hasSelectedParent = true;
+          break;
+        }
+      }
+
+      // If no selected parent, this is a root node
+      if (!hasSelectedParent) {
+        // Convert childToParentsMap to childToParentMap for buildTreeNode
+        const childToParentMap = new Map<string, string>();
+        for (const [parentId, children] of childToParentsMap.entries()) {
+          for (const childId of children) {
+            childToParentMap.set(childId, parentId);
+          }
+        }
+
+        // Build tree starting from this root
+        tree.push(this.buildTreeNode(selectedId, childToParentMap, shapeMap));
+      }
+    }
+
+    return tree;
+  }
+
+  private buildTreeNode(
+    shapeId: string,
+    childToParentMap: Map<string, string>,
+    shapeMap: Map<string, TLShape>
+  ): TreeNode {
+    // Create a map of parent to children for efficient lookup
+    const parentToChildrenMap = new Map<string, string[]>();
+
+    for (const [childId, parentId] of childToParentMap.entries()) {
+      if (!parentToChildrenMap.has(parentId)) {
+        parentToChildrenMap.set(parentId, []);
+      }
+      parentToChildrenMap.get(parentId)?.push(childId);
+    }
+
+    // Build the node
+    const node: TreeNode = {
+      id: shapeId,
+      children: [],
+    };
+
+    // Add children recursively
+    const childIds = parentToChildrenMap.get(shapeId) || [];
+    for (const childId of childIds) {
+      node.children.push(
+        this.buildTreeNode(childId, childToParentMap, shapeMap)
+      );
+    }
+
+    return node;
+  }
+
+  getShapePlacements(shapesToCreate: CreateBubbleParams[]) {
     // need to figure out empty space to put the new bubbles
     const positions: { x: number; y: number }[] = [];
     const canvasBounds = this.getCanvasBounds();

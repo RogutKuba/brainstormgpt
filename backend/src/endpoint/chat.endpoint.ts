@@ -22,6 +22,9 @@ const sendMessageRoute = createRoute({
             message: z.string().min(3).openapi({
               description: 'Message to send',
             }),
+            selectedItems: z.array(z.string()).openapi({
+              description: 'Selected items ids for context',
+            }),
             chatHistory: z
               .array(
                 z.object({
@@ -58,7 +61,18 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
     const { workspaceId } = ctx.req.valid('param');
-    const { message, chatHistory } = ctx.req.valid('json');
+    const { message, chatHistory, selectedItems } = ctx.req.valid('json');
+
+    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
+
+    const snapshot =
+      (await workspace.getCurrentSnapshot()) as unknown as RoomSnapshot;
+
+    const shapeService = new ShapeService(snapshot);
+
+    // need to construct tree of shapes from the ids and bindings between them
+    const tree = shapeService.getSelectedTree(selectedItems);
 
     // make fake delay of 2 seconds
     const { newShapes, explanation } =
@@ -68,14 +82,6 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
         shapes: [],
         ctx,
       });
-
-    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
-    const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
-
-    const snapshot =
-      (await workspace.getCurrentSnapshot()) as unknown as RoomSnapshot;
-
-    const shapeService = new ShapeService(snapshot);
 
     const shapePlacements = await shapeService.getShapePlacements(
       newShapes.map((shape) => ({
