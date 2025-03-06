@@ -155,8 +155,8 @@ export const ChatWindow: React.FC = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if input has more than 3 characters
-    if (inputValue.trim().length > 3 && !isLoading) {
+    // Check if input has more than 2 characters
+    if (inputValue.trim().length > 2 && !isLoading) {
       // Add user message
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -381,7 +381,7 @@ export const ChatWindow: React.FC = () => {
                   className='absolute right-2 bottom-2 p-1.5 bg-transparent hover:bg-gray-100 text-gray-600 rounded-md'
                   disabled={
                     !inputValue.trim() ||
-                    inputValue.trim().length <= 3 ||
+                    inputValue.trim().length < 3 ||
                     isLoading
                   }
                 >

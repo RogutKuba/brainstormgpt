@@ -3,6 +3,7 @@ import {
   IndexKey,
   TLArrowBinding,
   TLArrowShape,
+  TLBindingId,
   TLDocument,
   TLGeoShape,
   TLPage,
@@ -82,39 +83,6 @@ export class ShapeService {
       }
     }
 
-    console.log('arrowShapes', arrowShapes);
-
-    // build a map of arrow to shape
-    /*
-
-    {
-    meta: {},
-    id: 'binding:_2oFffiFZLXFm7xI09Jwm',
-    type: 'arrow',
-    fromId: 'shape:H54mIcaMJv8nrTkcxNpQW',
-    toId: 'shape:bb3a5ea8-0135-42e0-a960-6a32384785de',
-    props: {
-      isPrecise: false,
-      isExact: false,
-      normalizedAnchor: [Object],
-      terminal: 'start'
-    },
-    typeName: 'binding'
-  },
-  {
-    meta: {},
-    id: 'binding:yhbyD-fffzy7IisBxOzyC',
-    type: 'arrow',
-    fromId: 'shape:H54mIcaMJv8nrTkcxNpQW',
-    toId: 'shape:10FObKLmJQ5B5tYxQC3aU',
-    props: {
-      isPrecise: true,
-      isExact: false,
-      normalizedAnchor: [Object],
-      terminal: 'end'
-    },
-    typeName: 'binding'
-  }*/
     const arrowStartMap = new Map<string, string>();
     const arrowEndMap = new Map<string, string>();
     for (const binding of this.bindings) {
@@ -126,9 +94,6 @@ export class ShapeService {
         arrowEndMap.set(binding.fromId, binding.toId);
       }
     }
-
-    console.log('arrowStartMap', arrowStartMap);
-    console.log('arrowEndMap', arrowEndMap);
 
     // build a map of direct parent relationships from the arrow to shape map
     const childToParentsMap = new Map<string, string[]>();
@@ -149,8 +114,6 @@ export class ShapeService {
         parentToChildrenMap.get(fromShapeId)?.push(toShapeId);
       }
     }
-
-    console.log('childToParentsMap', childToParentsMap);
 
     // Create a map of shape id to shape for efficient lookup
     const shapeMap = new Map<string, TLShape>();
@@ -278,58 +241,146 @@ export class ShapeService {
     }
 
     // create new shape params
-    return shapesToCreate.map((shape, index) => {
-      const { x, y } = positions[index];
+    return shapesToCreate
+      .map((shape, index) => {
+        const { x, y } = positions[index];
 
-      // Calculate width and height based on text length
-      const MIN_HEIGHT = 200;
-      const MIN_WIDTH = 300;
-      const CHARS_PER_LINE = 50;
-      const HEIGHT_PER_LINE = 75;
+        // Calculate width and height based on text length
+        const MIN_HEIGHT = 200;
+        const MIN_WIDTH = 300;
+        const CHARS_PER_LINE = 50;
+        const HEIGHT_PER_LINE = 75;
 
-      // Scale width based on text length
-      const textLength = shape.text.length;
-      const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
-      const width = Math.ceil(MIN_WIDTH * widthScale);
+        // Scale width based on text length
+        const textLength = shape.text.length;
+        const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
+        const width = Math.ceil(MIN_WIDTH * widthScale);
 
-      // Calculate height based on text length and adjusted width
-      const charsPerWidthAdjustedLine = CHARS_PER_LINE * (width / MIN_WIDTH);
-      const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
-      const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
+        // Calculate height based on text length and adjusted width
+        const charsPerWidthAdjustedLine = CHARS_PER_LINE * (width / MIN_WIDTH);
+        const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
+        const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
-      const newShape: TLShape = {
-        x,
-        y,
-        rotation: 0,
-        isLocked: false,
-        opacity: 1,
-        meta: {},
-        id: this.generateShapeId(),
-        type: 'geo',
-        props: {
-          w: width,
-          h: height,
-          geo: 'rectangle',
-          color: 'black',
-          labelColor: 'black',
-          fill: 'none',
-          dash: 'draw',
-          size: 'm',
-          font: 'draw',
-          text: shape.text,
-          align: 'middle',
-          verticalAlign: 'middle',
-          growY: 0,
-          url: '',
-          scale: 1,
-        },
-        parentId: this.page.id,
-        index: 'a1' as IndexKey,
-        typeName: 'shape',
-      };
+        const newShapeId = this.generateShapeId();
+        const newShape: TLShape = {
+          id: newShapeId,
+          x,
+          y,
+          rotation: 0,
+          isLocked: false,
+          opacity: 1,
+          meta: {},
+          type: 'geo',
+          props: {
+            w: width,
+            h: height,
+            geo: 'rectangle',
+            color: 'black',
+            labelColor: 'black',
+            fill: 'none',
+            dash: 'draw',
+            size: 'm',
+            font: 'draw',
+            text: shape.text,
+            align: 'middle',
+            verticalAlign: 'middle',
+            growY: 0,
+            url: '',
+            scale: 1,
+          },
+          parentId: this.page.id,
+          index: 'a1' as IndexKey,
+          typeName: 'shape',
+        };
 
-      return newShape;
-    });
+        // Only create arrow if there's a parent
+        if (shape.parentId) {
+          const parentShape = this.shapes.find(
+            (s) => s.id === shape.parentId && s.type === 'geo'
+          ) as TLGeoShape | undefined;
+
+          if (parentShape) {
+            // Calculate center points of parent and child shapes
+            const parentCenterX =
+              parentShape.x + (parentShape.props.w ?? 0) / 2;
+            const parentCenterY =
+              parentShape.y + (parentShape.props.h ?? 0) / 2;
+            const childCenterX = x + width / 2;
+            const childCenterY = y + height / 2;
+
+            // Calculate midpoint for arrow placement
+            const arrowX = (parentCenterX + childCenterX) / 2;
+            const arrowY = (parentCenterY + childCenterY) / 2;
+
+            const arrowId = this.generateShapeId();
+
+            const arrow: TLArrowShape = {
+              id: arrowId,
+              type: 'arrow',
+              props: {
+                dash: 'draw',
+                size: 'm',
+                fill: 'none',
+                color: 'black',
+                labelColor: 'black',
+                bend: 0,
+                start: { x: parentCenterX - arrowX, y: parentCenterY - arrowY },
+                end: { x: childCenterX - arrowX, y: childCenterY - arrowY },
+                arrowheadStart: 'none',
+                arrowheadEnd: 'arrow',
+                text: '',
+                labelPosition: 0.5,
+                font: 'draw',
+                scale: 1,
+              },
+              parentId: this.page.id,
+              index: 'a1' as IndexKey,
+              typeName: 'shape',
+              x: arrowX,
+              y: arrowY,
+              rotation: 0,
+              isLocked: false,
+              opacity: 1,
+              meta: {},
+            };
+
+            // add the two bindings
+            const binding1: TLArrowBinding = {
+              id: this.generateBindingId(),
+              typeName: 'binding',
+              type: 'arrow',
+              fromId: arrow.id,
+              toId: parentShape.id,
+              props: {
+                isPrecise: false,
+                isExact: false,
+                normalizedAnchor: { x: 0.5, y: 0.5 },
+                terminal: 'start',
+              },
+              meta: {},
+            };
+
+            const binding2: TLArrowBinding = {
+              id: this.generateBindingId(),
+              type: 'arrow',
+              fromId: arrow.id,
+              toId: newShapeId,
+              props: {
+                isPrecise: false,
+                isExact: false,
+                normalizedAnchor: { x: 0.5, y: 0.5 },
+                terminal: 'end',
+              },
+              meta: {},
+              typeName: 'binding',
+            };
+            return [newShape, arrow, binding1, binding2];
+          }
+        }
+
+        return [newShape];
+      })
+      .flat();
   }
 
   // Add this new method to mark a position as occupied in the grid
@@ -504,12 +555,16 @@ export class ShapeService {
     const parentWidth = parentShape.props.w ?? 0;
     const parentHeight = parentShape.props.h ?? 0;
 
-    // Define search directions (right, bottom, left, top)
+    // Define search directions (right, bottom, left, top, and diagonals)
     const directions = [
-      { dx: 1, dy: 0 },
-      { dx: 0, dy: 1 },
-      { dx: -1, dy: 0 },
-      { dx: 0, dy: -1 },
+      { dx: 1, dy: 0 }, // right
+      { dx: 0, dy: 1 }, // bottom
+      { dx: -1, dy: 0 }, // left
+      { dx: 0, dy: -1 }, // top
+      { dx: 1, dy: 1 }, // bottom-righto
+      { dx: -1, dy: 1 }, // bottom-left
+      { dx: -1, dy: -1 }, // top-left
+      { dx: 1, dy: -1 }, // top-right
     ];
 
     // Start from parent center
@@ -522,13 +577,20 @@ export class ShapeService {
 
     // Use spiral search to find empty space
     let layer = 1;
-    const maxLayers = 5; // Limit search to 5 layers to keep bubbles close
+    const maxLayers = 10; // Increased max layers to find more positions
 
     while (layer < maxLayers) {
+      // Check each direction at current layer
       for (const dir of directions) {
+        // Check positions along this direction at current layer distance
         for (let i = 0; i < layer; i++) {
-          const row = centerRow + dir.dy * layer;
-          const col = centerCol + dir.dx * layer;
+          // Calculate position with offset
+          const offsetX = dir.dx * layer;
+          const offsetY = dir.dy * layer;
+
+          // Apply offset and add variation within the layer
+          const row = centerRow + offsetY + (dir.dy === 0 ? i : 0);
+          const col = centerCol + offsetX + (dir.dx === 0 ? i : 0);
 
           if (
             row >= 0 &&
@@ -632,5 +694,9 @@ export class ShapeService {
 
   private generateShapeId(): TLShapeId {
     return ('shape:' + crypto.randomUUID()) as TLShapeId;
+  }
+
+  private generateBindingId(): TLBindingId {
+    return ('binding:' + crypto.randomUUID()) as TLBindingId;
   }
 }

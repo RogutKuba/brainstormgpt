@@ -74,16 +74,12 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     // need to construct tree of shapes from the ids and bindings between them
     const tree = shapeService.getSelectedTree(selectedItems);
 
-    console.log('tree', JSON.stringify(tree, null, 2));
-
-    return ctx.json({ message: 'Hello, world!' }, 200);
-
     // make fake delay of 2 seconds
     const { newShapes, explanation } =
       await BrainstormService.generateBrainstorm({
         prompt: message,
         chatHistory,
-        shapes: [],
+        tree,
         ctx,
       });
 
@@ -95,7 +91,7 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     );
 
     // now actually add shapes to workspace
-    await workspace.addShapes(shapePlacements);
+    await workspace.addRecords(shapePlacements);
 
     console.log(shapePlacements);
 

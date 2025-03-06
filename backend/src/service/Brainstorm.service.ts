@@ -2,12 +2,42 @@ import { Context } from 'hono';
 import { AppContext } from '..';
 import { LLMService } from './LLM.service';
 import { TLGeoShape, TLShape, TLShapeId, TLTextShape } from '@tldraw/tlschema';
+import { TreeNode } from './Shape.service';
 
 type BrainStormResult = {
   type: 'add-text';
   text: string;
   parentId?: TLShapeId; // Optional parent shape ID to connect to
 };
+
+// Helper function to extract shapes with text from the tree structure
+function extractShapesWithText(tree: TreeNode[]): string {
+  /*
+  the result of the function should be a string that contains the shapes with text
+  the format of the string should be:
+  <shape id="shape-id-1">shape-text-1</shape>
+    <shape id="shape-id-2" parent="shape-id-1">shape-text-2</shape>
+    <shape id="shape-id-3" parent="shape-id-1">shape-text-3</shape>
+  ...
+  */
+
+  function processNode(node: TreeNode, parentId?: string): string {
+    const parentAttr = parentId ? ` parent="${parentId}"` : '';
+    const currentNode = `<shape id="${node.id}"${parentAttr}>${node.text}</shape>`;
+
+    if (node.children.length === 0) {
+      return currentNode;
+    }
+
+    const childrenText = node.children
+      .map((child) => processNode(child, node.id))
+      .join('\n');
+
+    return `${currentNode}\n${childrenText}`;
+  }
+
+  return tree.map((node) => processNode(node)).join('\n');
+}
 
 export const BrainstormService = {
   generateBrainstorm: async (params: {
@@ -17,39 +47,20 @@ export const BrainstormService = {
       sender: 'user' | 'system';
     }[];
     goal?: string;
-    shapes: TLShape[];
+    tree: TreeNode[];
     ctx: Context<AppContext>;
   }): Promise<{
     newShapes: BrainStormResult[];
     explanation: string;
   }> => {
-    const { prompt, shapes, ctx, goal, chatHistory } = params;
+    const { prompt, tree, ctx, goal, chatHistory } = params;
 
     console.log('params', {
       prompt,
       goal,
     });
 
-    // Extract text content with shape IDs
-    const shapesWithText = (() => {
-      const textShapes = shapes.filter(
-        (shape) => shape.type === 'text'
-      ) as TLTextShape[];
-
-      const geoShapesWithText = (
-        shapes.filter((shape) => shape.type === 'geo') as TLGeoShape[]
-      ).filter((shape) => shape.props.text?.length > 0);
-
-      return [...textShapes, ...geoShapesWithText].map((shape) => ({
-        id: shape.id,
-        text: shape.props.text?.trim() ?? '',
-      }));
-    })();
-
-    // Format shapes with text for the LLM prompt
-    const formattedShapes = shapesWithText
-      .map((shape) => `<shape id="${shape.id}">${shape.text}</shape>`)
-      .join('\n');
+    const formattedShapes = extractShapesWithText(tree);
 
     const newIdeasResult = await LLMService.generateMessage({
       prompt: `You are a whiteboard brainstorming assistant that helps users develop their ideas through iterative thinking by giving unique and concise ideas. You are given a user prompt and a list of current whiteboard bubbles with their shape IDs.

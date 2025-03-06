@@ -242,11 +242,11 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     return room.getCurrentSnapshot() as RoomSnapshot;
   }
 
-  async addShapes(shapes: TLShape[]) {
+  async addRecords(records: TLRecord[]) {
     const room = await this.getRoom();
     room.updateStore((store) => {
-      shapes.forEach((shape) => {
-        store.put(shape);
+      records.forEach((record) => {
+        store.put(record);
       });
     });
   }

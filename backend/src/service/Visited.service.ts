@@ -31,6 +31,7 @@ export class VisitedService {
       .insert(visitedWorkspaceTable)
       .values({
         browserId,
+        createdAt: new Date().toISOString(),
         workspaceId,
         userId: user?.id,
       })
