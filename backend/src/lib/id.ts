@@ -1,6 +1,7 @@
 const Entities = {
   user: 'u_',
   session: 's_',
+  crawledPage: 'cp_',
 };
 
 type Entities = typeof Entities;

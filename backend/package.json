@@ -18,6 +18,7 @@
 	"dependencies": {
 		"@cloudflare/types": "^6.29.0",
 		"@hono/zod-openapi": "^0.19.2",
+		"@mendable/firecrawl-js": "^1.19.0",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"@tldraw/sync": "3.8.1",

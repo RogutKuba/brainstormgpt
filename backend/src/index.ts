@@ -22,6 +22,7 @@ export type AppContext = {
 
     // API KEYS
     OPENAI_API_KEY: string;
+    FIRECRAWL_API_KEY: string;
 
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;

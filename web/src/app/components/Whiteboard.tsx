@@ -307,6 +307,9 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
       // loading states & enable multiplayer UX like cursors & a presence menu
       store={store}
       shapeUtils={customShapes}
+      options={{
+        createTextOnCanvasDoubleClick: false,
+      }}
     />
   );
 };
