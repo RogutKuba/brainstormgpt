@@ -93,8 +93,6 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     // now actually add shapes to workspace
     await workspace.addRecords(shapePlacements);
 
-    console.log(shapePlacements);
-
     return ctx.json({ message: explanation }, 200);
   }
 );

@@ -15,28 +15,32 @@ function extractShapesWithText(tree: TreeNode[]): string {
   /*
   the result of the function should be a string that contains the shapes with text
   the format of the string should be:
-  <shape id="shape-id-1">shape-text-1</shape>
-    <shape id="shape-id-2" parent="shape-id-1">shape-text-2</shape>
-    <shape id="shape-id-3" parent="shape-id-1">shape-text-3</shape>
+  <bubble id="shape-id-1" level="1">shape-text-1</bubble>
+    <bubble id="shape-id-2" level="2" parent="shape-id-1">shape-text-2</bubble>
+    <bubble id="shape-id-3" level="2" parent="shape-id-1">shape-text-3</bubble>
   ...
   */
 
-  function processNode(node: TreeNode, parentId?: string): string {
-    const parentAttr = parentId ? ` parent="${parentId}"` : '';
-    const currentNode = `<shape id="${node.id}"${parentAttr}>${node.text}</shape>`;
+  function processNode(
+    node: TreeNode,
+    level: number,
+    parentId?: string
+  ): string {
+    // const parentAttr = parentId ? ` parent="${parentId}"` : '';
+    const currentNode = `<bubble id="${node.id}" level="${level}">${node.text}</bubble>`;
 
     if (node.children.length === 0) {
       return currentNode;
     }
 
     const childrenText = node.children
-      .map((child) => processNode(child, node.id))
+      .map((child) => processNode(child, level + 1, node.id))
       .join('\n');
 
     return `${currentNode}\n${childrenText}`;
   }
 
-  return tree.map((node) => processNode(node)).join('\n');
+  return tree.map((node) => processNode(node, 1)).join('\n');
 }
 
 export const BrainstormService = {
@@ -55,15 +59,44 @@ export const BrainstormService = {
   }> => {
     const { prompt, tree, ctx, goal, chatHistory } = params;
 
-    console.log('params', {
-      prompt,
-      goal,
-    });
-
     const formattedShapes = extractShapesWithText(tree);
 
+    // Find the deepest level in the tree
+    const findDeepestLevel = (nodes: TreeNode[], currentLevel = 1): number => {
+      if (nodes.length === 0) return currentLevel - 1;
+
+      const childLevels = nodes.map((node) =>
+        findDeepestLevel(node.children, currentLevel + 1)
+      );
+
+      return Math.max(currentLevel, ...childLevels);
+    };
+
+    const deepestLevel = findDeepestLevel(tree);
+
+    // Find the IDs of shapes at the deepest level
+    const findDeepestShapeIds = (
+      nodes: TreeNode[],
+      currentLevel = 1,
+      targetLevel: number
+    ): string[] => {
+      if (currentLevel === targetLevel) {
+        return nodes.map((node) => node.id);
+      }
+
+      return nodes.flatMap((node) =>
+        findDeepestShapeIds(node.children, currentLevel + 1, targetLevel)
+      );
+    };
+
+    const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
+
+    console.log('formattedShapes', formattedShapes);
+    console.log('deepest level:', deepestLevel);
+    console.log('deepest shape IDs:', deepestShapeIds);
+
     const newIdeasResult = await LLMService.generateMessage({
-      prompt: `You are a whiteboard brainstorming assistant that helps users develop their ideas through iterative thinking by giving unique and concise ideas. You are given a user prompt and a list of current whiteboard bubbles with their shape IDs.
+      prompt: `You are a whiteboard brainstorming assistant that helps users develop their ideas through iterative thinking by giving unique and concise ideas. You are given a user prompt and a list of current whiteboard bubbles with their shape IDs and levels.
       
 Based on these whiteboard bubbles:
 
@@ -83,14 +116,20 @@ ${goal}
     : ''
 }
 
-First, provide a brief explanation of what you're doing based on the user's prompt and existing content. Then, generate new whiteboard bubbles that represent the next iteration of thinking. Each new bubble should be concise and formatted as a brief idea unless the user specifically requests detailed explanations.
+First, provide a brief explanation of what you're doing based on the user's prompt and existing content. Then, ONLY generate new whiteboard bubbles that extend the DEEPEST level of thinking in the existing bubbles.
+
+DO NOT create new top-level ideas or mid-level branches. ONLY add depth to the most detailed existing branches (level ${deepestLevel}).
 
 Format your response as:
 <explanation>Brief overview of what you're doing and how these ideas connect to the user's prompt</explanation>
 <bubble parent="shape-id-1">Key idea 1</bubble>
 <bubble parent="shape-id-2">Key idea 2</bubble>
 
-Only use parent attributes for bubbles that directly relate to an existing shape. Focus on advancing the overall brainstorming process with concise, actionable ideas. Keep each bubble brief.`,
+Only use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
+        ', '
+      )}
+
+Keep each bubble brief and concise (5-15 words). Your goal is to extend the existing deepest thoughts with specific, actionable, or insightful additions.`,
       chatHistory,
       ctx,
     });
@@ -98,6 +137,8 @@ Only use parent attributes for bubbles that directly relate to an existing shape
     if (!newIdeasResult) {
       throw new Error('No response from LLM');
     }
+
+    console.log('newIdeasResult', newIdeasResult);
 
     // Parse the LLM response to extract bubbles and their parent relationships
     const results: BrainStormResult[] = [];

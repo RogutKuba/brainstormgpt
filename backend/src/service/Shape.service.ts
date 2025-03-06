@@ -72,8 +72,8 @@ export class ShapeService {
     // need to construct tree of shapes from the ids and bindings between them
     const tree: TreeNode[] = [];
 
-    console.log('shapes', this.shapes);
-    console.log('bindings', this.bindings);
+    // Create a Set for faster lookups of selected items
+    const selectedItemsSet = new Set(selectedItemIds);
 
     // understand which shapes are arrows
     const arrowShapes = new Set<string>();
@@ -121,44 +121,86 @@ export class ShapeService {
       shapeMap.set(shape.id, shape);
     }
 
-    // Find root nodes (shapes that are selected but have no parents or their parents are not selected)
-    for (const selectedId of selectedItemIds) {
+    // Find all ancestors of selected nodes and add them to the set
+    const expandedSelectionSet = new Set(selectedItemsSet);
+    this.addAncestorsToSelection(
+      selectedItemIds,
+      childToParentsMap,
+      expandedSelectionSet,
+      arrowShapes
+    );
+
+    // Find root nodes (shapes that have no parents or their parents are not in the expanded selection)
+    const rootNodes = new Set<string>();
+
+    for (const selectedId of expandedSelectionSet) {
       // Skip arrows
       if (arrowShapes.has(selectedId)) continue;
 
-      // this shape is a root node if have no parents
-      const hasSelectedParent = childToParentsMap.has(selectedId);
+      const parents = childToParentsMap.get(selectedId) || [];
+      const hasParentInSelection = parents.some((parentId) =>
+        expandedSelectionSet.has(parentId)
+      );
 
-      // If no selected parent, this is a root node
-      if (!hasSelectedParent) {
-        // Convert childToParentsMap to childToParentMap for buildTreeNode
-        const childToParentMap = new Map<string, string>();
-        for (const [parentId, children] of childToParentsMap.entries()) {
-          for (const childId of children) {
-            childToParentMap.set(childId, parentId);
-          }
-        }
-
-        // Build tree starting from this root
-        tree.push(
-          this.buildTreeNode(
-            selectedId,
-            childToParentMap,
-            parentToChildrenMap,
-            shapeMap
-          )
-        );
+      if (!hasParentInSelection) {
+        rootNodes.add(selectedId);
       }
     }
 
+    // Convert childToParentsMap to childToParentMap for buildTreeNode
+    const childToParentMap = new Map<string, string>();
+    for (const [childId, parents] of childToParentsMap.entries()) {
+      if (parents.length > 0) {
+        // For simplicity, use the first parent if there are multiple
+        childToParentMap.set(childId, parents[0]);
+      }
+    }
+
+    // Build tree starting from each root
+    for (const rootId of rootNodes) {
+      tree.push(
+        this.buildTreeNode(
+          rootId,
+          childToParentMap,
+          parentToChildrenMap,
+          shapeMap,
+          expandedSelectionSet
+        )
+      );
+    }
+
     return tree;
+  }
+
+  // Helper method to add all ancestors of selected nodes to the selection set
+  private addAncestorsToSelection(
+    nodeIds: string[],
+    childToParentsMap: Map<string, string[]>,
+    selectionSet: Set<string>,
+    arrowShapes: Set<string>
+  ): void {
+    const queue = [...nodeIds];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      if (!currentId || arrowShapes.has(currentId)) continue;
+
+      const parents = childToParentsMap.get(currentId) || [];
+      for (const parentId of parents) {
+        if (!selectionSet.has(parentId) && !arrowShapes.has(parentId)) {
+          selectionSet.add(parentId);
+          queue.push(parentId);
+        }
+      }
+    }
   }
 
   private buildTreeNode(
     shapeId: string,
     childToParentMap: Map<string, string>,
     parentToChildrenMap: Map<string, string[]>,
-    shapeMap: Map<string, TLShape>
+    shapeMap: Map<string, TLShape>,
+    expandedSelectionSet: Set<string>
   ): TreeNode {
     // Get the shape from the map
     const shape = shapeMap.get(shapeId);
@@ -176,17 +218,21 @@ export class ShapeService {
       children: [],
     };
 
-    // Add children recursively
+    // Add children recursively, but only if they are in the expanded selection
     const childIds = parentToChildrenMap.get(shapeId) || [];
     for (const childId of childIds) {
-      node.children.push(
-        this.buildTreeNode(
-          childId,
-          childToParentMap,
-          parentToChildrenMap,
-          shapeMap
-        )
-      );
+      // Only include child if it's in the expanded selection
+      if (expandedSelectionSet.has(childId)) {
+        node.children.push(
+          this.buildTreeNode(
+            childId,
+            childToParentMap,
+            parentToChildrenMap,
+            shapeMap,
+            expandedSelectionSet
+          )
+        );
+      }
     }
 
     return node;
