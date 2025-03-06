@@ -1,7 +1,7 @@
 import { Context } from 'hono';
 import { AppContext } from '..';
 import { LLMService } from './LLM.service';
-import { TLGeoShape, TLShape, TLShapeId, TLTextShape } from '@tldraw/tlschema';
+import { TLShapeId } from '@tldraw/tlschema';
 import { TreeNode } from './Shape.service';
 
 type BrainStormResult = {
@@ -56,6 +56,7 @@ export const BrainstormService = {
   }): Promise<{
     newShapes: BrainStormResult[];
     explanation: string;
+    deepestLevel: number;
   }> => {
     const { prompt, tree, ctx, goal, chatHistory } = params;
 
@@ -174,6 +175,7 @@ Keep each bubble brief and concise (5-15 words). Your goal is primarily to exten
 
     return {
       newShapes: results,
+      deepestLevel,
       explanation:
         explanationMatch?.[1].trim() ?? 'I generated some new ideas:',
     };

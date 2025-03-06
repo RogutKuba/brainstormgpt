@@ -7,7 +7,6 @@ import {
   TLDocument,
   TLGeoShape,
   TLPage,
-  TLRecord,
   TLShape,
   TLShapeId,
 } from 'tldraw';
