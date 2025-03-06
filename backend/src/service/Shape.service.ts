@@ -16,8 +16,9 @@ export type CreateBubbleParams = {
   parentId: TLShapeId | null;
 };
 
-type TreeNode = {
+export type TreeNode = {
   id: string;
+  text: string;
   children: TreeNode[];
 };
 
@@ -131,6 +132,7 @@ export class ShapeService {
 
     // build a map of direct parent relationships from the arrow to shape map
     const childToParentsMap = new Map<string, string[]>();
+    const parentToChildrenMap = new Map<string, string[]>();
 
     for (const [arrowId, fromShapeId] of arrowStartMap.entries()) {
       const toShapeId = arrowEndMap.get(arrowId);
@@ -140,6 +142,11 @@ export class ShapeService {
           childToParentsMap.set(toShapeId, []);
         }
         childToParentsMap.get(toShapeId)?.push(fromShapeId);
+
+        if (!parentToChildrenMap.has(fromShapeId)) {
+          parentToChildrenMap.set(fromShapeId, []);
+        }
+        parentToChildrenMap.get(fromShapeId)?.push(toShapeId);
       }
     }
 
@@ -156,17 +163,8 @@ export class ShapeService {
       // Skip arrows
       if (arrowShapes.has(selectedId)) continue;
 
-      // Check if this shape has a parent in the selection
-      let hasSelectedParent = false;
-      for (const [parentId, children] of childToParentsMap.entries()) {
-        if (
-          children.includes(selectedId) &&
-          selectedItemIds.includes(parentId)
-        ) {
-          hasSelectedParent = true;
-          break;
-        }
-      }
+      // this shape is a root node if have no parents
+      const hasSelectedParent = childToParentsMap.has(selectedId);
 
       // If no selected parent, this is a root node
       if (!hasSelectedParent) {
@@ -179,7 +177,14 @@ export class ShapeService {
         }
 
         // Build tree starting from this root
-        tree.push(this.buildTreeNode(selectedId, childToParentMap, shapeMap));
+        tree.push(
+          this.buildTreeNode(
+            selectedId,
+            childToParentMap,
+            parentToChildrenMap,
+            shapeMap
+          )
+        );
       }
     }
 
@@ -189,21 +194,22 @@ export class ShapeService {
   private buildTreeNode(
     shapeId: string,
     childToParentMap: Map<string, string>,
+    parentToChildrenMap: Map<string, string[]>,
     shapeMap: Map<string, TLShape>
   ): TreeNode {
-    // Create a map of parent to children for efficient lookup
-    const parentToChildrenMap = new Map<string, string[]>();
+    // Get the shape from the map
+    const shape = shapeMap.get(shapeId);
 
-    for (const [childId, parentId] of childToParentMap.entries()) {
-      if (!parentToChildrenMap.has(parentId)) {
-        parentToChildrenMap.set(parentId, []);
-      }
-      parentToChildrenMap.get(parentId)?.push(childId);
+    // Extract text from the shape
+    let text = '';
+    if (shape && 'props' in shape && shape.props && 'text' in shape.props) {
+      text = shape.props.text as string;
     }
 
     // Build the node
     const node: TreeNode = {
       id: shapeId,
+      text,
       children: [],
     };
 
@@ -211,7 +217,12 @@ export class ShapeService {
     const childIds = parentToChildrenMap.get(shapeId) || [];
     for (const childId of childIds) {
       node.children.push(
-        this.buildTreeNode(childId, childToParentMap, shapeMap)
+        this.buildTreeNode(
+          childId,
+          childToParentMap,
+          parentToChildrenMap,
+          shapeMap
+        )
       );
     }
 

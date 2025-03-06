@@ -74,6 +74,10 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     // need to construct tree of shapes from the ids and bindings between them
     const tree = shapeService.getSelectedTree(selectedItems);
 
+    console.log('tree', JSON.stringify(tree, null, 2));
+
+    return ctx.json({ message: 'Hello, world!' }, 200);
+
     // make fake delay of 2 seconds
     const { newShapes, explanation } =
       await BrainstormService.generateBrainstorm({
@@ -83,7 +87,7 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
         ctx,
       });
 
-    const shapePlacements = await shapeService.getShapePlacements(
+    const shapePlacements = shapeService.getShapePlacements(
       newShapes.map((shape) => ({
         text: shape.text,
         parentId: shape.parentId ?? null,
