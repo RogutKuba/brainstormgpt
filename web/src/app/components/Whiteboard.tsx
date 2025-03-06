@@ -90,8 +90,8 @@ const customUiOverrides: TLUiOverrides = {
 };
 
 function CustomToolbar() {
-  const tools = useTools();
-  const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
+  // const tools = useTools();
+  // const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
   // const isLinkSelected = useIsToolSelected(tools['link']);
 
   return (
@@ -102,10 +102,10 @@ function CustomToolbar() {
       <ArrowToolbarItem />
       <RectangleToolbarItem />
       <EllipseToolbarItem />
-      <TldrawUiMenuItem
+      {/* <TldrawUiMenuItem
         {...tools['brainstorm']}
         isSelected={isAiBrainstormSelected}
-      />
+      /> */}
       {/* <DefaultToolbarContent /> */}
       {/* <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} /> */}
     </DefaultToolbar>
@@ -158,7 +158,7 @@ const customAssetUrls: TLUiAssetUrlOverrides = {
   },
 };
 
-const customTools = [BrainstormTool, LinkTool];
+// const customTools = [];
 const customShapes = [LinkShapeUtil];
 
 function AiBrainstormBox() {
@@ -299,7 +299,7 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
 
   return (
     <Tldraw
-      tools={customTools}
+      // tools={customTools}
       overrides={customUiOverrides}
       assetUrls={customAssetUrls}
       components={customComponents}

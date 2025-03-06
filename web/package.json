@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "preview": "NODE_ENV=development opennextjs-cloudflare && wrangler dev",
-    "cf-deploy": "NODE_ENV=production opennextjs-cloudflare && wrangler deploy",
+    "cf-deploy": "NODE_ENV=production opennextjs-cloudflare && NODE_ENV=production wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

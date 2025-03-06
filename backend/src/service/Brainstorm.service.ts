@@ -91,9 +91,9 @@ export const BrainstormService = {
 
     const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
 
-    console.log('formattedShapes', formattedShapes);
-    console.log('deepest level:', deepestLevel);
-    console.log('deepest shape IDs:', deepestShapeIds);
+    // console.log('formattedShapes', formattedShapes);
+    // console.log('deepest level:', deepestLevel);
+    // console.log('deepest shape IDs:', deepestShapeIds);
 
     const newIdeasResult = await LLMService.generateMessage({
       prompt: `You are a whiteboard brainstorming assistant that helps users develop their ideas through iterative thinking by giving unique and concise ideas. You are given a user prompt and a list of current whiteboard bubbles with their shape IDs and levels.
@@ -116,20 +116,23 @@ ${goal}
     : ''
 }
 
-First, provide a brief explanation of what you're doing based on the user's prompt and existing content. Then, ONLY generate new whiteboard bubbles that extend the DEEPEST level of thinking in the existing bubbles.
+First, provide a brief explanation of how your new ideas connect to and extend the existing content. Focus on the relationships and connections between ideas, not on what you're doing.
 
-DO NOT create new top-level ideas or mid-level branches. ONLY add depth to the most detailed existing branches (level ${deepestLevel}).
+PRIORITIZE extending the DEEPEST level of thinking in the existing bubbles (level ${deepestLevel}). This should be your primary focus.
+
+However, if you believe a new top-level idea is truly valuable or if no existing content is provided, you may also suggest new top-level or mid-level ideas.
 
 Format your response as:
-<explanation>Brief overview of what you're doing and how these ideas connect to the user's prompt</explanation>
+<explanation>Brief overview of how these new ideas relate to and extend the existing content</explanation>
 <bubble parent="shape-id-1">Key idea 1</bubble>
 <bubble parent="shape-id-2">Key idea 2</bubble>
+<bubble>New top-level idea</bubble> <!-- Only if truly valuable -->
 
-Only use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
+For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
         ', '
       )}
 
-Keep each bubble brief and concise (5-15 words). Your goal is to extend the existing deepest thoughts with specific, actionable, or insightful additions.`,
+Keep each bubble brief and concise (5-15 words). Your goal is primarily to extend the existing deepest thoughts with specific, actionable, or insightful additions.`,
       chatHistory,
       ctx,
     });
@@ -137,8 +140,6 @@ Keep each bubble brief and concise (5-15 words). Your goal is to extend the exis
     if (!newIdeasResult) {
       throw new Error('No response from LLM');
     }
-
-    console.log('newIdeasResult', newIdeasResult);
 
     // Parse the LLM response to extract bubbles and their parent relationships
     const results: BrainStormResult[] = [];

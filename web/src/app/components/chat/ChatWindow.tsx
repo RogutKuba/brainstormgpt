@@ -33,11 +33,10 @@ type Message = {
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isOpen, setIsOpen] = useState(true);
   const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState({
-    x: window.innerWidth - 480,
-    y: 400,
+    x: window.innerWidth - 400,
+    y: 20,
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -96,10 +95,6 @@ export const ChatWindow: React.FC = () => {
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
-  };
-
-  const handleToggleOpen = () => {
-    setIsOpen(!isOpen);
   };
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -172,7 +167,7 @@ export const ChatWindow: React.FC = () => {
         setIsLoading(true);
         setMessages((prev) => [...prev, userMessage]);
 
-        console.log('userMessage', userMessage);
+        // console.log('userMessage', userMessage);
 
         // Format chat history for the API
         const formattedChatHistory = messages.map((msg) => ({
@@ -214,17 +209,6 @@ export const ChatWindow: React.FC = () => {
     }
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        className='fixed bottom-4 right-4 p-3 bg-blue-600 hover:bg-blue-700 rounded-full shadow-lg'
-        onClick={handleToggleOpen}
-      >
-        <RiChat1Line className='w-5 h-5 text-white' />
-      </Button>
-    );
-  }
-
   return (
     <Card
       ref={cardRef}
@@ -257,16 +241,6 @@ export const ChatWindow: React.FC = () => {
               <RiArrowDownSLine className='w-5 h-5' />
             )}
           </Button>
-          <Button
-            variant='icon'
-            className='p-0 text-gray-300 hover:text-white hover:bg-gray-700 rounded'
-            onClick={(e) => {
-              e.stopPropagation();
-              handleToggleOpen();
-            }}
-          >
-            <RiCloseLine className='w-5 h-5' />
-          </Button>
         </div>
       </CardHeader>
 
@@ -278,19 +252,25 @@ export const ChatWindow: React.FC = () => {
               <div className='flex flex-row items-center flex-wrap gap-2 overflow-y-auto no-scrollbar'>
                 <p className='text-xs font-medium text-gray-600'>Context</p>
 
-                {selectedItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className='flex flex-row items-center gap-0.5 text-xs bg-white border border-gray-200 rounded-md p-1.5 shadow-sm'
-                  >
-                    <div className='bg-gray-100 rounded-md p-1'>
-                      <RiText className='w-3 h-3' />
+                {selectedItems.length > 0 ? (
+                  selectedItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className='flex flex-row items-center gap-0.5 text-xs bg-white border border-gray-200 rounded-md p-1.5 shadow-sm'
+                    >
+                      <div className='bg-gray-100 rounded-md p-1'>
+                        <RiText className='w-3 h-3' />
+                      </div>
+                      <p className='text-gray-700 text-sm'>
+                        {item.text || '(no text)'}
+                      </p>
                     </div>
-                    <p className='text-gray-700 text-sm'>
-                      {item.text || '(no text)'}
-                    </p>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className='text-xs text-gray-500 italic'>
+                    Select elements to include them as context
+                  </p>
+                )}
               </div>
             </div>
           </div>
