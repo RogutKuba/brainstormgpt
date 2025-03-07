@@ -40,6 +40,10 @@ import {
   DefaultQuickActionsContent,
   TldrawUiMenuActionItem,
   useToasts,
+  TLBookmarkAsset,
+  getHashForString,
+  AssetRecordType,
+  TLAsset,
 } from 'tldraw';
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/app/components/brainstorm-tool/BrainstormTool';
@@ -50,6 +54,7 @@ import { LinkTool } from '@/app/components/shape/link/LinkTool';
 import { memo, useMemo, useRef } from 'react';
 import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
 import { ChatWindowPlugin } from '@/app/components/chat/ChatWindow';
+import { handleCustomUrlPaste } from '@/app/components/handleUrlPaste';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -90,9 +95,9 @@ const customUiOverrides: TLUiOverrides = {
 };
 
 function CustomToolbar() {
-  // const tools = useTools();
+  const tools = useTools();
   // const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
-  // const isLinkSelected = useIsToolSelected(tools['link']);
+  const isLinkSelected = useIsToolSelected(tools['link']);
 
   return (
     <DefaultToolbar>
@@ -107,7 +112,7 @@ function CustomToolbar() {
         isSelected={isAiBrainstormSelected}
       /> */}
       {/* <DefaultToolbarContent /> */}
-      {/* <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} /> */}
+      <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
     </DefaultToolbar>
   );
 }
@@ -158,7 +163,7 @@ const customAssetUrls: TLUiAssetUrlOverrides = {
   },
 };
 
-// const customTools = [];
+const customTools = [LinkTool];
 const customShapes = [LinkShapeUtil];
 
 function AiBrainstormBox() {
@@ -299,7 +304,7 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
 
   return (
     <Tldraw
-      // tools={customTools}
+      tools={customTools}
       overrides={customUiOverrides}
       assetUrls={customAssetUrls}
       components={customComponents}
@@ -310,6 +315,47 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
       options={{
         createTextOnCanvasDoubleClick: false,
       }}
+      onMount={(editor) => {
+        // when the editor is ready, we need to register our bookmark unfurling service
+        editor.registerExternalContentHandler('url', (content) =>
+          handleCustomUrlPaste(editor, content)
+        );
+      }}
     />
   );
 };
+
+async function getBookmarkPreview({ url }: { url: string }): Promise<TLAsset> {
+  // we start with an empty asset record
+  const asset: TLBookmarkAsset = {
+    id: AssetRecordType.createId(getHashForString(url)),
+    typeName: 'asset',
+    type: 'bookmark',
+    meta: {},
+    props: {
+      src: url,
+      description: '',
+      image: '',
+      favicon: '',
+      title: '',
+    },
+  };
+
+  try {
+    // try to fetch the preview data from the server
+    const response = await fetch(
+      `${process.env.TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`
+    );
+    const data = await response.json();
+
+    // fill in our asset with whatever info we found
+    asset.props.description = data?.description ?? '';
+    asset.props.image = data?.image ?? '';
+    asset.props.favicon = data?.favicon ?? '';
+    asset.props.title = data?.title ?? '';
+  } catch (e) {
+    console.error(e);
+  }
+
+  return asset;
+}

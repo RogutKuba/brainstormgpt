@@ -7,6 +7,7 @@ import { CrawledPageEntity, crawledPageTable } from '../db/crawledPage.db';
 import { and, eq } from 'drizzle-orm';
 import { generateId } from '../lib/id';
 
+// TODO: replace with cloudflare browser rendering and make own scraper for less third-party dependencies
 export class CrawlerService {
   private firecrawl: FirecrawlApp;
   private db: PostgresJsDatabase;
@@ -47,11 +48,12 @@ export class CrawlerService {
         workspaceId: this.workspaceId,
         createdAt: new Date().toISOString(),
         status: 'success',
-        markdown: existingPage.markdown,
+        previewImageUrl: existingPage.previewImageUrl,
         html: existingPage.html,
         title: existingPage.title,
         description: existingPage.description,
         url,
+        markdown: existingPage.markdown,
         error: null,
       };
       await this.db.insert(crawledPageTable).values(crawledPage);
@@ -76,6 +78,7 @@ export class CrawlerService {
         html: '',
         status: 'error',
         createdAt: new Date().toISOString(),
+        previewImageUrl: null,
       };
 
       // insert error into the database
@@ -95,6 +98,7 @@ export class CrawlerService {
       description: scrapeResult.description ?? '',
       url,
       error: null,
+      previewImageUrl: null,
     };
     await this.db.insert(crawledPageTable).values(crawledPage);
 

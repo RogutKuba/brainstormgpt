@@ -12,6 +12,7 @@ export const crawledPageTable = pgTable(
     markdown: text('markdown').notNull(),
     html: text('html').notNull(),
     status: text('status').notNull(),
+    previewImageUrl: text('preview_image_url'),
     error: jsonb('error'),
   },
   (t) => [index('url_index').on(t.url)]

@@ -61,6 +61,8 @@ export class ShapeService {
       );
     }
 
+    console.log('_shapes', _shapes);
+
     this.document = _document;
     this.page = _page;
     this.shapes = _shapes;

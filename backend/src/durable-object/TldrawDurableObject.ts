@@ -6,6 +6,7 @@ import {
   createTLSchema,
   defaultShapeSchemas,
   TLBaseShape,
+  createShapeValidator,
 } from '@tldraw/tlschema';
 import { AutoRouter, IRequest, error } from 'itty-router';
 import throttle from 'lodash.throttle';
@@ -26,9 +27,7 @@ type LinkShape = TLBaseShape<'link', LinkShapeProps>;
 const schema = createTLSchema({
   shapes: {
     ...defaultShapeSchemas,
-    // link: {
-    //   props: LinkShape.
-    // },
+    link: {},
   },
 });
 
