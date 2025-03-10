@@ -1,6 +1,6 @@
 'use client';
 
-import { Whiteboard } from '@/app/components/Whiteboard';
+import { Whiteboard } from '@/components/Whiteboard';
 import { useParams } from 'next/navigation';
 import 'tldraw/tldraw.css';
 // import { ChatWindow } from '@/app/components/chat/ChatWindow';

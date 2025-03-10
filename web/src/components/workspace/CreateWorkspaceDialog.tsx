@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { useCreateWorkspace } from '@/app/query/workspace.query';
+import { useCreateWorkspace } from '@/query/workspace.query';
 import { useForm } from 'react-hook-form';
 import {
   Form,

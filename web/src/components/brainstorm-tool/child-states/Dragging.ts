@@ -1,5 +1,5 @@
-import { BrainstormToolCalls } from '@/app/components/brainstorm-tool/toolCalls';
-import { GOAL_STORAGE_KEY } from '@/app/components/SystemGoalDialog';
+import { BrainstormToolCalls } from '@/components/brainstorm-tool/toolCalls';
+import { GOAL_STORAGE_KEY } from '@/components/SystemGoalDialog';
 import { API_URL } from '@/lib/constants';
 import { useParams } from 'next/navigation';
 import { Box, StateNode, atom, copyAs, exportAs } from 'tldraw';

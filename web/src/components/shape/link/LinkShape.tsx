@@ -1,132 +1,345 @@
-component(shape: LinkShape) {
-  const {
-    url,
-    text,
-    isLoading,
-    error,
-    previewImageUrl,
-    description,
-    tempUrl,
-  } = shape.props;
+import {
+  BaseBoxShapeUtil,
+  HTMLContainer,
+  IndexKey,
+  JsonObject,
+  Rectangle2d,
+  resizeBox,
+  TLBaseShape,
+  TldrawUiButton,
+  TldrawUiButtonLabel,
+  TldrawUiDialogBody,
+  TldrawUiDialogCloseButton,
+  TldrawUiDialogFooter,
+  TldrawUiDialogHeader,
+  TldrawUiDialogTitle,
+  TLParentId,
+  TLResizeInfo,
+  TLShapeId,
+} from 'tldraw';
+import { useState, useRef } from 'react';
+import { debounce } from 'lodash';
+import {
+  RiCloseLine,
+  RiEditLine,
+  RiExternalLinkLine,
+  RiLink,
+  RiLoader2Line,
+  RiSaveLine,
+} from '@remixicon/react';
+import { Input } from '@/components/ui/input';
+import { useUpdateLinkShape } from '@/query/shape.query';
+import { Button } from '@/components/ui/button';
 
-  const isEditing = this.editor.getEditingShapeId() === shape.id;
+// Define the properties specific to our LinkShape
+export type LinkShapeProps = {
+  h: number;
+  w: number;
+  url: string;
+  title: string;
+  content: string;
+  isLoading: boolean;
+  error: string | null;
+  previewImageUrl: string | null;
+};
 
-  // Function to handle external link click
-  const handleExternalLinkClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+// Define the shape type by extending TLBaseShape with our props
+export type LinkShape = TLBaseShape<'link', LinkShapeProps>;
 
-  return (
-    <HTMLContainer
-      style={{
-        width: '100%',
-        height: '100%',
-        padding: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        backgroundColor: 'white',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-        pointerEvents: 'all', // Allow pointer events
-      }}
-    >
-      {/* External link icon in top-right corner */}
-      <div 
+export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
+  static override type = 'link' as const;
+
+  override canEdit() {
+    return true;
+  }
+
+  getDefaultProps(): LinkShape['props'] {
+    return {
+      w: 240,
+      h: 160,
+      url: 'https://www.google.com',
+      title: 'Google',
+      content: 'Google',
+      isLoading: false,
+      error: null,
+      previewImageUrl: null,
+    };
+  }
+
+  getGeometry(shape: LinkShape) {
+    return new Rectangle2d({
+      width: shape.props.w,
+      height: shape.props.h,
+      isFilled: true,
+    });
+  }
+
+  component(shape: LinkShape) {
+    const { url, title, content, isLoading, error, previewImageUrl } =
+      shape.props;
+
+    const [editing, setEditing] = useState(false);
+    const { updateLinkShape } = useUpdateLinkShape();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const domain = (() => {
+      try {
+        return new URL(url).hostname;
+      } catch (e) {
+        return '';
+      }
+    })();
+
+    // Create a debounced update function
+    const debouncedUpdateUrl = debounce(async (newUrl: string) => {
+      if (newUrl === url) return;
+
+      console.log('debouncedUpdateUrl', shape.id, shape.props);
+
+      await updateLinkShape({ shapeId: shape.id, url: newUrl });
+    }, 500);
+
+    const stopEventPropagation = (e: any) => e.stopPropagation();
+
+    return (
+      <HTMLContainer
         style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          zIndex: 10,
-          cursor: 'pointer',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-          borderRadius: '4px',
-          padding: '4px',
-        }}
-        onClick={handleExternalLinkClick}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18 13V19C18 19.5304 17.7893 20.0391 17.4142 20.4142C17.0391 20.7893 16.5304 21 16 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V8C3 7.46957 3.21071 6.96086 3.58579 6.58579C3.96086 6.21071 4.46957 6 5 6H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M15 3H21V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-      
-      {previewImageUrl && (
-        // ... existing code ...
-      )}
-
-      <div
-        style={{
-          padding: '12px',
-          flexGrow: previewImageUrl ? 1 : 0,
+          width: '100%',
+          height: '100%',
+          padding: 0,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          backgroundColor: 'white',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+          pointerEvents: 'all', // Allow pointer events
         }}
       >
-        <div>
-          {!isEditing ? (
+        {/* Title section at the top */}
+        <div
+          style={{
+            padding: '12px',
+            borderBottom: '1px solid #eee',
+          }}
+        >
+          <div
+            style={{
+              color: '#000',
+              fontWeight: 'bold',
+              fontSize: '18px',
+              wordBreak: 'break-word',
+            }}
+          >
+            {title}
+          </div>
+        </div>
+
+        {/* Preview image or content area */}
+        {previewImageUrl ? (
+          <div
+            style={{
+              width: '100%',
+              flexGrow: 1,
+              overflow: 'hidden',
+              position: 'relative',
+              backgroundColor: '#f0f0f0',
+            }}
+          >
+            <img
+              src={previewImageUrl}
+              alt={'No preview available'}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          </div>
+        ) : (
+          <div style={{ fontSize: '14px', color: '#888', fontStyle: 'italic' }}>
+            No preview available
+          </div>
+        )}
+
+        {/* Bottom bar with favicon, domain and input when editing */}
+        <div className='flex items-center justify-between p-2 px-4'>
+          <div>
+            {isLoading ? (
+              <div className='w-full h-full flex items-center justify-center'>
+                <RiLoader2Line className='w-4 h-4 animate-spin' />
+              </div>
+            ) : (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${domain}`}
+                alt=''
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            )}
+          </div>
+
+          <Input
+            disabled={!editing || isLoading}
+            ref={inputRef}
+            type='text'
+            defaultValue={url}
+            className='border-none outline-none mx-2'
+            onBlur={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            placeholder='Enter URL'
+          />
+
+          {editing ? (
+            <Button
+              variant='icon'
+              onClick={(e) => {
+                console.log('save', inputRef.current?.value);
+
+                if (inputRef.current) {
+                  // Trigger the update with the current input value
+                  console.log('inputRef.current.value', inputRef.current.value);
+                  debouncedUpdateUrl(inputRef.current.value);
+                }
+                setEditing(false);
+                e.stopPropagation();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
+              <RiSaveLine className='w-4 h-4' />
+            </Button>
+          ) : (
+            <Button
+              variant='icon'
+              onClick={() => setEditing(true)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
+              <RiEditLine className='w-4 h-4' />
+            </Button>
+          )}
+
+          <Button variant='icon' asChild>
             <a
               href={url}
               target='_blank'
               rel='noopener noreferrer'
-              style={{
-                color: '#1a73e8',
-                textDecoration: 'none',
-                fontWeight: 'bold',
-                fontSize: '14px',
-                display: 'block',
-                marginBottom: '4px',
-                wordBreak: 'break-word',
-              }}
+              onClick={stopEventPropagation}
+              onPointerDown={stopEventPropagation}
+              onPointerUp={stopEventPropagation}
             >
-              {text}
+              <RiExternalLinkLine className='w-4 h-4' />
             </a>
-          ) : (
-            // ... existing code ...
-          )}
-
-          {/* ... existing code ... */}
+          </Button>
         </div>
 
-        <div
-          style={{
-            fontSize: '11px',
-            color: '#888',
-            marginTop: '8px',
-            textOverflow: 'ellipsis',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <span style={{ marginRight: '4px', flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {url}
-          </span>
-          <button
-            onClick={handleExternalLinkClick}
+        {isLoading && (
+          <div
             style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '2px',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255,255,255,0.7)',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 13V19C18 19.5304 17.7893 20.0391 17.4142 20.4142C17.0391 20.7893 16.5304 21 16 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V8C3 7.46957 3.21071 6.96086 3.58579 6.58579C3.96086 6.21071 4.46957 6 5 6H11" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M15 3H21V9" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M10 14L21 3" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+            <div style={{ fontSize: '14px' }}>Loading...</div>
+          </div>
+        )}
 
-      {/* ... existing code ... */}
-    </HTMLContainer>
+        {error && (
+          <div
+            style={{
+              padding: '8px',
+              color: '#d32f2f',
+              fontSize: '12px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </HTMLContainer>
+    );
+  }
+
+  indicator(shape: LinkShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={8} />;
+  }
+
+  onDoubleClick(shape: LinkShape) {
+    // if editing and double click, we want to select focus on the input and select all the text
+    if (this.editor.getEditingShapeId() === shape.id) {
+      console.log('select text');
+    } else {
+      this.editor.setEditingShape(shape.id);
+    }
+  }
+
+  override onResize(shape: LinkShape, info: TLResizeInfo<LinkShape>) {
+    return resizeBox(shape, info);
+  }
+}
+
+const InputDialog = ({
+  onClose,
+  onSubmit,
+  initialValue,
+  title,
+  placeholder,
+}: {
+  onClose(): void;
+  onSubmit: (value: string) => void;
+  initialValue: string;
+  title: string;
+  placeholder: string;
+}) => {
+  const [value, setValue] = useState(initialValue);
+
+  const handleSubmit = () => {
+    onSubmit(value);
+    onClose();
+  };
+
+  return (
+    <>
+      <TldrawUiDialogHeader>
+        <TldrawUiDialogTitle>{title}</TldrawUiDialogTitle>
+        <TldrawUiDialogCloseButton />
+      </TldrawUiDialogHeader>
+      <TldrawUiDialogBody style={{ maxWidth: 350 }}>
+        <input
+          className='w-full px-3 py-2 text-sm rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sans'
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          autoFocus
+        />
+      </TldrawUiDialogBody>
+      <TldrawUiDialogFooter className='tlui-dialog__footer__actions'>
+        <TldrawUiButton type='normal' onClick={onClose}>
+          <TldrawUiButtonLabel>Cancel</TldrawUiButtonLabel>
+        </TldrawUiButton>
+        <TldrawUiButton
+          type='primary'
+          onClick={handleSubmit}
+          disabled={!value.trim()}
+        >
+          <TldrawUiButtonLabel>Save</TldrawUiButtonLabel>
+        </TldrawUiButton>
+      </TldrawUiDialogFooter>
+    </>
   );
-} 
+};

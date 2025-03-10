@@ -1,4 +1,4 @@
-import { clientFetch } from '@/app/query/client';
+import { clientFetch } from '@/query/client';
 import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 

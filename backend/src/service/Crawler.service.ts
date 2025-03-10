@@ -14,11 +14,7 @@ export class CrawlerService {
 
   private workspaceId: string;
 
-  constructor(params: {
-    workspaceId: string;
-    userId: string;
-    ctx: Context<AppContext>;
-  }) {
+  constructor(params: { workspaceId: string; ctx: Context<AppContext> }) {
     this.workspaceId = params.workspaceId;
 
     this.firecrawl = new FirecrawlApp({
@@ -65,6 +61,8 @@ export class CrawlerService {
       formats: ['markdown', 'html'],
     })) as ScrapeResponse;
 
+    console.log('scrapeResult', scrapeResult);
+
     // check if we error-ed out
     if (!scrapeResult.success) {
       const errorCrawledPage: CrawledPageEntity = {
@@ -94,14 +92,14 @@ export class CrawlerService {
       status: 'success',
       markdown: scrapeResult.markdown ?? '',
       html: scrapeResult.html ?? '',
-      title: scrapeResult.title ?? '',
-      description: scrapeResult.description ?? '',
+      title: scrapeResult.metadata?.title ?? '',
+      description: scrapeResult.metadata?.description ?? '',
       url,
       error: null,
-      previewImageUrl: null,
+      previewImageUrl: scrapeResult.metadata?.ogImage ?? null,
     };
     await this.db.insert(crawledPageTable).values(crawledPage);
 
-    return scrapeResult;
+    return crawledPage;
   }
 }

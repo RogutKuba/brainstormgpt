@@ -11,6 +11,7 @@ import { authRouter } from './endpoint/auth.endpoint';
 import { VisitedService } from './service/Visited.service';
 import { TldrawDurableObject } from './durable-object/TldrawDurableObject';
 import { chatRouter } from './endpoint/chat.endpoint';
+import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
 
 // make sure our sync durable object is made available to cloudflare
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -80,6 +81,7 @@ app
     })
   )
   .route('/workspace/:workspaceId/chat', chatRouter)
+  .route('/workspace/:workspaceId/shape/url', urlShapeRouter)
   .get('/health', async (ctx) => {
     return ctx.text('ok');
   })

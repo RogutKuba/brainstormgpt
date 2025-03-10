@@ -1,4 +1,8 @@
-import { RoomSnapshot, TLSocketRoom } from '@tldraw/sync-core';
+import {
+  RoomSnapshot,
+  RoomStoreMethods,
+  TLSocketRoom,
+} from '@tldraw/sync-core';
 import {
   TLRecord,
   TLShape,
@@ -6,7 +10,6 @@ import {
   createTLSchema,
   defaultShapeSchemas,
   TLBaseShape,
-  createShapeValidator,
 } from '@tldraw/tlschema';
 import { AutoRouter, IRequest, error } from 'itty-router';
 import throttle from 'lodash.throttle';
@@ -192,6 +195,14 @@ export class TldrawDurableObject extends DurableObject<Environment> {
             // and persist whenever the data in the room changes
             this.schedulePersistToR2();
           },
+          log: {
+            warn: (message) => {
+              console.warn('warn', message);
+            },
+            error: (message) => {
+              console.error('error', message);
+            },
+          },
         });
       })();
     }
@@ -204,10 +215,20 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     return room.getCurrentSnapshot();
   }
 
-  async addShape(shape: TLShape) {
+  async getShape(shapeId: string) {
     const room = await this.getRoom();
-    room.updateStore((store) => {
-      store.put(shape);
+    return room.getRecord(shapeId);
+  }
+
+  async applyToStore(
+    updater: (store: RoomStoreMethods<TLRecord>) => Promise<void> | void
+  ) {
+    const room = await this.getRoom();
+    console.log('applying to store', !!room);
+    await room.updateStore(async (store) => {
+      console.log('store inside do');
+      await updater(store);
+      console.log('done inside do');
     });
   }
 

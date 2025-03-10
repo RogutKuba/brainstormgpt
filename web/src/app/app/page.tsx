@@ -20,9 +20,9 @@ import {
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 import { JoinWorkspaceDialog } from '@/components/workspace/JoinWorkspaceDialog';
 import { useRouter } from 'next/navigation';
-import { useWorkspaces } from '@/app/query/workspace.query';
+import { useWorkspaces } from '@/query/workspace.query';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLogout, useUserData } from '@/app/query/auth.query';
+import { useLogout, useUserData } from '@/query/auth.query';
 
 export default function DashboardPage() {
   const router = useRouter();

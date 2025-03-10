@@ -20,7 +20,7 @@ import {
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
-import { useSendMessage } from '@/app/query/workspace.query';
+import { useSendMessage } from '@/query/workspace.query';
 
 type Message = {
   id: string;

@@ -46,15 +46,15 @@ import {
   TLAsset,
 } from 'tldraw';
 import { multiplayerAssetStore } from './multiplayerAssetStore';
-import { BrainstormTool } from '@/app/components/brainstorm-tool/BrainstormTool';
-import { BrainstormDragging } from '@/app/components/brainstorm-tool/child-states/Dragging';
+import { BrainstormTool } from '@/components/brainstorm-tool/BrainstormTool';
+import { BrainstormDragging } from '@/components/brainstorm-tool/child-states/Dragging';
 import { API_URL } from '@/lib/constants';
-import { LinkShapeUtil } from '@/app/components/shape/link/LinkShape';
-import { LinkTool } from '@/app/components/shape/link/LinkTool';
+import { LinkShapeUtil } from '@/components/shape/link/LinkShape';
+import { LinkTool } from '@/components/shape/link/LinkTool';
 import { memo, useMemo, useRef } from 'react';
-import { SystemGoalDialog } from '@/app/components/SystemGoalDialog';
-import { ChatWindowPlugin } from '@/app/components/chat/ChatWindow';
-import { handleCustomUrlPaste } from '@/app/components/handleUrlPaste';
+import { SystemGoalDialog } from '@/components/SystemGoalDialog';
+import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
+import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -147,7 +147,7 @@ const CustomMainMenu = () => {
           label='Exit workspace'
           icon='exit'
           onSelect={() => {
-            window.location.href = '/app';
+            window.location.href = '';
           }}
         />
       </TldrawUiMenuGroup>
