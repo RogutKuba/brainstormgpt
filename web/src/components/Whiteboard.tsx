@@ -55,6 +55,8 @@ import { memo, useMemo, useRef } from 'react';
 import { SystemGoalDialog } from '@/components/SystemGoalDialog';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
+import { RiShare2Fill, RiShare2Line } from '@remixicon/react';
+import { useUpdateLinkShape } from '@/query/shape.query';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -264,7 +266,7 @@ const CustomMenuPanel = memo(function MenuPanel() {
             });
           }}
         >
-          <TldrawUiButtonIcon icon='external-link' />
+          <RiShare2Line className='w-5 h-5' />
         </TldrawUiButton>
       </div>
     </div>
@@ -292,6 +294,7 @@ const customComponents: TLComponents = {
 
 export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
   const shapeUtils = useMemo(() => [...customShapes, ...defaultShapeUtils], []);
+  const { updateLinkShape } = useUpdateLinkShape();
 
   // Create a store connected to multiplayer.
   const store = useSync({
@@ -318,44 +321,14 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
       onMount={(editor) => {
         // when the editor is ready, we need to register our bookmark unfurling service
         editor.registerExternalContentHandler('url', (content) =>
-          handleCustomUrlPaste(editor, content)
+          handleCustomUrlPaste(editor, content, (params) => {
+            // timeout for 2.5 seconds to allow the server to update the shape
+            setTimeout(() => {
+              updateLinkShape(params);
+            }, 2500);
+          })
         );
       }}
     />
   );
 };
-
-async function getBookmarkPreview({ url }: { url: string }): Promise<TLAsset> {
-  // we start with an empty asset record
-  const asset: TLBookmarkAsset = {
-    id: AssetRecordType.createId(getHashForString(url)),
-    typeName: 'asset',
-    type: 'bookmark',
-    meta: {},
-    props: {
-      src: url,
-      description: '',
-      image: '',
-      favicon: '',
-      title: '',
-    },
-  };
-
-  try {
-    // try to fetch the preview data from the server
-    const response = await fetch(
-      `${process.env.TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`
-    );
-    const data = await response.json();
-
-    // fill in our asset with whatever info we found
-    asset.props.description = data?.description ?? '';
-    asset.props.image = data?.image ?? '';
-    asset.props.favicon = data?.favicon ?? '';
-    asset.props.title = data?.title ?? '';
-  } catch (e) {
-    console.error(e);
-  }
-
-  return asset;
-}

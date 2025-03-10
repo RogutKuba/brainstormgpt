@@ -7,16 +7,11 @@ export const useUpdateLinkShape = () => {
 
   const mutation = useMutation({
     mutationFn: async (json: { shapeId: string; url: string }) => {
-      const res = await clientFetch(`/workspace/${workspaceId}/shape/url`, {
-        method: 'POST',
-        body: JSON.stringify(json),
+      return refreshLinkShape({
+        shapeId: json.shapeId,
+        url: json.url,
+        workspaceId,
       });
-
-      if (!res.ok) {
-        throw new Error('Failed to update link shape');
-      }
-
-      return res.json();
     },
   });
 
@@ -24,4 +19,24 @@ export const useUpdateLinkShape = () => {
     updateLinkShape: mutation.mutateAsync,
     ...mutation,
   };
+};
+
+const refreshLinkShape = async (params: {
+  shapeId: string;
+  url: string;
+  workspaceId: string;
+}) => {
+  const res = await clientFetch(`/workspace/${params.workspaceId}/shape/url`, {
+    method: 'POST',
+    body: JSON.stringify({
+      shapeId: params.shapeId,
+      url: params.url,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to refresh link shape');
+  }
+
+  return res.json();
 };
