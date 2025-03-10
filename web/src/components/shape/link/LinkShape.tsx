@@ -37,7 +37,7 @@ export type LinkShapeProps = {
   w: number;
   url: string;
   title: string;
-  content: string;
+  description: string;
   isLoading: boolean;
   error: string | null;
   previewImageUrl: string | null;
@@ -59,7 +59,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       h: 160,
       url: 'https://www.google.com',
       title: 'Google',
-      content: 'Google',
+      description: 'Google',
       isLoading: false,
       error: null,
       previewImageUrl: null,
@@ -75,7 +75,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
   }
 
   component(shape: LinkShape) {
-    const { url, title, content, isLoading, error, previewImageUrl } =
+    const { url, title, description, isLoading, error, previewImageUrl } =
       shape.props;
 
     const [editing, setEditing] = useState(false);
@@ -90,14 +90,36 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       }
     })();
 
-    // Create a debounced update function
-    const debouncedUpdateUrl = debounce(async (newUrl: string) => {
-      if (newUrl === url) return;
+    const handleSave = async () => {
+      const newUrl = inputRef.current?.value;
+      if (!newUrl || newUrl === url) return;
 
       console.log('debouncedUpdateUrl', shape.id, shape.props);
 
-      await updateLinkShape({ shapeId: shape.id, url: newUrl });
-    }, 500);
+      try {
+        this.editor.updateShape<LinkShape>({
+          ...shape,
+          id: shape.id,
+          props: {
+            ...shape.props,
+            isLoading: true,
+          },
+        });
+
+        await updateLinkShape({ shapeId: shape.id, url: newUrl });
+      } catch (e) {
+        console.error('error', e);
+
+        this.editor.updateShape<LinkShape>({
+          ...shape,
+          id: shape.id,
+          props: {
+            ...shape.props,
+            isLoading: false,
+          },
+        });
+      }
+    };
 
     const stopEventPropagation = (e: any) => e.stopPropagation();
 
@@ -158,8 +180,26 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
             />
           </div>
         ) : (
-          <div style={{ fontSize: '14px', color: '#888', fontStyle: 'italic' }}>
-            No preview available
+          <div
+            style={{
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              backgroundColor: '#f8f9fa',
+              color: '#6c757d',
+              textAlign: 'center',
+            }}
+          >
+            <RiLink className='w-8 h-8 mb-2 opacity-50' />
+            <div style={{ fontSize: '14px', fontWeight: 'medium' }}>
+              {description || 'No preview available'}
+            </div>
+            <div style={{ fontSize: '12px', marginTop: '4px' }}>
+              {domain && `From ${domain}`}
+            </div>
           </div>
         )}
 
@@ -205,7 +245,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
                 if (inputRef.current) {
                   // Trigger the update with the current input value
                   console.log('inputRef.current.value', inputRef.current.value);
-                  debouncedUpdateUrl(inputRef.current.value);
+                  handleSave();
                 }
                 setEditing(false);
                 e.stopPropagation();

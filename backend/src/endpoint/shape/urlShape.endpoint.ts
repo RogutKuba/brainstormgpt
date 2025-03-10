@@ -90,7 +90,7 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
           url,
           isLoading: false,
           title: crawlResult.title,
-          content: crawlResult.markdown,
+          description: crawlResult.description,
           previewImageUrl: crawlResult.previewImageUrl,
         },
         typeName: 'shape',

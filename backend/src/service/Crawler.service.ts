@@ -61,8 +61,6 @@ export class CrawlerService {
       formats: ['markdown', 'html'],
     })) as ScrapeResponse;
 
-    console.log('scrapeResult', scrapeResult);
-
     // check if we error-ed out
     if (!scrapeResult.success) {
       const errorCrawledPage: CrawledPageEntity = {

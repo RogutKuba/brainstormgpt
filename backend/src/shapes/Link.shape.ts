@@ -5,7 +5,7 @@ type LinkShapeProps = {
   w: number;
   url: string;
   title: string;
-  content: string;
+  description: string;
   isLoading: boolean;
   error: string | null;
   previewImageUrl: string | null;
