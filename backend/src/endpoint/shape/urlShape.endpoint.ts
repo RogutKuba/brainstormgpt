@@ -94,6 +94,15 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
 
       await workspaceDo.updateShape(updatedShape);
 
+      // spawn a workflow to crawl the page and create a summary
+      const workflow = await ctx.env.ChunkWorkflow.create({
+        params: {
+          crawledPageId: crawlResult.id,
+        },
+      });
+
+      console.log('Workflow spawned', workflow);
+
       return ctx.json(
         {
           ok: true,
@@ -101,6 +110,8 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
         200
       );
     } catch (error) {
+      console.error(error);
+
       // TODO: type instantiation is too deep below :(
       // @ts-ignore
       const currentShape = (await workspaceDo.getShape(shapeId)) as LinkShape;

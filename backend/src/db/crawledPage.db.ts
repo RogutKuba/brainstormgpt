@@ -11,6 +11,7 @@ export const crawledPageTable = pgTable(
     description: text('description').notNull(),
     markdown: text('markdown').notNull(),
     html: text('html').notNull(),
+    // status can be success, error, pending, processing
     status: text('status').notNull(),
     previewImageUrl: text('preview_image_url'),
     error: jsonb('error'),

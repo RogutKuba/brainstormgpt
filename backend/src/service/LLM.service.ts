@@ -9,13 +9,13 @@ export const LLMService = {
       content: string;
       sender: 'user' | 'system';
     }[];
-    ctx: Context<AppContext>;
+    env: AppContext['Bindings'];
   }) => {
-    const { prompt, chatHistory, ctx } = params;
+    const { prompt, chatHistory, env } = params;
 
     // Initialize OpenAI client with API key from environment
     const openai = new OpenAI({
-      apiKey: ctx.env.OPENAI_API_KEY,
+      apiKey: env.OPENAI_API_KEY,
     });
 
     // Call OpenAI API

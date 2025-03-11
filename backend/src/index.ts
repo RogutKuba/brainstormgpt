@@ -12,14 +12,19 @@ import { VisitedService } from './service/Visited.service';
 import { TldrawDurableObject } from './durable-object/TldrawDurableObject';
 import { chatRouter } from './endpoint/chat.endpoint';
 import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
+import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 
-// make sure our sync durable object is made available to cloudflare
+// export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
+export { ChunkWorkflow } from './workflow/Chunk.workflow';
 
 export type AppContext = {
   Bindings: {
     TLDRAW_BUCKET: R2Bucket;
     TLDRAW_DURABLE_OBJECT: DurableObjectNamespace<TldrawDurableObject>;
+
+    // WORKFLOWS
+    ChunkWorkflow: Workflow<ChunkWorkflowParams>;
 
     // API KEYS
     OPENAI_API_KEY: string;

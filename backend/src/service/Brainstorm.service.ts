@@ -135,7 +135,7 @@ For extending existing ideas, use parent IDs from this list of deepest shapes: $
 
 Keep each bubble brief and concise (5-15 words). Your goal is primarily to extend the existing deepest thoughts with specific, actionable, or insightful additions.`,
       chatHistory,
-      ctx,
+      env: ctx.env,
     });
 
     if (!newIdeasResult) {

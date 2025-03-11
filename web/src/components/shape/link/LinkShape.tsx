@@ -143,14 +143,47 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           style={{
             padding: '12px',
             borderBottom: '1px solid #eee',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
         >
+          {isLoading ? (
+            <div className='flex items-center justify-center'>
+              <RiLoader2Line className='w-4 h-4 animate-spin' />
+            </div>
+          ) : (
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}`}
+              alt=''
+              style={{
+                width: '16px',
+                height: '16px',
+                objectFit: 'cover',
+                pointerEvents: 'none',
+                userSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              onDragStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragEnd={(e) => e.stopPropagation()}
+              onDrag={(e) => e.stopPropagation()}
+              draggable='false'
+            />
+          )}
           <div
             style={{
               color: '#000',
               fontWeight: 'bold',
               fontSize: '18px',
               wordBreak: 'break-word',
+              flexGrow: 1,
             }}
           >
             {title}
@@ -204,46 +237,14 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           </div>
         )}
 
-        {/* Bottom bar with favicon, domain and input when editing */}
-        <div className='flex items-center justify-between p-2 px-4'>
-          <div>
-            {isLoading ? (
-              <div className='w-full h-full flex items-center justify-center'>
-                <RiLoader2Line className='w-4 h-4 animate-spin' />
-              </div>
-            ) : (
-              <img
-                src={`https://www.google.com/s2/favicons?domain=${domain}`}
-                alt=''
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  MozUserSelect: 'none',
-                  msUserSelect: 'none',
-                }}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onMouseUp={(e) => e.stopPropagation()}
-                onDragStart={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDragEnd={(e) => e.stopPropagation()}
-                onDrag={(e) => e.stopPropagation()}
-                draggable='false'
-              />
-            )}
-          </div>
-
+        {/* Bottom bar with input when editing */}
+        <div className='flex items-center justify-between p-2'>
           <Input
             disabled={!editing || isLoading}
             ref={inputRef}
             type='text'
             defaultValue={url}
-            className='border-none outline-none mx-2'
+            className='border-none outline-none mx-2 flex-grow'
             onBlur={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}

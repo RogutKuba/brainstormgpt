@@ -17,6 +17,7 @@ import {
   RiCloseLine,
   RiChat1Line,
   RiText,
+  RiLink,
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
@@ -269,7 +270,11 @@ export const ChatWindow: React.FC = () => {
                       className='flex flex-row items-center gap-0.5 text-xs bg-white border border-gray-200 rounded-md p-1.5 shadow-sm'
                     >
                       <div className='bg-gray-100 rounded-md p-1'>
-                        <RiText className='w-3 h-3' />
+                        {item.type === 'link' ? (
+                          <RiLink className='w-3 h-3' />
+                        ) : (
+                          <RiText className='w-3 h-3' />
+                        )}
                       </div>
                       <p className='text-gray-700 text-sm'>
                         {item.text || '(no text)'}
