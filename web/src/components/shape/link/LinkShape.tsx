@@ -177,6 +177,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
                 objectFit: 'cover',
                 display: 'block',
               }}
+              draggable={false}
             />
           </div>
         ) : (
@@ -218,7 +219,21 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none',
                 }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+                onDragStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDragEnd={(e) => e.stopPropagation()}
+                onDrag={(e) => e.stopPropagation()}
+                draggable='false'
               />
             )}
           </div>

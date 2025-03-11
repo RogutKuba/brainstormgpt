@@ -57,16 +57,54 @@ export class CrawlerService {
       return existingPage;
     }
 
-    const scrapeResult = (await this.firecrawl.scrapeUrl(url, {
-      formats: ['markdown', 'html'],
-    })) as ScrapeResponse;
+    try {
+      const scrapeResult = (await this.firecrawl.scrapeUrl(url, {
+        formats: ['markdown', 'html'],
+      })) as ScrapeResponse;
 
-    // check if we error-ed out
-    if (!scrapeResult.success) {
+      // check if we error-ed out
+      if (!scrapeResult.success) {
+        const errorCrawledPage: CrawledPageEntity = {
+          id: generateId('crawledPage'),
+          url,
+          error: scrapeResult.error ?? 'Unknown error!',
+          workspaceId: this.workspaceId,
+          title: '',
+          description: '',
+          markdown: '',
+          html: '',
+          status: 'error',
+          createdAt: new Date().toISOString(),
+          previewImageUrl: null,
+        };
+
+        // insert error into the database
+        await this.db.insert(crawledPageTable).values(errorCrawledPage);
+        return null;
+      }
+
+      // insert the crawled page into the database
+      const crawledPage: CrawledPageEntity = {
+        id: generateId('crawledPage'),
+        workspaceId: this.workspaceId,
+        createdAt: new Date().toISOString(),
+        status: 'success',
+        markdown: scrapeResult.markdown ?? '',
+        html: scrapeResult.html ?? '',
+        title: scrapeResult.metadata?.title ?? '',
+        description: scrapeResult.metadata?.description ?? '',
+        url,
+        error: null,
+        previewImageUrl: scrapeResult.metadata?.ogImage ?? null,
+      };
+      await this.db.insert(crawledPageTable).values(crawledPage);
+
+      return crawledPage;
+    } catch (error: unknown) {
       const errorCrawledPage: CrawledPageEntity = {
         id: generateId('crawledPage'),
         url,
-        error: scrapeResult.error ?? 'Unknown error!',
+        error: error instanceof Error ? error.message : 'Unknown error!',
         workspaceId: this.workspaceId,
         title: '',
         description: '',
@@ -76,28 +114,9 @@ export class CrawlerService {
         createdAt: new Date().toISOString(),
         previewImageUrl: null,
       };
-
-      // insert error into the database
       await this.db.insert(crawledPageTable).values(errorCrawledPage);
+
       return null;
     }
-
-    // insert the crawled page into the database
-    const crawledPage: CrawledPageEntity = {
-      id: generateId('crawledPage'),
-      workspaceId: this.workspaceId,
-      createdAt: new Date().toISOString(),
-      status: 'success',
-      markdown: scrapeResult.markdown ?? '',
-      html: scrapeResult.html ?? '',
-      title: scrapeResult.metadata?.title ?? '',
-      description: scrapeResult.metadata?.description ?? '',
-      url,
-      error: null,
-      previewImageUrl: scrapeResult.metadata?.ogImage ?? null,
-    };
-    await this.db.insert(crawledPageTable).values(crawledPage);
-
-    return crawledPage;
   }
 }

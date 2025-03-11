@@ -52,14 +52,10 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
     const { workspaceId } = ctx.req.valid('param');
     const { shapeId, url } = await ctx.req.json();
 
-    console.log('workspaceId', workspaceId);
-
+    // Get the durable object for this workspace
+    const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
     try {
-      // Get the durable object for this workspace
-      const workspaceDoId =
-        ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
-      const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
-
       // Update the shape in the durable object
 
       // TODO: type instantiation is too deep below :(
@@ -80,7 +76,7 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
       const crawlResult = await crawlerService.crawl(url);
 
       if (!crawlResult) {
-        throw new HTTPException(500, { message: 'Failed to crawl URL' });
+        throw new Error('Failed to crawl URL');
       }
 
       const updatedShape: LinkShape = {
@@ -105,7 +101,26 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
         200
       );
     } catch (error) {
-      console.error('Error updating link shape:', error);
+      // TODO: type instantiation is too deep below :(
+      // @ts-ignore
+      const currentShape = (await workspaceDo.getShape(shapeId)) as LinkShape;
+
+      if (!currentShape) {
+        throw new HTTPException(404, { message: 'Shape not found' });
+      }
+
+      // update the shape to not be in error state
+      const errorShape: LinkShape = {
+        ...currentShape,
+        props: {
+          ...currentShape.props,
+          isLoading: false,
+          error: 'Failed to update link shape',
+        },
+      };
+
+      await workspaceDo.updateShape(errorShape);
+
       throw new HTTPException(500, { message: 'Failed to update link shape' });
     }
   }

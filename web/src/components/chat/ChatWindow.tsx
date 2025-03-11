@@ -21,6 +21,7 @@ import {
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
 import { useSendMessage } from '@/query/workspace.query';
+import { LinkShape } from '@/components/shape/link/LinkShape';
 
 type Message = {
   id: string;
@@ -54,18 +55,26 @@ export const ChatWindow: React.FC = () => {
 
       const selectedShapes = editor.getSelectedShapes();
       return selectedShapes
-        .filter((shape) => 'text' in shape.props && shape.props.text.length > 0)
+        .filter((shape) => {
+          // Include shapes with text or geo type shapes
+          return shape.type === 'link' || shape.type === 'geo';
+        })
         .map((shape) => {
           // Extract text content if available (handles different shape types)
           let textContent = '';
 
-          // Type-safe approach to access shape properties
-          if (shape && 'props' in shape) {
-            const props = shape.props as Record<string, any>;
-            if (props.text && typeof props.text === 'string') {
-              textContent = props.text;
-            } else if (props.value && typeof props.value === 'string') {
-              textContent = props.value;
+          // Handle link type specially
+          if (shape.type === 'link') {
+            let linkShape = shape as LinkShape;
+            textContent = linkShape.props.url
+              .replace('https://', '')
+              .replace('http://', '');
+          }
+
+          // Handle geo shape with text
+          if (shape.type === 'geo' && 'props' in shape) {
+            if ('text' in shape.props && typeof shape.props.text === 'string') {
+              textContent = shape.props.text;
             }
           }
 
@@ -77,7 +86,8 @@ export const ChatWindow: React.FC = () => {
                 (textContent.length > 10 ? '...' : '')
               : '',
           };
-        });
+        })
+        .filter((item) => item.text.length > 0);
     },
     [editor]
   );

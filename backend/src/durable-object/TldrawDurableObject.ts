@@ -215,30 +215,34 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     return room.getCurrentSnapshot();
   }
 
+  /**
+   * Gets a shape from the store.
+   * @param shapeId - The ID of the shape to get.
+   * @returns The shape.
+   */
   async getShape(shapeId: string) {
     const room = await this.getRoom();
     return room.getRecord(shapeId);
   }
 
-  async applyToStore(
-    updater: (store: RoomStoreMethods<TLRecord>) => Promise<void> | void
-  ) {
-    const room = await this.getRoom();
-    console.log('applying to store', !!room);
-    await room.updateStore(async (store) => {
-      console.log('store inside do');
-      await updater(store);
-      console.log('done inside do');
-    });
-  }
-
+  /**
+   * Updates a shape in the store. If the shape doesn't exist, it will be not be created.
+   * @param shape - The shape to update.
+   */
   async updateShape(shape: TLShape) {
     const room = await this.getRoom();
     room.updateStore((store) => {
-      store.put(shape);
+      const existingShape = store.get(shape.id);
+      if (existingShape) {
+        store.put(shape);
+      }
     });
   }
 
+  /**
+   * Removes a shape from the store.
+   * @param shape - The shape to remove.
+   */
   async removeShape(shape: TLShape) {
     const room = await this.getRoom();
     room.updateStore((store) => {
@@ -257,11 +261,19 @@ export class TldrawDurableObject extends DurableObject<Environment> {
   }, 10_000);
 
   // EXTERNAL METHODS
+  /**
+   * Gets the current snapshot of the room.
+   * @returns The current snapshot of the room.
+   */
   async getCurrentSnapshot(): Promise<RoomSnapshot> {
     const room = await this.getRoom();
     return room.getCurrentSnapshot() as RoomSnapshot;
   }
 
+  /**
+   * Adds records to the store.
+   * @param records - The records to add.
+   */
   async addRecords(records: TLRecord[]) {
     const room = await this.getRoom();
     room.updateStore((store) => {
