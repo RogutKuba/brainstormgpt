@@ -32,6 +32,7 @@ export type LinkShapeProps = {
   title: string;
   description: string;
   isLoading: boolean;
+  status: 'success' | 'error' | 'scraping' | 'analyzing';
   error: string | null;
   previewImageUrl: string | null;
 };
@@ -54,6 +55,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       title: 'Google',
       description: 'Google',
       isLoading: false,
+      status: 'success',
       error: null,
       previewImageUrl: null,
     };
@@ -68,8 +70,15 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
   }
 
   component(shape: LinkShape) {
-    const { url, title, description, isLoading, error, previewImageUrl } =
-      shape.props;
+    const {
+      url,
+      title,
+      description,
+      isLoading,
+      status,
+      error,
+      previewImageUrl,
+    } = shape.props;
 
     const [editing, setEditing] = useState(false);
     const { updateLinkShape } = useUpdateLinkShape();
@@ -87,14 +96,13 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       const newUrl = inputRef.current?.value;
       if (!newUrl || newUrl === url) return;
 
-      console.log('debouncedUpdateUrl', shape.id, shape.props);
-
       try {
         this.editor.updateShape<LinkShape>({
           ...shape,
           id: shape.id,
           props: {
             ...shape.props,
+            status: 'scraping',
             isLoading: true,
           },
         });
@@ -108,6 +116,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           id: shape.id,
           props: {
             ...shape.props,
+            status: 'error',
             isLoading: false,
           },
         });
@@ -118,16 +127,8 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
     return (
       <HTMLContainer
+        className='w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white border border-2 border-gray-200'
         style={{
-          width: '100%',
-          height: '100%',
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          backgroundColor: 'white',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
           pointerEvents: 'all', // Allow pointer events
         }}
       >

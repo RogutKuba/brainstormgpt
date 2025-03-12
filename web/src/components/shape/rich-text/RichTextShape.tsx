@@ -66,20 +66,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       e.stopPropagation();
 
     return (
-      <HTMLContainer
-        style={{
-          width: '100%',
-          height: '100%',
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          backgroundColor: 'white',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-          pointerEvents: 'all',
-        }}
-      >
+      <HTMLContainer className='w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 border-gray-200 pointer-events-all'>
         {/* Content area */}
         <div
           style={{

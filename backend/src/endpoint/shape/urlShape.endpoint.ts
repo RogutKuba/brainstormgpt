@@ -82,7 +82,8 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
         props: {
           ...currentShape.props,
           url,
-          isLoading: false,
+          status: 'analyzing',
+          isLoading: true,
           title: crawlResult.title,
           description: crawlResult.description,
           previewImageUrl: crawlResult.previewImageUrl,
@@ -96,6 +97,8 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
       // spawn a workflow to crawl the page and create a summary
       const workflow = await ctx.env.ChunkWorkflow.create({
         params: {
+          workspaceId,
+          shapeId,
           crawledPageId: crawlResult.id,
         },
       });
@@ -124,6 +127,7 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
         ...currentShape,
         props: {
           ...currentShape.props,
+          status: 'error',
           isLoading: false,
           error: 'Failed to update link shape',
         },

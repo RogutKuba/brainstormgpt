@@ -7,6 +7,7 @@ type LinkShapeProps = {
   title: string;
   description: string;
   isLoading: boolean;
+  status: 'success' | 'error' | 'scraping' | 'analyzing';
   error: string | null;
   previewImageUrl: string | null;
 };

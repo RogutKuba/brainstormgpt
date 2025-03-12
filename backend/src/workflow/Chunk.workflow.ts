@@ -11,9 +11,12 @@ import { NonRetryableError } from 'cloudflare:workflows';
 import { PageChunkEntity, pageChunkTable } from '../db/pageChunk.db';
 import { generateId } from '../lib/id';
 import { SummaryService } from '../service/Summary.service';
+import { LinkShape } from '../shapes/Link.shape';
 
 export type ChunkWorkflowParams = {
   crawledPageId: string;
+  shapeId: string;
+  workspaceId: string;
 };
 
 /**
@@ -33,66 +36,117 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
   ChunkWorkflowParams
 > {
   async run(event: WorkflowEvent<ChunkWorkflowParams>, step: WorkflowStep) {
-    const { crawledPageId } = event.payload;
+    const { crawledPageId, shapeId, workspaceId } = event.payload;
 
-    const crawledPage = await step.do('get-crawled-page', async () => {
-      const db = getDbConnectionFromEnv(this.env);
-      const crawledPage = await db
-        .select({
-          id: crawledPageTable.id,
-          url: crawledPageTable.url,
-          title: crawledPageTable.title,
-          description: crawledPageTable.description,
-          markdown: crawledPageTable.markdown,
-          html: crawledPageTable.html,
-          workspaceId: crawledPageTable.workspaceId,
-        })
-        .from(crawledPageTable)
-        .where(
-          and(
-            eq(crawledPageTable.id, crawledPageId),
-            eq(crawledPageTable.status, 'success')
+    try {
+      const crawledPage = await step.do('get-crawled-page', async () => {
+        const db = getDbConnectionFromEnv(this.env);
+        const crawledPage = await db
+          .select({
+            id: crawledPageTable.id,
+            url: crawledPageTable.url,
+            title: crawledPageTable.title,
+            description: crawledPageTable.description,
+            markdown: crawledPageTable.markdown,
+            html: crawledPageTable.html,
+          })
+          .from(crawledPageTable)
+          .where(
+            and(
+              eq(crawledPageTable.id, crawledPageId),
+              eq(crawledPageTable.status, 'success')
+            )
           )
-        )
-        .then(takeUnique);
-      return crawledPage;
-    });
-
-    if (!crawledPage) {
-      throw new NonRetryableError(
-        `Crawled page ${crawledPageId} not found or was not successful`
-      );
-    }
-
-    await step.do('convert-content-to-chunks', async () => {
-      const db = getDbConnectionFromEnv(this.env);
-
-      // convert the markdown to chunks
-      const chunks = await convertMarkdownToChunks(crawledPage.markdown);
-
-      // insert the chunks into the database
-      const chunkEntities: PageChunkEntity[] = chunks.map((chunk, index) => ({
-        id: generateId('pageChunk'),
-        createdAt: new Date().toISOString(),
-        workspaceId: crawledPage.workspaceId,
-        url: crawledPage.url,
-        content: chunk.content,
-        type: chunk.type,
-        index,
-      }));
-
-      await db.insert(pageChunkTable).values(chunkEntities);
-
-      return chunkEntities;
-    });
-
-    // create the page summary
-    await step.do('create-page-summary', async () => {
-      await SummaryService.createPageSummary({
-        crawledPageId: crawledPage.id,
-        env: this.env,
+          .then(takeUnique);
+        return crawledPage;
       });
-    });
+
+      if (!crawledPage) {
+        throw new NonRetryableError(
+          `Crawled page ${crawledPageId} not found or was not successful`
+        );
+      }
+
+      await step.do('convert-content-to-chunks', async () => {
+        const db = getDbConnectionFromEnv(this.env);
+
+        // convert the markdown to chunks
+        const chunks = await convertMarkdownToChunks(crawledPage.markdown);
+
+        // insert the chunks into the database
+        const chunkEntities: PageChunkEntity[] = chunks.map((chunk, index) => ({
+          id: generateId('pageChunk'),
+          createdAt: new Date().toISOString(),
+          workspaceId,
+          url: crawledPage.url,
+          content: chunk.content,
+          type: chunk.type,
+          index,
+        }));
+
+        await db.insert(pageChunkTable).values(chunkEntities);
+
+        return chunkEntities;
+      });
+
+      // create the page summary
+      await step.do('create-page-summary', async () => {
+        await SummaryService.createPageSummary({
+          crawledPageId: crawledPage.id,
+          env: this.env,
+        });
+      });
+
+      // Update the shape to indicate processing is complete
+      await step.do('update-shape-status', async () => {
+        // Get the durable object for this workspace
+        const workspaceDoId =
+          this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+        const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
+
+        // Find shapes that reference this URL
+        // @ts-ignore
+        const shape = (await workspaceDo.getShape(shapeId)) as any as LinkShape;
+
+        if (shape) {
+          const updatedShape: LinkShape = {
+            ...shape,
+            props: {
+              ...shape.props,
+              status: 'success',
+              isLoading: false,
+            },
+          };
+
+          await workspaceDo.updateShape(updatedShape);
+        }
+      });
+    } catch (error) {
+      console.error('Error in ChunkWorkflow:', error);
+
+      const workspaceDoId =
+        this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+      const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
+
+      // @ts-ignore
+      const shape = (await workspaceDo.getShape(shapeId)) as any as LinkShape;
+
+      if (shape) {
+        const updatedShape = {
+          ...shape,
+          props: {
+            ...shape.props,
+            status: 'error',
+            isLoading: false,
+          },
+        };
+
+        await workspaceDo.updateShape(updatedShape);
+      }
+
+      // Re-throw the original error
+      throw error;
+    }
   }
 }
 
