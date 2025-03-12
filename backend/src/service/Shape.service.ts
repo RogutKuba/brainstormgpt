@@ -11,6 +11,7 @@ import {
   TLShapeId,
 } from 'tldraw';
 import { LinkShape } from '../shapes/Link.shape';
+import { RichTextShape } from '../shapes/RichText.shape';
 
 export type CreateBubbleParams = {
   text: string;
@@ -22,7 +23,7 @@ export type TreeNode = {
   children: TreeNode[];
 } & (
   | {
-      type: 'text';
+      type: 'text' | 'rich-text';
       text: string;
     }
   | {
@@ -284,8 +285,10 @@ export class ShapeService {
         const parentShape = this.shapes.find(
           (shape) =>
             shape.id === shapeParams.parentId &&
-            (shape.type === 'geo' || shape.type === 'link')
-        ) as (TLGeoShape | LinkShape) | undefined;
+            (shape.type === 'geo' ||
+              shape.type === 'link' ||
+              shape.type === 'rich-text')
+        ) as (TLGeoShape | LinkShape | RichTextShape) | undefined;
 
         if (!parentShape) {
           position = this.findPositionAwayFromShapes(
@@ -323,7 +326,7 @@ export class ShapeService {
         const MIN_HEIGHT = 200;
         const MIN_WIDTH = 300;
         const CHARS_PER_LINE = 50;
-        const HEIGHT_PER_LINE = 75;
+        const HEIGHT_PER_LINE = 50;
 
         // Scale width based on text length
         const textLength = shape.text.length;
@@ -344,7 +347,7 @@ export class ShapeService {
           isLocked: false,
           opacity: 1,
           meta: {},
-          type: 'geo',
+          type: 'rich-text',
           props: {
             w: width,
             h: height,
@@ -367,12 +370,13 @@ export class ShapeService {
           typeName: 'shape',
         };
 
-        // Only create arrow if there's a parent and it's a geo or link shape
+        // Only create arrow if there's a parent and it's a geo, link, or rich-text shape
         if (shape.parentId) {
           const parentShape = this.shapes.find(
             (s) =>
-              s.id === shape.parentId && (s.type === 'geo' || s.type === 'link')
-          ) as (TLGeoShape | LinkShape) | undefined;
+              s.id === shape.parentId &&
+              (s.type === 'geo' || s.type === 'link' || s.type === 'rich-text')
+          ) as (TLGeoShape | LinkShape | RichTextShape) | undefined;
 
           if (parentShape) {
             // Calculate center points of parent and child shapes
@@ -547,12 +551,15 @@ export class ShapeService {
       maxX = -Infinity,
       maxY = -Infinity;
 
-    // get only geo shapes or link shapes
-    const geoShapes = this.shapes.filter(
-      (shape) => shape.type === 'geo' || shape.type === 'link'
-    ) as (TLGeoShape | LinkShape)[];
+    // get only geo shapes, link shapes, or rich-text shapes
+    const relevantShapes = this.shapes.filter(
+      (shape) =>
+        shape.type === 'geo' ||
+        shape.type === 'link' ||
+        shape.type === 'rich-text'
+    ) as (TLGeoShape | LinkShape | RichTextShape)[];
 
-    geoShapes.forEach((shape) => {
+    relevantShapes.forEach((shape) => {
       // Assuming shapes have x, y, and props.w, props.h properties
       const x = shape.x;
       const y = shape.y;
@@ -584,13 +591,16 @@ export class ShapeService {
       .fill(null)
       .map(() => Array(cols).fill(false));
 
-    // get only geo shapes or link shapes
-    const geoShapes = this.shapes.filter(
-      (shape) => shape.type === 'geo' || shape.type === 'link'
-    ) as (TLGeoShape | LinkShape)[];
+    // get only geo shapes, link shapes, or rich-text shapes
+    const relevantShapes = this.shapes.filter(
+      (shape) =>
+        shape.type === 'geo' ||
+        shape.type === 'link' ||
+        shape.type === 'rich-text'
+    ) as (TLGeoShape | LinkShape | RichTextShape)[];
 
     // Mark cells as occupied based on shape positions
-    geoShapes.forEach((shape) => {
+    relevantShapes.forEach((shape) => {
       const x = shape.x;
       const y = shape.y;
       const width = shape.props.w ?? 0;

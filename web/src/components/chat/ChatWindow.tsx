@@ -23,6 +23,7 @@ import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
 import { useSendMessage } from '@/query/workspace.query';
 import { LinkShape } from '@/components/shape/link/LinkShape';
+import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 
 type Message = {
   id: string;
@@ -58,7 +59,11 @@ export const ChatWindow: React.FC = () => {
       return selectedShapes
         .filter((shape) => {
           // Include shapes with text or geo type shapes
-          return shape.type === 'link' || shape.type === 'geo';
+          return (
+            shape.type === 'link' ||
+            shape.type === 'geo' ||
+            shape.type === 'rich-text'
+          );
         })
         .map((shape) => {
           // Extract text content if available (handles different shape types)
@@ -70,6 +75,17 @@ export const ChatWindow: React.FC = () => {
             textContent = linkShape.props.url
               .replace('https://', '')
               .replace('http://', '');
+          }
+
+          // Handle rich-text shape
+          if (shape.type === 'rich-text' && 'props' in shape) {
+            const richTextShape = shape as RichTextShape;
+            if (richTextShape.props.text) {
+              // Remove any markdown stuff so its just the text
+              textContent = richTextShape.props.text
+                .replaceAll('#', '')
+                .replaceAll('*', '');
+            }
           }
 
           // Handle geo shape with text
@@ -272,6 +288,8 @@ export const ChatWindow: React.FC = () => {
                       <div className='bg-gray-100 rounded-md p-1'>
                         {item.type === 'link' ? (
                           <RiLink className='w-3 h-3' />
+                        ) : item.type === 'rich-text' ? (
+                          <RiText className='w-3 h-3' />
                         ) : (
                           <RiText className='w-3 h-3' />
                         )}

@@ -1,9 +1,7 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { AppContext } from '../..';
-import { eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { CrawlerService } from '../../service/Crawler.service';
-import { workspaceTable } from '../../db/workspace.db';
 import { ErrorResponses } from '../errors';
 import { LinkShape } from '../../shapes/Link.shape';
 

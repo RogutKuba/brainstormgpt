@@ -41,7 +41,7 @@ async function extractShapesWithText(params: {
     parentId?: string;
   } & (
     | {
-        type: 'text';
+        type: 'text' | 'rich-text';
         text: string;
       }
     | { type: 'link'; url: string }
@@ -52,7 +52,7 @@ async function extractShapesWithText(params: {
     level: number,
     parentId?: string
   ): void {
-    if (node.type === 'text') {
+    if (node.type === 'text' || node.type === 'rich-text') {
       allNodes.push({
         id: node.id,
         level,
@@ -108,7 +108,7 @@ async function extractShapesWithText(params: {
     id: string;
     level: number;
     parentId?: string;
-    type: 'text' | 'link';
+    type: 'text' | 'link' | 'rich-text';
     text?: string;
     url?: string;
   }): string {
@@ -269,7 +269,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       throw new Error('No response from LLM');
     }
 
-    console.log('newIdeasResult', newIdeasResult);
+    // console.log('newIdeasResult', newIdeasResult);
 
     // Parse the LLM response to extract nodes and their parent relationships
     const results: BrainStormResult[] = [];
