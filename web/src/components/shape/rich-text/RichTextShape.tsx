@@ -59,21 +59,8 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
   component(shape: RichTextShape) {
     const { text } = shape.props;
-    const [editing, setEditing] = useState(false);
-    const [localText, setLocalText] = useState(text);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const handleSave = () => {
-      this.editor.updateShape<RichTextShape>({
-        id: shape.id,
-        type: 'rich-text',
-        props: {
-          ...shape.props,
-          text: localText,
-        },
-      });
-      setEditing(false);
-    };
+    const isEditing = this.editor.getEditingShapeId() === shape.id;
 
     const stopEventPropagation = (e: React.SyntheticEvent) =>
       e.stopPropagation();
@@ -102,49 +89,27 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             position: 'relative',
           }}
         >
-          {editing ? (
+          {isEditing ? (
             <Textarea
-              ref={textareaRef}
-              value={localText}
-              onChange={(e) => setLocalText(e.target.value)}
-              className='w-full h-full resize-none border-none focus:ring-0'
+              value={text}
+              onChange={(e) =>
+                this.editor.updateShape<RichTextShape>({
+                  id: shape.id,
+                  type: 'rich-text',
+                  props: { text: e.currentTarget.value },
+                })
+              }
+              onClick={stopEventPropagation}
               onPointerDown={stopEventPropagation}
               onTouchStart={stopEventPropagation}
               onTouchEnd={stopEventPropagation}
+              className='w-full h-full resize-none border-none focus:ring-0'
               autoFocus
             />
           ) : (
             <div className='markdown-content prose prose-sm max-w-none'>
               <ReactMarkdown>{text}</ReactMarkdown>
             </div>
-          )}
-        </div>
-
-        {/* Bottom toolbar */}
-        <div className='flex items-center justify-end p-2 bg-gray-50 border-t'>
-          {editing ? (
-            <Button
-              variant='icon'
-              onClick={(e) => {
-                handleSave();
-                e.stopPropagation();
-              }}
-              onPointerDown={stopEventPropagation}
-              onTouchStart={stopEventPropagation}
-              onTouchEnd={stopEventPropagation}
-            >
-              <RiSaveLine className='w-5 h-5 text-stone-500' />
-            </Button>
-          ) : (
-            <Button
-              variant='icon'
-              onClick={() => setEditing(true)}
-              onPointerDown={stopEventPropagation}
-              onTouchStart={stopEventPropagation}
-              onTouchEnd={stopEventPropagation}
-            >
-              <RiEditLine className='w-5 h-5 text-stone-500' />
-            </Button>
           )}
         </div>
       </HTMLContainer>
@@ -156,11 +121,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   }
 
   onDoubleClick(shape: RichTextShape) {
-    if (this.editor.getEditingShapeId() === shape.id) {
-      // Already editing
-    } else {
-      this.editor.setEditingShape(shape.id);
-    }
+    this.editor.setEditingShape(shape.id);
   }
 
   override onResize(shape: RichTextShape, info: TLResizeInfo<RichTextShape>) {
