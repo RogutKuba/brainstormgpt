@@ -57,6 +57,8 @@ import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
 import { RiShare2Fill, RiShare2Line } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
+import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
+import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -92,6 +94,15 @@ const customUiOverrides: TLUiOverrides = {
           editor.setCurrentTool('link');
         },
       },
+      'rich-text': {
+        id: RichTextTool.id,
+        label: 'Rich Text',
+        icon: 'rich-text',
+        kbd: 'r',
+        onSelect() {
+          editor.setCurrentTool('rich-text');
+        },
+      },
     };
   },
 };
@@ -100,7 +111,7 @@ function CustomToolbar() {
   const tools = useTools();
   // const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
   const isLinkSelected = useIsToolSelected(tools['link']);
-
+  const isRichTextSelected = useIsToolSelected(tools['rich-text']);
   return (
     <DefaultToolbar>
       <SelectToolbarItem />
@@ -115,6 +126,10 @@ function CustomToolbar() {
       /> */}
       {/* <DefaultToolbarContent /> */}
       <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
+      <TldrawUiMenuItem
+        {...tools['rich-text']}
+        isSelected={isRichTextSelected}
+      />
     </DefaultToolbar>
   );
 }
@@ -158,15 +173,8 @@ const CustomMainMenu = () => {
   );
 };
 
-// [3]
-const customAssetUrls: TLUiAssetUrlOverrides = {
-  icons: {
-    brainstorm: '/ai-brainstorm.svg',
-  },
-};
-
-const customTools = [LinkTool];
-const customShapes = [LinkShapeUtil];
+const customTools = [LinkTool, RichTextTool];
+const customShapes = [LinkShapeUtil, RichTextShapeUtil];
 
 function AiBrainstormBox() {
   const editor = useEditor();
@@ -309,7 +317,6 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
     <Tldraw
       tools={customTools}
       overrides={customUiOverrides}
-      assetUrls={customAssetUrls}
       components={customComponents}
       // we can pass the connected store into the Tldraw component which will handle
       // loading states & enable multiplayer UX like cursors & a presence menu

@@ -17,20 +17,12 @@ import { Environment } from '../types';
 import { DurableObject } from 'cloudflare:workers';
 import { ShapeService } from '../service/Shape.service';
 
-type LinkShapeProps = {
-  url: string;
-  text: string;
-  w: number;
-  h: number;
-};
-
-type LinkShape = TLBaseShape<'link', LinkShapeProps>;
-
 // add custom shapes and bindings here if needed:
 const schema = createTLSchema({
   shapes: {
     ...defaultShapeSchemas,
     link: {},
+    'rich-text': {},
   },
 });
 

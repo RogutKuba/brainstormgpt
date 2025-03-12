@@ -135,12 +135,12 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         <div className='flex items-center justify-center p-4 gap-4'>
           {isLoading ? (
             <div className='flex items-center justify-center'>
-              <RiLoader2Line className='w-4 h-4 animate-spin' />
+              <RiLoader2Line className='w-6 h-6 animate-spin' />
             </div>
           ) : (
             <img
               src={`https://www.google.com/s2/favicons?domain=${domain}`}
-              alt=''
+              alt={domain}
               className='w-6 h-6'
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
@@ -237,7 +237,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
-              <RiSaveLine className='w-4 h-4' />
+              <RiSaveLine className='w-5 h-5 text-stone-500' />
             </Button>
           ) : (
             <Button
@@ -247,7 +247,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
-              <RiEditLine className='w-4 h-4' />
+              <RiEditLine className='w-5 h-5 text-stone-500' />
             </Button>
           )}
 
@@ -260,7 +260,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               onPointerDown={stopEventPropagation}
               onPointerUp={stopEventPropagation}
             >
-              <RiExternalLinkLine className='w-4 h-4' />
+              <RiExternalLinkLine className='w-5 h-5 text-stone-500' />
             </a>
           </Button>
         </div>
