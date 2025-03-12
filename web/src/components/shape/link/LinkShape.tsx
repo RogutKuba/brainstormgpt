@@ -134,27 +134,21 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       >
         {/* Title section at the top */}
         <div className='flex items-center justify-center p-4 gap-4'>
-          {isLoading ? (
-            <div className='flex items-center justify-center'>
-              <RiLoader2Line className='w-6 h-6 animate-spin' />
-            </div>
-          ) : (
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${domain}`}
-              alt={domain}
-              className='w-6 h-6'
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onMouseUp={(e) => e.stopPropagation()}
-              onDragStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDragEnd={(e) => e.stopPropagation()}
-              onDrag={(e) => e.stopPropagation()}
-              draggable='false'
-            />
-          )}
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}`}
+            alt={domain}
+            className='w-6 h-6'
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onDragStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDragEnd={(e) => e.stopPropagation()}
+            onDrag={(e) => e.stopPropagation()}
+            draggable='false'
+          />
           <div className='text-2xl font-bold'>{title}</div>
         </div>
 
@@ -267,20 +261,81 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         </div>
 
         {isLoading && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(255,255,255,0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div style={{ fontSize: '14px' }}>Loading...</div>
+          <div className='absolute inset-0 bg-white/70 flex flex-col items-center justify-center gap-3 backdrop-blur-sm transition-all duration-300'>
+            {status === 'scraping' && (
+              <>
+                <div className='flex items-center justify-center'>
+                  <div className='relative w-12 h-12'>
+                    <div
+                      className='absolute inset-0 border-l-4 border-transparent border-solid rounded-full animate-spin text-primary'
+                      style={{ animationDuration: '3s' }}
+                    />
+                    <RiLink
+                      className='absolute inset-0 w-12 h-12 text-primary p-2 animate-pulse'
+                      style={{ animationDuration: '2s' }}
+                    />
+                  </div>
+                </div>
+                <div className='text-base font-medium text-primary [text-shadow:0_0_10px_rgba(59,130,246,0.2)]'>
+                  Scraping website content
+                </div>
+              </>
+            )}
+
+            {status === 'analyzing' && (
+              <>
+                <div className='flex items-center justify-center'>
+                  <div
+                    className='absolute inset-0 border-r-4 border-transparent border-solid rounded-full animate-spin'
+                    style={{
+                      animationDuration: '3s',
+                      animationDirection: 'reverse',
+                    }}
+                  ></div>
+                  <div className='absolute inset-0 flex items-center justify-center gap-1'>
+                    <div
+                      className='w-2 h-2 bg-primary rounded-full animate-bounce'
+                      style={{ animationDuration: '0.8s' }}
+                    ></div>
+                    <div
+                      className='w-2 h-2 bg-primary rounded-full animate-bounce'
+                      style={{
+                        animationDuration: '0.8s',
+                        animationDelay: '0.2s',
+                      }}
+                    ></div>
+                    <div
+                      className='w-2 h-2 bg-primary rounded-full animate-bounce'
+                      style={{
+                        animationDuration: '0.8s',
+                        animationDelay: '0.4s',
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div className='mt-8 text-base font-medium text-primary [text-shadow:0_0_10px_rgba(139,92,246,0.2)]'>
+                  Analyzing content
+                </div>
+              </>
+            )}
+
+            {status !== 'scraping' && status !== 'analyzing' && (
+              <div className='flex flex-col items-center'>
+                <RiLoader2Line
+                  className='w-10 h-10 text-gray-500 animate-spin mb-2'
+                  style={{ animationDuration: '1.2s' }}
+                />
+                <div
+                  style={{
+                    fontSize: '16px',
+                    color: '#4b5563',
+                    fontWeight: 'medium',
+                  }}
+                >
+                  Loading...
+                </div>
+              </div>
+            )}
           </div>
         )}
 
