@@ -10,6 +10,7 @@ import {
   TLShape,
   TLShapeId,
 } from 'tldraw';
+import { LinkShape } from '../shapes/Link.shape';
 
 export type CreateBubbleParams = {
   text: string;
@@ -18,9 +19,17 @@ export type CreateBubbleParams = {
 
 export type TreeNode = {
   id: string;
-  text: string;
   children: TreeNode[];
-};
+} & (
+  | {
+      type: 'text';
+      text: string;
+    }
+  | {
+      type: 'link';
+      url: string;
+    }
+);
 
 export class ShapeService {
   private document: TLDocument;
@@ -60,8 +69,6 @@ export class ShapeService {
         } found in snapshot!.`
       );
     }
-
-    console.log('_shapes', _shapes);
 
     this.document = _document;
     this.page = _page;
@@ -206,25 +213,28 @@ export class ShapeService {
     // Get the shape from the map
     const shape = shapeMap.get(shapeId);
 
-    // Extract text from the shape
+    // Extract text and url from the shape
     let text = '';
-    if (shape && 'props' in shape && shape.props && 'text' in shape.props) {
-      text = shape.props.text as string;
+    let url = '';
+
+    if (shape && 'props' in shape && shape.props) {
+      if ('text' in shape.props) {
+        text = shape.props.text as string;
+      }
+      if ('url' in shape.props) {
+        url = shape.props.url as string;
+      }
     }
 
     // Build the node
-    const node: TreeNode = {
-      id: shapeId,
-      text,
-      children: [],
-    };
+    const children: TreeNode[] = [];
 
     // Add children recursively, but only if they are in the expanded selection
     const childIds = parentToChildrenMap.get(shapeId) || [];
     for (const childId of childIds) {
       // Only include child if it's in the expanded selection
       if (expandedSelectionSet.has(childId)) {
-        node.children.push(
+        children.push(
           this.buildTreeNode(
             childId,
             childToParentMap,
@@ -236,7 +246,22 @@ export class ShapeService {
       }
     }
 
-    return node;
+    // Create either a link or text node based on whether URL exists
+    if (url) {
+      return {
+        id: shapeId,
+        type: 'link',
+        url,
+        children,
+      };
+    } else {
+      return {
+        id: shapeId,
+        type: 'text',
+        text,
+        children,
+      };
+    }
   }
 
   getShapePlacements(shapesToCreate: CreateBubbleParams[]) {
@@ -257,8 +282,10 @@ export class ShapeService {
 
       if (hasParent) {
         const parentShape = this.shapes.find(
-          (shape) => shape.id === shapeParams.parentId && shape.type === 'geo'
-        ) as TLGeoShape | undefined;
+          (shape) =>
+            shape.id === shapeParams.parentId &&
+            (shape.type === 'geo' || shape.type === 'link')
+        ) as (TLGeoShape | LinkShape) | undefined;
 
         if (!parentShape) {
           position = this.findPositionAwayFromShapes(
@@ -340,11 +367,12 @@ export class ShapeService {
           typeName: 'shape',
         };
 
-        // Only create arrow if there's a parent
+        // Only create arrow if there's a parent and it's a geo or link shape
         if (shape.parentId) {
           const parentShape = this.shapes.find(
-            (s) => s.id === shape.parentId && s.type === 'geo'
-          ) as TLGeoShape | undefined;
+            (s) =>
+              s.id === shape.parentId && (s.type === 'geo' || s.type === 'link')
+          ) as (TLGeoShape | LinkShape) | undefined;
 
           if (parentShape) {
             // Calculate center points of parent and child shapes
@@ -421,6 +449,7 @@ export class ShapeService {
               meta: {},
               typeName: 'binding',
             };
+
             return [newShape, arrow, binding1, binding2];
           }
         }
@@ -518,10 +547,10 @@ export class ShapeService {
       maxX = -Infinity,
       maxY = -Infinity;
 
-    // get only geo shapes
+    // get only geo shapes or link shapes
     const geoShapes = this.shapes.filter(
-      (shape) => shape.type === 'geo'
-    ) as TLGeoShape[];
+      (shape) => shape.type === 'geo' || shape.type === 'link'
+    ) as (TLGeoShape | LinkShape)[];
 
     geoShapes.forEach((shape) => {
       // Assuming shapes have x, y, and props.w, props.h properties
@@ -555,10 +584,10 @@ export class ShapeService {
       .fill(null)
       .map(() => Array(cols).fill(false));
 
-    // get only geo shapes
+    // get only geo shapes or link shapes
     const geoShapes = this.shapes.filter(
-      (shape) => shape.type === 'geo'
-    ) as TLGeoShape[];
+      (shape) => shape.type === 'geo' || shape.type === 'link'
+    ) as (TLGeoShape | LinkShape)[];
 
     // Mark cells as occupied based on shape positions
     geoShapes.forEach((shape) => {
@@ -587,7 +616,14 @@ export class ShapeService {
   }
 
   private findPositionNearParent(
-    parentShape: TLGeoShape,
+    parentShape: {
+      x: number;
+      y: number;
+      props: {
+        w: number;
+        h: number;
+      };
+    },
     gridInfo: {
       grid: boolean[][];
       rows: number;

@@ -6,13 +6,6 @@ import {
   Rectangle2d,
   resizeBox,
   TLBaseShape,
-  TldrawUiButton,
-  TldrawUiButtonLabel,
-  TldrawUiDialogBody,
-  TldrawUiDialogCloseButton,
-  TldrawUiDialogFooter,
-  TldrawUiDialogHeader,
-  TldrawUiDialogTitle,
   TLParentId,
   TLResizeInfo,
   TLShapeId,
@@ -139,15 +132,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         }}
       >
         {/* Title section at the top */}
-        <div
-          style={{
-            padding: '12px',
-            borderBottom: '1px solid #eee',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
+        <div className='flex items-center justify-center p-4 gap-4'>
           {isLoading ? (
             <div className='flex items-center justify-center'>
               <RiLoader2Line className='w-4 h-4 animate-spin' />
@@ -156,15 +141,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
             <img
               src={`https://www.google.com/s2/favicons?domain=${domain}`}
               alt=''
-              style={{
-                width: '16px',
-                height: '16px',
-                objectFit: 'cover',
-                pointerEvents: 'none',
-                userSelect: 'none',
-                MozUserSelect: 'none',
-                msUserSelect: 'none',
-              }}
+              className='w-6 h-6'
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onMouseUp={(e) => e.stopPropagation()}
@@ -177,17 +154,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               draggable='false'
             />
           )}
-          <div
-            style={{
-              color: '#000',
-              fontWeight: 'bold',
-              fontSize: '18px',
-              wordBreak: 'break-word',
-              flexGrow: 1,
-            }}
-          >
-            {title}
-          </div>
+          <div className='text-2xl font-bold'>{title}</div>
         </div>
 
         {/* Preview image or content area */}
@@ -348,54 +315,3 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     return resizeBox(shape, info);
   }
 }
-
-const InputDialog = ({
-  onClose,
-  onSubmit,
-  initialValue,
-  title,
-  placeholder,
-}: {
-  onClose(): void;
-  onSubmit: (value: string) => void;
-  initialValue: string;
-  title: string;
-  placeholder: string;
-}) => {
-  const [value, setValue] = useState(initialValue);
-
-  const handleSubmit = () => {
-    onSubmit(value);
-    onClose();
-  };
-
-  return (
-    <>
-      <TldrawUiDialogHeader>
-        <TldrawUiDialogTitle>{title}</TldrawUiDialogTitle>
-        <TldrawUiDialogCloseButton />
-      </TldrawUiDialogHeader>
-      <TldrawUiDialogBody style={{ maxWidth: 350 }}>
-        <input
-          className='w-full px-3 py-2 text-sm rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-sans'
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          autoFocus
-        />
-      </TldrawUiDialogBody>
-      <TldrawUiDialogFooter className='tlui-dialog__footer__actions'>
-        <TldrawUiButton type='normal' onClick={onClose}>
-          <TldrawUiButtonLabel>Cancel</TldrawUiButtonLabel>
-        </TldrawUiButton>
-        <TldrawUiButton
-          type='primary'
-          onClick={handleSubmit}
-          disabled={!value.trim()}
-        >
-          <TldrawUiButtonLabel>Save</TldrawUiButtonLabel>
-        </TldrawUiButton>
-      </TldrawUiDialogFooter>
-    </>
-  );
-};

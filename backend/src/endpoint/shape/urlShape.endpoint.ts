@@ -88,6 +88,7 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
           title: crawlResult.title,
           description: crawlResult.description,
           previewImageUrl: crawlResult.previewImageUrl,
+          error: null,
         },
         typeName: 'shape',
       };
@@ -101,7 +102,7 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
         },
       });
 
-      console.log('Workflow spawned', workflow);
+      console.log('Workflow spawned', workflow.id);
 
       return ctx.json(
         {
