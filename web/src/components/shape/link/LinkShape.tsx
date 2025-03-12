@@ -212,6 +212,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
             onTouchStart={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
             placeholder='Enter URL'
+            autoFocus
           />
 
           {editing ? (
