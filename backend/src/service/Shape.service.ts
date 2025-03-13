@@ -326,7 +326,7 @@ export class ShapeService {
         const MIN_HEIGHT = 200;
         const MIN_WIDTH = 300;
         const CHARS_PER_LINE = 50;
-        const HEIGHT_PER_LINE = 60;
+        const HEIGHT_PER_LINE = 75;
 
         // Scale width based on text length
         const textLength = shape.text.length;

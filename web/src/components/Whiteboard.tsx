@@ -117,19 +117,20 @@ function CustomToolbar() {
       <SelectToolbarItem />
       <HandToolbarItem />
       <EraserToolbarItem />
-      <ArrowToolbarItem />
-      <RectangleToolbarItem />
-      <EllipseToolbarItem />
+      {/* <RectangleToolbarItem /> */}
+      {/* <EllipseToolbarItem /> */}
       {/* <TldrawUiMenuItem
         {...tools['brainstorm']}
         isSelected={isAiBrainstormSelected}
-      /> */}
+        /> */}
       {/* <DefaultToolbarContent /> */}
-      <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
       <TldrawUiMenuItem
         {...tools['rich-text']}
         isSelected={isRichTextSelected}
+        icon='tool-text'
       />
+      <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
+      <ArrowToolbarItem />
     </DefaultToolbar>
   );
 }

@@ -18,6 +18,7 @@ import {
   RiChat1Line,
   RiText,
   RiLink,
+  RiAddLine,
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
@@ -254,6 +255,17 @@ export const ChatWindow: React.FC = () => {
       >
         <CardTitle className='text-base font-medium'>AI Assistant</CardTitle>
         <div className='flex gap-1'>
+          <Button
+            variant='icon'
+            className='p-0 text-gray-300 hover:text-white hover:bg-gray-700 rounded'
+            onClick={(e) => {
+              e.stopPropagation();
+              setMessages([]);
+            }}
+          >
+            <RiAddLine className='h-5 w-5' />
+          </Button>
+
           <Button
             variant='icon'
             className='p-0 text-gray-300 hover:text-white hover:bg-gray-700 rounded'

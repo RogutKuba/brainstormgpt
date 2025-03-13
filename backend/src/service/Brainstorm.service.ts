@@ -230,37 +230,49 @@ IMPORTANT FORMATTING GUIDELINES:
 3. Use proper markdown formatting with headings (##) for titles
 4. Write in a professional, objective tone appropriate for knowledge documentation
 5. Ensure each node can stand alone while also connecting to the broader knowledge structure
-6. Use paragraphs for narrative explanation and bullet points only when presenting lists of specific items
-7. Maintain consistent terminology and reference style across all nodes
+6. Break content into SHORT PARAGRAPHS of 2-3 sentences each for easy readability
+7. Use bullet points only when presenting lists of specific items
+8. Maintain consistent terminology and reference style across all nodes
+9. Avoid large blocks of text - aim for visual clarity with frequent paragraph breaks
 
 Format your response as:
 <explanation>Professional overview of how these new knowledge units extend and complement the existing structure</explanation>
 <node parent="shape-id-1">
 ## Descriptive Title for This Concept
 
-Comprehensive explanation of this specific concept. Present information in a clear, objective manner that would be appropriate for a professional knowledge base or wiki article. Develop the concept with proper context and logical flow.
+Short paragraph explaining the first aspect of this concept. Keep to 2-3 sentences maximum.
+
+Another short paragraph developing a different aspect. Maintain brevity and clarity.
+
+A final short paragraph if needed to complete the concept. Remember to keep paragraphs short for visual clarity.
 </node>
 <node parent="shape-id-1">
 ## Different Concept Title
 
-Another well-structured explanation that explores a different concept related to the same parent. Provide depth and precision rather than superficial coverage.
+Short paragraph introducing this concept. Keep it concise and focused.
+
+Follow-up paragraph developing the idea further. Maintain the same brief style.
 </node>
 <node parent="shape-id-2">
 ## Another Specific Concept
 
-Detailed explanation of this concept with appropriate professional terminology and structure.
+Brief paragraph with professional terminology. Keep it short and precise.
+
+Second paragraph adding depth to the concept. Maintain brevity.
 </node>
 <node>
 ## New Foundational Concept (only if addressing a significant gap)
 
-Comprehensive explanation establishing this new concept within the broader knowledge structure.
+Short paragraph establishing this concept. Keep it concise.
+
+Follow-up paragraph providing more context. Maintain brevity throughout.
 </node>
 
 For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
         ', '
       )}
 
-Your goal is to create a cohesive knowledge structure where each node functions as its own mini-wiki article - self-contained yet connected to the broader context. Prioritize clarity, precision, and professional tone throughout.`,
+Your goal is to create a cohesive knowledge structure where each node functions as its own mini-wiki article - self-contained yet connected to the broader context. Prioritize clarity, precision, and professional tone throughout. Remember to keep paragraphs SHORT (2-3 sentences) for optimal readability on a whiteboard.`,
       chatHistory,
       env: ctx.env,
     });
