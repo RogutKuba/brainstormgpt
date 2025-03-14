@@ -15,12 +15,13 @@ export const LLMService = {
 
     // Initialize OpenAI client with API key from environment
     const openai = new OpenAI({
-      apiKey: env.OPENAI_API_KEY,
+      apiKey: env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
     });
 
     // Call OpenAI API
     const response = await openai.chat.completions.create({
-      model: 'o3-mini', // You can change this to other models like "gpt-4" if needed
+      model: 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
       messages: [
         ...chatHistory.map((message) => ({
           role: message.sender,

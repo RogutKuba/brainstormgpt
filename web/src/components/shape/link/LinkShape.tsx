@@ -49,8 +49,8 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
   getDefaultProps(): LinkShape['props'] {
     return {
-      w: 240,
-      h: 160,
+      w: 400,
+      h: 300,
       url: 'https://www.google.com',
       title: 'Google',
       description: 'Google',

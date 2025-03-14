@@ -216,7 +216,7 @@ ${goal}
     : ''
 }
 
-First, provide a brief, professional explanation of how your new content elements connect to and extend the existing knowledge structure. Focus on logical relationships and conceptual connections.
+First, provide a brief, professional explanation of your new content elements. Focus on logical relationships and conceptual connections.
 
 IMPORTANT: When you see link nodes in the existing content, understand that users CANNOT see the content of these links directly on their whiteboard. The link summaries and key points are only visible to you as context. If you want to reference information from links, you should include that information explicitly in your new nodes.
 

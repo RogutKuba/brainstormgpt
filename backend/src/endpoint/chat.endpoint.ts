@@ -4,6 +4,7 @@ import { ErrorResponses } from './errors.js';
 import { BrainstormService } from '../service/Brainstorm.service';
 import { ShapeService } from '../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
+import { TLShapeId } from 'tldraw';
 
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
@@ -81,6 +82,23 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
         tree,
         ctx,
       });
+
+    // FAKE PLACEHOLDER DATA TO TEST PLACEMENT
+    // const newShapes = [
+    //   {
+    //     text: 'New Shape 1',
+    //     parentId: 'shape:GFX1-KMQLg2PyCwZCmyvw' as TLShapeId,
+    //   },
+    //   {
+    //     text: 'New Shape 2',
+    //     parentId: 'shape:GFX1-KMQLg2PyCwZCmyvw' as TLShapeId,
+    //   },
+    //   {
+    //     text: 'New Shape 3',
+    //     parentId: 'shape:GFX1-KMQLg2PyCwZCmyvw' as TLShapeId,
+    //   },
+    // ] as const;
+    // const explanation = 'This is a test explanation';
 
     const shapePlacements = shapeService.getShapePlacements(
       newShapes.map((shape) => ({

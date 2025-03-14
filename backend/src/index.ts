@@ -27,6 +27,7 @@ export type AppContext = {
     ChunkWorkflow: Workflow<ChunkWorkflowParams>;
 
     // API KEYS
+    OPENROUTER_API_KEY: string;
     OPENAI_API_KEY: string;
     FIRECRAWL_API_KEY: string;
 

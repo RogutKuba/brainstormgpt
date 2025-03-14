@@ -59,6 +59,7 @@ import { RiShare2Fill, RiShare2Line } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
 import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
+import { useRouter } from 'next/navigation';
 
 const ALLOWED_TOOLS = [
   'select',
@@ -138,6 +139,8 @@ function CustomToolbar() {
 const CustomMainMenu = () => {
   const { addDialog } = useDialogs();
 
+  const router = useRouter();
+
   return (
     <DefaultMainMenu>
       <TldrawUiMenuGroup id='example'>
@@ -165,7 +168,7 @@ const CustomMainMenu = () => {
           label='Exit workspace'
           icon='exit'
           onSelect={() => {
-            window.location.href = '';
+            router.push('/app');
           }}
         />
       </TldrawUiMenuGroup>

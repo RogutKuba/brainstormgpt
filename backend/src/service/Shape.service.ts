@@ -88,6 +88,7 @@ export class ShapeService {
     const arrowShapes = new Set<string>();
     for (const shape of this.shapes) {
       if (shape.type === 'arrow') {
+        console.log('arrow', shape);
         arrowShapes.add(shape.id);
       }
     }
@@ -269,7 +270,14 @@ export class ShapeService {
     // need to figure out empty space to put the new bubbles
     const positions: { x: number; y: number }[] = [];
     const canvasBounds = this.getCanvasBounds();
-    const gridSize = 100;
+
+    // the larger the bounds, the larger the grid size with a min of 100
+    const gridSize = Math.max(
+      (canvasBounds.maxX - canvasBounds.minX) / 10,
+      (canvasBounds.maxY - canvasBounds.minY) / 10,
+      100
+    );
+    console.log('grid size', gridSize);
 
     // Create initial grid
     const gridInfo = this.createOccupancyGrid(canvasBounds, gridSize);
@@ -277,6 +285,11 @@ export class ShapeService {
 
     // Place shapes one by one, updating the grid after each placement
     for (const shapeParams of shapesToCreate) {
+      console.log('\n\n--------------------------------');
+      console.log('placing shape', shapeParams);
+
+      this.prettyPrintGrid(gridInfo);
+
       const hasParent = shapeParams.parentId !== null;
 
       let position: { x: number; y: number };
@@ -302,6 +315,8 @@ export class ShapeService {
             gridInfo,
             gridSize
           );
+
+          console.log('new shape position', position);
         }
       } else {
         position = this.findPositionAwayFromShapes(
@@ -315,6 +330,8 @@ export class ShapeService {
 
       // Update grid to mark this position as occupied
       this.markPositionAsOccupied(position, gridInfo, gridSize);
+
+      console.log('--------------------------------\n\n');
     }
 
     // create new shape params
@@ -355,9 +372,9 @@ export class ShapeService {
             color: 'black',
             labelColor: 'black',
             fill: 'none',
-            dash: 'draw',
+            dash: 'dashed',
             size: 'm',
-            font: 'draw',
+            font: 'dashed',
             text: shape.text,
             align: 'middle',
             verticalAlign: 'middle',
@@ -366,7 +383,7 @@ export class ShapeService {
             scale: 1,
           },
           parentId: this.page.id,
-          index: 'a1' as IndexKey,
+          index: 'a2' as IndexKey,
           typeName: 'shape',
         };
 
@@ -393,6 +410,30 @@ export class ShapeService {
 
             const arrowId = this.generateShapeId();
 
+            // Calculate bend based on Y-position difference
+            const yDifference = childCenterY - parentCenterY;
+            const xDifference = childCenterX - parentCenterX;
+
+            // Calculate bend value - more bend for larger Y differences
+            // The sign determines the direction of the bend
+            let bendValue = 0;
+
+            // Only apply bend if there's a significant Y difference
+            if (Math.abs(yDifference) > 50) {
+              // Calculate bend based on the ratio of Y difference to X difference
+              // This creates more natural-looking arrows
+              const ratio = Math.abs(yDifference / (xDifference || 1));
+
+              // Scale the bend based on the ratio, with a maximum value
+              bendValue = Math.min(Math.max(ratio * 20, 0), 80);
+
+              // Make the bend negative if the child is below the parent
+              // This creates a more natural flow direction
+              if (yDifference > 0) {
+                bendValue *= -1;
+              }
+            }
+
             const arrow: TLArrowShape = {
               id: arrowId,
               type: 'arrow',
@@ -402,7 +443,7 @@ export class ShapeService {
                 fill: 'none',
                 color: 'black',
                 labelColor: 'black',
-                bend: 0,
+                bend: bendValue,
                 start: { x: parentCenterX - arrowX, y: parentCenterY - arrowY },
                 end: { x: childCenterX - arrowX, y: childCenterY - arrowY },
                 arrowheadStart: 'none',
@@ -468,7 +509,12 @@ export class ShapeService {
     position: { x: number; y: number },
     gridInfo: {
       grid: boolean[][];
-      bounds: any;
+      bounds: {
+        minX: number;
+        minY: number;
+        maxX: number;
+        maxY: number;
+      };
       rows: number;
       cols: number;
     },
@@ -501,14 +547,14 @@ export class ShapeService {
   private markBufferZones(
     gridInfo: {
       grid: boolean[][];
-      bounds: any;
+      bounds: { minX: number; minY: number; maxX: number; maxY: number };
       rows: number;
       cols: number;
     },
     gridSize: number
   ) {
     const { grid, bounds } = gridInfo;
-    const bufferCells = 1; // Buffer of 1 cell around each shape
+    const bufferCells = 0; // Buffer of 0 cell around each shape
 
     // Create a copy of the grid to avoid modifying while iterating
     const originalGrid = grid.map((row) => [...row]);
@@ -582,7 +628,10 @@ export class ShapeService {
     };
   }
 
-  private createOccupancyGrid(bounds: any, gridSize: number) {
+  private createOccupancyGrid(
+    bounds: { minX: number; minY: number; maxX: number; maxY: number },
+    gridSize: number
+  ) {
     const cols = Math.ceil((bounds.maxX - bounds.minX) / gridSize);
     const rows = Math.ceil((bounds.maxY - bounds.minY) / gridSize);
 
@@ -703,6 +752,8 @@ export class ShapeService {
       layer++;
     }
 
+    console.log('no space found');
+
     // Fallback if no space found
     return this.findPositionAwayFromShapes(gridInfo, bounds, gridSize);
   }
@@ -791,5 +842,21 @@ export class ShapeService {
 
   private generateBindingId(): TLBindingId {
     return ('binding:' + crypto.randomUUID()) as TLBindingId;
+  }
+
+  // make the grid extremely readable
+  private prettyPrintGrid(gridInfo: {
+    grid: boolean[][];
+    rows: number;
+    cols: number;
+  }) {
+    const { grid, rows, cols } = gridInfo;
+    for (let row = 0; row < rows; row++) {
+      let toPrint = '';
+      for (let col = 0; col < cols; col++) {
+        toPrint += grid[row][col] ? 'X' : '.';
+      }
+      console.log(toPrint);
+    }
   }
 }

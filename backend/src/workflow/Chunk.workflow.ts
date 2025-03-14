@@ -6,7 +6,7 @@ import {
 import { AppContext } from '..';
 import { getDbConnectionFromEnv, takeUnique } from '../db/client';
 import { crawledPageTable } from '../db/crawledPage.db';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { NonRetryableError } from 'cloudflare:workflows';
 import { PageChunkEntity, pageChunkTable } from '../db/pageChunk.db';
 import { generateId } from '../lib/id';
@@ -70,6 +70,19 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
       await step.do('convert-content-to-chunks', async () => {
         const db = getDbConnectionFromEnv(this.env);
 
+        // if url already exists for the url, we can skip the chunking
+        const existingPageChunk = await db
+          .select({
+            count: count(),
+          })
+          .from(pageChunkTable)
+          .where(eq(pageChunkTable.url, crawledPage.url))
+          .then(takeUnique);
+
+        if (existingPageChunk && existingPageChunk.count > 0) {
+          return;
+        }
+
         // convert the markdown to chunks
         const chunks = await convertMarkdownToChunks(crawledPage.markdown);
 
@@ -85,8 +98,6 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
         }));
 
         await db.insert(pageChunkTable).values(chunkEntities);
-
-        return chunkEntities;
       });
 
       // create the page summary

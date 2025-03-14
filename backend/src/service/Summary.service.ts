@@ -20,6 +20,17 @@ export const SummaryService = {
 
     const db = getDbConnectionFromEnv(env);
 
+    // if summary already exists, we can skip the summary
+    const existingPageSummary = await db
+      .select()
+      .from(pageSummaryTable)
+      .where(eq(pageSummaryTable.url, crawledPageId))
+      .then(takeUnique);
+
+    if (existingPageSummary) {
+      return;
+    }
+
     // Get the crawled page
     const crawledPage = await db
       .select({
