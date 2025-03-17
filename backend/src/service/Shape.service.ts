@@ -88,7 +88,6 @@ export class ShapeService {
     const arrowShapes = new Set<string>();
     for (const shape of this.shapes) {
       if (shape.type === 'arrow') {
-        console.log('arrow', shape);
         arrowShapes.add(shape.id);
       }
     }
@@ -254,6 +253,13 @@ export class ShapeService {
         id: shapeId,
         type: 'link',
         url,
+        children,
+      };
+    } else if (shape?.type === 'rich-text') {
+      return {
+        id: shapeId,
+        type: 'rich-text',
+        text,
         children,
       };
     } else {
