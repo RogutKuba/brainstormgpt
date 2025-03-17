@@ -250,14 +250,14 @@ export const ChatWindow: React.FC = () => {
       }}
     >
       <CardHeader
-        className='py-2 px-4 cursor-grab flex flex-row justify-between items-center bg-gray-800 text-white shrink-0'
+        className='py-2 px-4 cursor-grab flex flex-row justify-between items-center bg-primary text-white shrink-0'
         onMouseDown={handleDragStart}
       >
         <CardTitle className='text-base font-medium'>AI Assistant</CardTitle>
         <div className='flex gap-1'>
           <Button
             variant='icon'
-            className='p-0 text-gray-300 hover:text-white hover:bg-gray-700 rounded'
+            className='p-0 text-gray-200 hover:text-white hover:bg-white/10 rounded transition-colors duration-200'
             onClick={(e) => {
               e.stopPropagation();
               setMessages([]);
@@ -268,7 +268,7 @@ export const ChatWindow: React.FC = () => {
 
           <Button
             variant='icon'
-            className='p-0 text-gray-300 hover:text-white hover:bg-gray-700 rounded'
+            className='p-0 text-gray-200 hover:text-white hover:bg-white/10 rounded transition-colors duration-200'
             onClick={(e) => {
               e.stopPropagation();
               handleToggleCollapse();

@@ -32,14 +32,14 @@ export default function DashboardPage() {
   const { logout } = useLogout();
 
   return (
-    <>
+    <div className='min-h-screen'>
       {/* Header */}
-      <header className='w-full border-b border-gray-200 py-4 px-2 md:px-0'>
+      <header className='w-full border-b border-gray-200 bg-white shadow-sm py-4 px-2 md:px-0'>
         <div className='container max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-4 lg:px-0'>
           <div className='flex items-center'>
             <span className='text-xl font-bold flex items-center gap-1'>
-              <RiBrain2Fill className='w-6 h-6 text-pink-400' />
-              BrainstormGPT
+              <RiBrain2Fill className='w-6 h-6 text-blue-500' />
+              <span className=''>Tangent</span>
             </span>
           </div>
 
@@ -49,7 +49,7 @@ export default function DashboardPage() {
             ) : (
               <Button
                 variant='secondary'
-                className='flex items-center gap-2'
+                className='flex items-center gap-2 transition-colors'
                 onClick={() => logout()}
               >
                 <RiLogoutBoxLine className='w-4 h-4' />
@@ -60,8 +60,8 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className='container max-w-3xl mx-auto py-6 md:py-8 px-4 sm:px-4 md:px-0'>
-        <div className='flex flex-row justify-between items-center gap-4 md:gap-0 mb-6 md:mb-2'>
+      <div className='container max-w-3xl mx-auto py-8 md:py-12 px-4 sm:px-4 md:px-0'>
+        <div className='flex flex-row justify-between items-center gap-4 md:gap-0 mb-8'>
           <h1 className='text-2xl sm:text-3xl font-bold text-gray-900'>
             Your Workspaces
           </h1>
@@ -69,7 +69,10 @@ export default function DashboardPage() {
           {/* Desktop buttons */}
           <div className='hidden md:flex items-center gap-2'>
             <JoinWorkspaceDialog>
-              <Button variant='light'>
+              <Button
+                variant='light'
+                className='hover:bg-gray-100 transition-colors'
+              >
                 <RiUserSharedLine className='w-4 h-4' />
                 <span>Join Workspace</span>
               </Button>
@@ -101,10 +104,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className='overflow-x-auto -mx-4 sm:-mx-4 md:mx-0'>
+        <div className='overflow-x-auto -mx-4 sm:-mx-4 md:mx-0 bg-white rounded-lg shadow-sm border border-gray-200'>
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow className='bg-gray-50'>
                 <TableHeaderCell className='w-1/3'>Name</TableHeaderCell>
                 <TableHeaderCell className='w-1/3'>Code</TableHeaderCell>
                 <TableHeaderCell className='text-right'></TableHeaderCell>
@@ -149,11 +152,16 @@ export default function DashboardPage() {
                 </>
               ) : workspaces && workspaces.length > 0 ? (
                 workspaces.map((workspace, index) => (
-                  <TableRow key={index} className='hover:bg-gray-50'>
+                  <TableRow
+                    key={index}
+                    className='hover:bg-blue-50/25 transition-colors'
+                  >
                     <TableCell className='font-medium'>
                       {workspace.name}
                     </TableCell>
-                    <TableCell>{workspace.id}</TableCell>
+                    <TableCell className='font-mono text-sm text-gray-600'>
+                      {workspace.id}
+                    </TableCell>
                     <TableCell className='text-right'>
                       <Button
                         variant='secondary'
@@ -166,15 +174,24 @@ export default function DashboardPage() {
                           Enter Workspace
                         </span>
                         <span className='inline md:hidden'>Enter</span>
-                        <RiArrowRightLine className='w-4 h-4' />
+                        <RiArrowRightLine className='w-4 h-4 ml-1' />
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className='text-center'>
-                    You have not created any workspaces yet.
+                  <TableCell
+                    colSpan={3}
+                    className='text-center py-8 text-gray-500'
+                  >
+                    <div className='flex flex-col items-center gap-2'>
+                      <RiBrain2Fill className='w-10 h-10 text-gray-300' />
+                      <p>You have not created any workspaces yet.</p>
+                      <p className='text-sm'>
+                        Create or join a workspace to get started.
+                      </p>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
@@ -182,6 +199,6 @@ export default function DashboardPage() {
           </Table>
         </div>
       </div>
-    </>
+    </div>
   );
 }

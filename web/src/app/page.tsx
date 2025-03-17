@@ -102,11 +102,11 @@ export default function Home() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <div className='flex flex-col sm:flex-row gap-2'>
+          <div className='flex flex-col sm:flex-row gap-2 bg-white p-1'>
             <input
               type='email'
               placeholder='Enter your email here'
-              className='bg-white text-gray-600 border-none rounded-lg transition-colors placeholder:text-gray-400 px-5 py-3 focus:outline-none shadow-lg w-72 sm:w-80'
+              className='bg-white text-gray-600 border-none rounded-lg transition-colors placeholder:text-gray-400 px-5 py-3 focus:outline-none w-72 sm:w-80'
             />
             <button className='flex items-center justify-center px-6 py-3 bg-black text-white rounded-lg transition-colors hover:bg-gray-800 font-medium shadow-lg'>
               Join waitlist
