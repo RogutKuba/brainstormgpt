@@ -90,11 +90,11 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
               onPointerDown={stopEventPropagation}
               onTouchStart={stopEventPropagation}
               onTouchEnd={stopEventPropagation}
-              className='w-full h-full resize-none border-none focus:ring-0 text-lg'
+              className='w-full h-full resize-none border-none focus:ring-0 text-md'
               autoFocus
             />
           ) : (
-            <div className='markdown-content prose prose-sm max-w-none text-xl'>
+            <div className='markdown-content prose prose-sm max-w-none text-md'>
               <ReactMarkdown>{text}</ReactMarkdown>
             </div>
           )}

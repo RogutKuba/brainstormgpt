@@ -44,6 +44,9 @@ import {
   getHashForString,
   AssetRecordType,
   TLAsset,
+  TLUiTranslationKey,
+  TLUiEventSource,
+  Editor,
 } from 'tldraw';
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/components/brainstorm-tool/BrainstormTool';
@@ -51,17 +54,22 @@ import { BrainstormDragging } from '@/components/brainstorm-tool/child-states/Dr
 import { API_URL } from '@/lib/constants';
 import { LinkShapeUtil } from '@/components/shape/link/LinkShape';
 import { LinkTool } from '@/components/shape/link/LinkTool';
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { SystemGoalDialog } from '@/components/SystemGoalDialog';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
 import { RiShare2Fill, RiShare2Line } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
+import { Collection } from '@/components/collection/base/CollectionProvider';
 import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
 import { useRouter } from 'next/navigation';
-
+import { CollectionProvider } from '@/components/collection/base/CollectionProvider';
+import { GraphLayoutCollection } from '@/components/collection/graph/GraphLayoutCollection';
+import { GraphUi } from '@/components/collection/graph/GraphUi';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
+
+const collections: Collection[] = [GraphLayoutCollection];
 
 const customUiOverrides: TLUiOverrides = {
   tools: (editor, tools) => {
@@ -98,6 +106,19 @@ const customUiOverrides: TLUiOverrides = {
         },
       },
     };
+  },
+  actions(_editor, actions) {
+    actions['toggle-graph-layout'] = {
+      id: 'toggle-graph-layout',
+      label: 'Toggle Graph Layout' as TLUiTranslationKey,
+      readonlyOk: true,
+      kbd: 'g',
+      onSelect(_source: TLUiEventSource) {
+        const event = new CustomEvent('toggleGraphLayoutEvent');
+        window.dispatchEvent(event);
+      },
+    };
+    return actions;
   },
 };
 
@@ -298,6 +319,7 @@ const customComponents: TLComponents = {
 };
 
 export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
+  const [editor, setEditor] = useState<Editor | null>(null);
   const shapeUtils = useMemo(() => [...customShapes, ...defaultShapeUtils], []);
   const { updateLinkShape } = useUpdateLinkShape();
 
@@ -323,6 +345,9 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
         createTextOnCanvasDoubleClick: false,
       }}
       onMount={(editor) => {
+        // set the editor
+        setEditor(editor);
+
         // when the editor is ready, we need to register our bookmark unfurling service
         editor.registerExternalContentHandler('url', (content) =>
           handleCustomUrlPaste(editor, content, (params) => {
@@ -333,6 +358,12 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
           })
         );
       }}
-    />
+    >
+      {editor && (
+        <CollectionProvider editor={editor} collections={collections}>
+          <GraphUi />
+        </CollectionProvider>
+      )}
+    </Tldraw>
   );
 };
