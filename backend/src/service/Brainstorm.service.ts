@@ -153,7 +153,7 @@ export const BrainstormService = {
     tree: TreeNode[];
     ctx: Context<AppContext>;
   }): Promise<{
-    newShapes: BrainStormResult[];
+    newNodes: BrainStormResult[];
     explanation: string;
     deepestLevel: number;
   }> => {
@@ -315,7 +315,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
     }
 
     return {
-      newShapes: results,
+      newNodes: results,
       deepestLevel,
       explanation:
         explanationMatch?.[1].trim() ?? 'I generated some new ideas:',

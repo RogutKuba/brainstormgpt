@@ -64,10 +64,6 @@ export class TldrawDurableObject extends DurableObject<Environment> {
         });
       }
       return this.handleConnect(request);
-    })
-    .post('/brainstorm/:workspaceId', async (request) => {
-      if (!this.workspaceId) return error(400, 'Missing workspaceId');
-      return this.handleBrainstorm(request);
     });
 
   // `fetch` is the entry point for all requests to the Durable Object
@@ -93,75 +89,6 @@ export class TldrawDurableObject extends DurableObject<Environment> {
 
     // return the websocket connection to the client
     return new Response(null, { status: 101, webSocket: clientWebSocket });
-  }
-
-  async handleBrainstorm(request: IRequest): Promise<Response> {
-    const { prompt, shapes } = await request.json<{
-      prompt: string;
-      shapes: TLShape[];
-    }>();
-    // console.log('brainstorm', prompt, shapes);
-
-    // I want to transform the shapes into a text prompt
-    const shapeTexts = (() => {
-      // collect all the text shapes
-      const textShapes = shapes.filter(
-        (shape) => shape.type === 'text'
-      ) as TLTextShape[];
-
-      return textShapes.map((shape) => shape.props.text?.trim() ?? '');
-    })();
-
-    const room = await this.getRoom();
-    const snapshot = room.getCurrentSnapshot();
-
-    const currentDocuments = snapshot.documents;
-
-    // get only typeName = shape
-    const currentShapes = currentDocuments.filter(
-      (shape) => shape.state.typeName === 'shape'
-    );
-
-    console.log(currentShapes);
-
-    // currentShapes.forEach((shape) => {
-    //   console.dir(shape.state, { depth: null });
-    //   console.log(shape.state.props);
-    //   console.log('--------------------------------');
-    // });
-
-    // get some new shapes
-    const shapeService = new ShapeService(snapshot);
-    const newShapes = await shapeService.getShapePlacements([
-      {
-        text: prompt,
-        parentId: null,
-      },
-      {
-        text: "Hey this is a test. You're absolutely right. The current implementation doesn't account for newly added shapes when placing multiple bubbles, which could lead to overlaps. Let's fix that by updating the grid as we place each new shape.",
-        parentId: null,
-      },
-      {
-        text: 'Hey this is a test 2',
-        parentId: null,
-      },
-      {
-        text: 'Hey this is a test 3',
-        parentId: null,
-      },
-    ]);
-
-    console.log('newShapes', newShapes);
-
-    room.updateStore((store) => {
-      newShapes.forEach((shape) => {
-        store.put(shape);
-      });
-    });
-
-    // console.log('snapshot', snapshot.documents);
-
-    return new Response(JSON.stringify([]));
   }
 
   getRoom() {
@@ -232,6 +159,38 @@ export class TldrawDurableObject extends DurableObject<Environment> {
   }
 
   /**
+   * Partial update a shape in the store. By default if the shape doesn't exist, it will be not be created.
+   * @param shape - The shape to update.
+   */
+  async updateShapes(
+    shapes: (Pick<TLShape, 'id'> & Partial<TLShape>)[],
+    options?: {
+      createIfMissing?: boolean;
+    }
+  ) {
+    const room = await this.getRoom();
+    room.updateStore((store) => {
+      shapes.forEach((shape) => {
+        const existingShape = store.get(shape.id) as TLShape;
+        if (existingShape) {
+          // merge the existing shape with the new shape
+          store.put({
+            ...existingShape,
+            ...shape,
+            props: {
+              ...existingShape.props,
+              ...(shape.props ?? {}),
+            },
+          });
+        } else if (options?.createIfMissing && shape.type) {
+          // TODO: add actual validation to ensure the type has all the required fields
+          store.put(shape as TLRecord);
+        }
+      });
+    });
+  }
+
+  /**
    * Removes a shape from the store.
    * @param shape - The shape to remove.
    */
@@ -260,6 +219,15 @@ export class TldrawDurableObject extends DurableObject<Environment> {
   async getCurrentSnapshot(): Promise<RoomSnapshot> {
     const room = await this.getRoom();
     return room.getCurrentSnapshot() as RoomSnapshot;
+  }
+
+  /**
+   * Gets the current document clock of the room.
+   * @returns The current document clock of the room.
+   */
+  async getCurrentDocumentClock(): Promise<number> {
+    const room = await this.getRoom();
+    return room.getCurrentDocumentClock();
   }
 
   /**

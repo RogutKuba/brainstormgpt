@@ -109,12 +109,6 @@ export class BrainstormDragging extends StateNode {
           }),
         });
         const data = await response.json();
-
-        // handle the result
-        BrainstormToolCalls.handleBrainstormResult({
-          result: data,
-          editor: this.editor,
-        });
       } catch (error) {
         console.error('Error during brainstorming:', error);
       }

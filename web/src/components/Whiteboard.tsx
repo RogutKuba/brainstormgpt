@@ -61,14 +61,7 @@ import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
 import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
 import { useRouter } from 'next/navigation';
 
-const ALLOWED_TOOLS = [
-  'select',
-  'hand',
-  'eraser',
-  'rectangle',
-  'ellipse',
-  'arrow',
-];
+const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const customUiOverrides: TLUiOverrides = {
   tools: (editor, tools) => {

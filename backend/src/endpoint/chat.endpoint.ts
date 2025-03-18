@@ -4,7 +4,8 @@ import { ErrorResponses } from './errors.js';
 import { BrainstormService } from '../service/Brainstorm.service';
 import { ShapeService } from '../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
-import { TLShapeId } from 'tldraw';
+import { TLShape, TLArrowBinding, TLShapeId } from 'tldraw';
+import { GraphService } from '../service/Graph.service';
 
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
@@ -75,7 +76,7 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     // need to construct tree of shapes from the ids and bindings between them
     const tree = shapeService.getSelectedTree(selectedItems);
 
-    const { newShapes, explanation } =
+    const { newNodes, explanation } =
       await BrainstormService.generateBrainstorm({
         prompt: message,
         chatHistory,
@@ -83,32 +84,67 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
         ctx,
       });
 
-    // FAKE PLACEHOLDER DATA TO TEST PLACEMENT
-    // const newShapes = [
-    //   {
-    //     text: 'New Shape 1',
-    //     parentId: 'shape:GFX1-KMQLg2PyCwZCmyvw' as TLShapeId,
-    //   },
-    //   {
-    //     text: 'New Shape 2',
-    //     parentId: 'shape:GFX1-KMQLg2PyCwZCmyvw' as TLShapeId,
-    //   },
-    //   {
-    //     text: 'New Shape 3',
-    //     parentId: 'shape:GFX1-KMQLg2PyCwZCmyvw' as TLShapeId,
-    //   },
-    // ] as const;
-    // const explanation = 'This is a test explanation';
+    const { shapes: newShapes, bindings: newBindings } =
+      shapeService.getShapePlacements(
+        newNodes.map((node) => ({
+          text: node.text,
+          parentId: node.parentId ?? null,
+        }))
+      );
+    const newShapeMap = new Map(newShapes.map((shape) => [shape.id, shape]));
+    console.log('newShapes', [...newShapeMap.keys()]);
 
-    const shapePlacements = shapeService.getShapePlacements(
-      newShapes.map((shape) => ({
-        text: shape.text,
-        parentId: shape.parentId ?? null,
-      }))
-    );
+    // print out x and y of new shapes
+    newShapes.forEach((shape) => {
+      console.log('shape', shape.id, shape.x, shape.y);
+    });
 
-    // now actually add shapes to workspace
-    await workspace.addRecords(shapePlacements);
+    const lastChangedClock = await workspace.getCurrentDocumentClock();
+
+    // add new shapes to existing snapshot for rebalancing
+    const updatedSnapshot = {
+      ...snapshot,
+      documents: [
+        ...snapshot.documents,
+        ...[...newShapes, ...newBindings].map((shape) => ({
+          state: shape,
+          lastChangedClock,
+        })),
+      ],
+    };
+
+    // now rebalance the graph
+    const graphService = new GraphService({ snapshot: updatedSnapshot });
+    const rebalancedNodes = graphService.rebalance();
+
+    console.log('### PRINTING REBALANCED NODES ###');
+    // replace the new shapes with the rebalanced nodes
+    const rebalancedShapes = rebalancedNodes.map((node) => {
+      const shape = newShapeMap.get(node.id);
+      if (shape) {
+        // print out the node x y for shape
+        console.log('shape', shape.id, shape.x, shape.y, '->', node.x, node.y);
+
+        return {
+          ...shape,
+          ...node,
+        };
+      }
+      return node;
+    });
+
+    console.log('### PRINTING REBALANCED SHAPES ###');
+    // print out the rebalanced shapes
+    rebalancedShapes.forEach((shape) => {
+      if (newShapeMap.has(shape.id)) {
+        console.log('shape', shape.id, shape.x, shape.y);
+      }
+    });
+
+    console.log('rebalancedShapes', rebalancedShapes);
+
+    await workspace.updateShapes(rebalancedShapes, { createIfMissing: true });
+    await workspace.addRecords(newBindings);
 
     return ctx.json({ message: explanation }, 200);
   }

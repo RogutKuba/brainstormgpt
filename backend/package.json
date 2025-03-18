@@ -35,6 +35,7 @@
 		"openai": "^4.85.4",
 		"postgres": "^3.4.5",
 		"tldraw": "3.8.1",
+		"webcola": "^3.4.0",
 		"zod": "^3.24.2"
 	},
 	"devDependencies": {

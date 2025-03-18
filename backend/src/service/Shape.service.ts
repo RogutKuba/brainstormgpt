@@ -272,7 +272,10 @@ export class ShapeService {
     }
   }
 
-  getShapePlacements(shapesToCreate: CreateBubbleParams[]) {
+  getShapePlacements(shapesToCreate: CreateBubbleParams[]): {
+    shapes: TLShape[];
+    bindings: TLArrowBinding[];
+  } {
     // need to figure out empty space to put the new bubbles
     const positions: { x: number; y: number }[] = [];
     const canvasBounds = this.getCanvasBounds();
@@ -283,7 +286,7 @@ export class ShapeService {
       (canvasBounds.maxY - canvasBounds.minY) / 10,
       100
     );
-    console.log('grid size', gridSize);
+    // console.log('grid size', gridSize);
 
     // Create initial grid
     const gridInfo = this.createOccupancyGrid(canvasBounds, gridSize);
@@ -291,10 +294,10 @@ export class ShapeService {
 
     // Place shapes one by one, updating the grid after each placement
     for (const shapeParams of shapesToCreate) {
-      console.log('\n\n--------------------------------');
-      console.log('placing shape', shapeParams);
+      // console.log('\n\n--------------------------------');
+      // console.log('placing shape', shapeParams);
 
-      this.prettyPrintGrid(gridInfo);
+      // this.prettyPrintGrid(gridInfo);
 
       const hasParent = shapeParams.parentId !== null;
 
@@ -337,177 +340,180 @@ export class ShapeService {
       // Update grid to mark this position as occupied
       this.markPositionAsOccupied(position, gridInfo, gridSize);
 
-      console.log('--------------------------------\n\n');
+      // console.log('--------------------------------\n\n');
     }
 
+    const shapes: TLShape[] = [];
+    const bindings: TLArrowBinding[] = [];
+
     // create new shape params
-    return shapesToCreate
-      .map((shape, index) => {
-        const { x, y } = positions[index];
+    let index = 0;
+    for (const shape of shapesToCreate) {
+      const { x, y } = positions[index++];
 
-        // Calculate width and height based on text length
-        const MIN_HEIGHT = 200;
-        const MIN_WIDTH = 300;
-        const CHARS_PER_LINE = 50;
-        const HEIGHT_PER_LINE = 75;
+      // Calculate width and height based on text length
+      const MIN_HEIGHT = 200;
+      const MIN_WIDTH = 300;
+      const CHARS_PER_LINE = 50;
+      const HEIGHT_PER_LINE = 75;
 
-        // Scale width based on text length
-        const textLength = shape.text.length;
-        const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
-        const width = Math.ceil(MIN_WIDTH * widthScale);
+      // Scale width based on text length
+      const textLength = shape.text.length;
+      const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
+      const width = Math.ceil(MIN_WIDTH * widthScale);
 
-        // Calculate height based on text length and adjusted width
-        const charsPerWidthAdjustedLine = CHARS_PER_LINE * (width / MIN_WIDTH);
-        const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
-        const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
+      // Calculate height based on text length and adjusted width
+      const charsPerWidthAdjustedLine = CHARS_PER_LINE * (width / MIN_WIDTH);
+      const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
+      const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
-        const newShapeId = this.generateShapeId();
-        const newShape: TLShape = {
-          id: newShapeId,
-          x,
-          y,
-          rotation: 0,
-          isLocked: false,
-          opacity: 1,
-          meta: {},
-          type: 'rich-text',
-          props: {
-            w: width,
-            h: height,
-            geo: 'rectangle',
-            color: 'black',
-            labelColor: 'black',
-            fill: 'none',
-            dash: 'dashed',
-            size: 'm',
-            font: 'dashed',
-            text: shape.text,
-            align: 'middle',
-            verticalAlign: 'middle',
-            growY: 0,
-            url: '',
-            scale: 1,
-          },
-          parentId: this.page.id,
-          index: 'a2' as IndexKey,
-          typeName: 'shape',
-        };
+      const newShapeId = this.generateShapeId();
+      const newShape: TLShape = {
+        id: newShapeId,
+        x,
+        y,
+        rotation: 0,
+        isLocked: false,
+        opacity: 1,
+        meta: {},
+        type: 'rich-text',
+        props: {
+          w: width,
+          h: height,
+          geo: 'rectangle',
+          color: 'black',
+          labelColor: 'black',
+          fill: 'none',
+          dash: 'dashed',
+          size: 'm',
+          font: 'dashed',
+          text: shape.text,
+          align: 'middle',
+          verticalAlign: 'middle',
+          growY: 0,
+          url: '',
+          scale: 1,
+        },
+        parentId: this.page.id,
+        index: 'a2' as IndexKey,
+        typeName: 'shape',
+      };
 
-        // Only create arrow if there's a parent and it's a geo, link, or rich-text shape
-        if (shape.parentId) {
-          const parentShape = this.shapes.find(
-            (s) =>
-              s.id === shape.parentId &&
-              (s.type === 'geo' || s.type === 'link' || s.type === 'rich-text')
-          ) as (TLGeoShape | LinkShape | RichTextShape) | undefined;
+      // Only create arrow if there's a parent and it's a geo, link, or rich-text shape
+      if (shape.parentId) {
+        const parentShape = this.shapes.find(
+          (s) =>
+            s.id === shape.parentId &&
+            (s.type === 'geo' || s.type === 'link' || s.type === 'rich-text')
+        ) as (TLGeoShape | LinkShape | RichTextShape) | undefined;
 
-          if (parentShape) {
-            // Calculate center points of parent and child shapes
-            const parentCenterX =
-              parentShape.x + (parentShape.props.w ?? 0) / 2;
-            const parentCenterY =
-              parentShape.y + (parentShape.props.h ?? 0) / 2;
-            const childCenterX = x + width / 2;
-            const childCenterY = y + height / 2;
+        if (parentShape) {
+          // Calculate center points of parent and child shapes
+          const parentCenterX = parentShape.x + (parentShape.props.w ?? 0) / 2;
+          const parentCenterY = parentShape.y + (parentShape.props.h ?? 0) / 2;
+          const childCenterX = x + width / 2;
+          const childCenterY = y + height / 2;
 
-            // Calculate midpoint for arrow placement
-            const arrowX = (parentCenterX + childCenterX) / 2;
-            const arrowY = (parentCenterY + childCenterY) / 2;
+          // Calculate midpoint for arrow placement
+          const arrowX = (parentCenterX + childCenterX) / 2;
+          const arrowY = (parentCenterY + childCenterY) / 2;
 
-            const arrowId = this.generateShapeId();
+          const arrowId = this.generateShapeId();
 
-            // Calculate bend based on Y-position difference
-            const yDifference = childCenterY - parentCenterY;
-            const xDifference = childCenterX - parentCenterX;
+          // // Calculate bend based on Y-position difference
+          // const yDifference = childCenterY - parentCenterY;
+          // const xDifference = childCenterX - parentCenterX;
 
-            // Calculate bend value - more bend for larger Y differences
-            // The sign determines the direction of the bend
-            let bendValue = 0;
+          // // Calculate bend value - more bend for larger Y differences
+          // // The sign determines the direction of the bend
+          // let bendValue = 0;
 
-            // Only apply bend if there's a significant Y difference
-            if (Math.abs(yDifference) > 50) {
-              // Calculate bend based on the ratio of Y difference to X difference
-              // This creates more natural-looking arrows
-              const ratio = Math.abs(yDifference / (xDifference || 1));
+          // // Only apply bend if there's a significant Y difference
+          // if (Math.abs(yDifference) > 50) {
+          //   // Calculate bend based on the ratio of Y difference to X difference
+          //   // This creates more natural-looking arrows
+          //   const ratio = Math.abs(yDifference / (xDifference || 1));
 
-              // Scale the bend based on the ratio, with a maximum value
-              bendValue = Math.min(Math.max(ratio * 20, 0), 80);
+          //   // Scale the bend based on the ratio, with a maximum value
+          //   bendValue = Math.min(Math.max(ratio * 20, 0), 80);
 
-              // Make the bend negative if the child is below the parent
-              // This creates a more natural flow direction
-              if (yDifference > 0) {
-                bendValue *= -1;
-              }
-            }
+          //   // Make the bend negative if the child is below the parent
+          //   // This creates a more natural flow direction
+          //   if (yDifference > 0) {
+          //     bendValue *= -1;
+          //   }
+          // }
 
-            const arrow: TLArrowShape = {
-              id: arrowId,
-              type: 'arrow',
-              props: {
-                dash: 'draw',
-                size: 'm',
-                fill: 'none',
-                color: 'black',
-                labelColor: 'black',
-                bend: bendValue,
-                start: { x: parentCenterX - arrowX, y: parentCenterY - arrowY },
-                end: { x: childCenterX - arrowX, y: childCenterY - arrowY },
-                arrowheadStart: 'none',
-                arrowheadEnd: 'arrow',
-                text: '',
-                labelPosition: 0.5,
-                font: 'draw',
-                scale: 1,
-              },
-              parentId: this.page.id,
-              index: 'a1' as IndexKey,
-              typeName: 'shape',
-              x: arrowX,
-              y: arrowY,
-              rotation: 0,
-              isLocked: false,
-              opacity: 1,
-              meta: {},
-            };
+          const arrow: TLArrowShape = {
+            id: arrowId,
+            type: 'arrow',
+            props: {
+              dash: 'draw',
+              size: 'm',
+              fill: 'none',
+              color: 'black',
+              labelColor: 'black',
+              bend: 0,
+              start: { x: parentCenterX - arrowX, y: parentCenterY - arrowY },
+              end: { x: childCenterX - arrowX, y: childCenterY - arrowY },
+              arrowheadStart: 'none',
+              arrowheadEnd: 'arrow',
+              text: '',
+              labelPosition: 0.5,
+              font: 'draw',
+              scale: 1,
+            },
+            parentId: this.page.id,
+            index: 'a1' as IndexKey,
+            typeName: 'shape',
+            x: arrowX,
+            y: arrowY,
+            rotation: 0,
+            isLocked: false,
+            opacity: 1,
+            meta: {},
+          };
 
-            // add the two bindings
-            const binding1: TLArrowBinding = {
-              id: this.generateBindingId(),
-              typeName: 'binding',
-              type: 'arrow',
-              fromId: arrow.id,
-              toId: parentShape.id,
-              props: {
-                isPrecise: false,
-                isExact: false,
-                normalizedAnchor: { x: 0.5, y: 0.5 },
-                terminal: 'start',
-              },
-              meta: {},
-            };
+          // add the two bindings
+          const binding1: TLArrowBinding = {
+            id: this.generateBindingId(),
+            typeName: 'binding',
+            type: 'arrow',
+            fromId: arrow.id,
+            toId: parentShape.id,
+            props: {
+              isPrecise: false,
+              isExact: false,
+              normalizedAnchor: { x: 0.5, y: 0.5 },
+              terminal: 'start',
+            },
+            meta: {},
+          };
 
-            const binding2: TLArrowBinding = {
-              id: this.generateBindingId(),
-              type: 'arrow',
-              fromId: arrow.id,
-              toId: newShapeId,
-              props: {
-                isPrecise: false,
-                isExact: false,
-                normalizedAnchor: { x: 0.5, y: 0.5 },
-                terminal: 'end',
-              },
-              meta: {},
-              typeName: 'binding',
-            };
+          const binding2: TLArrowBinding = {
+            id: this.generateBindingId(),
+            type: 'arrow',
+            fromId: arrow.id,
+            toId: newShapeId,
+            props: {
+              isPrecise: false,
+              isExact: false,
+              normalizedAnchor: { x: 0.5, y: 0.5 },
+              terminal: 'end',
+            },
+            meta: {},
+            typeName: 'binding',
+          };
 
-            return [newShape, arrow, binding1, binding2];
-          }
+          shapes.push(newShape, arrow);
+          bindings.push(binding1, binding2);
         }
+      } else {
+        shapes.push(newShape);
+      }
+    }
 
-        return [newShape];
-      })
-      .flat();
+    return { shapes, bindings };
   }
 
   // Add this new method to mark a position as occupied in the grid
