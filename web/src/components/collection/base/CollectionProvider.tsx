@@ -82,14 +82,27 @@ const CollectionProvider: React.FC<CollectionProviderProps> = ({
   useEffect(() => {
     if (editor && collections) {
       editor.store.listen((entry: HistoryEntry) => {
-        if (entry.changes.removed) {
-          console.log('removed', entry.changes.removed);
+        const removed = Object.values(entry.changes.removed);
+        const added = Object.values(entry.changes.added);
+        const updated = Object.values(entry.changes.updated);
+
+        if (removed.length > 0) {
+          // console.log('removed', entry.changes.removed);
+          for (const shape of removed) {
+            handleShapeDelete(shape as TLShape);
+          }
         }
-        if (entry.changes.added) {
-          console.log('added', entry.changes.added);
+        if (added.length > 0) {
+          // console.log('added', entry.changes.added);
+          for (const shape of added) {
+            // handleShapeChange(shape as TLShape);
+          }
         }
-        if (entry.changes.updated) {
-          console.log('updated', entry.changes.updated);
+        if (updated.length > 0) {
+          // console.log('updated', entry.changes.updated);
+          for (const shape of updated) {
+            // handleShapeChange(shape as TLShape);
+          }
         }
       });
     }

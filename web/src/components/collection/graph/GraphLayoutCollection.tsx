@@ -105,6 +105,22 @@ export class GraphLayoutCollection extends BaseCollection {
 
   step = () => {
     this.graphSim.start(1, 0, 0, 0, true, false);
+
+    const selectedIds = this.editor.getSelectedShapeIds();
+
+    // Get all descendants of selected shapes
+    const affectedIds = new Set<TLShapeId>();
+
+    for (const selectedId of selectedIds) {
+      affectedIds.add(selectedId);
+      const descendants = this.getDescendants(selectedId);
+      for (const descendantId of descendants) {
+        affectedIds.add(descendantId);
+      }
+    }
+    // If nothing is selected, we'll update all nodes
+    const shouldUpdateAll = selectedIds.length === 0;
+
     for (const node of this.graphSim.nodes() as ColaNode[]) {
       const shape = this.editor.getShape(node.id);
       const { w, h } = this.editor.getShapeGeometry(node.id).bounds;
@@ -113,7 +129,7 @@ export class GraphLayoutCollection extends BaseCollection {
       const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
 
       // Fix positions if we're dragging them
-      if (this.editor.getSelectedShapeIds().includes(node.id)) {
+      if (selectedIds.includes(node.id)) {
         node.x = shape.x + x;
         node.y = shape.y + y;
       }
@@ -123,12 +139,15 @@ export class GraphLayoutCollection extends BaseCollection {
       node.height = h;
       node.rotation = shape.rotation;
 
-      this.editor.updateShape({
-        id: node.id,
-        type: 'geo',
-        x: node.x - x,
-        y: node.y - y,
-      });
+      // Only update shapes that are selected or descendants of selected shapes
+      if (shouldUpdateAll || affectedIds.has(node.id)) {
+        this.editor.updateShape({
+          id: node.id,
+          type: 'geo',
+          x: node.x - x,
+          y: node.y - y,
+        });
+      }
     }
   };
 
@@ -232,6 +251,28 @@ export class GraphLayoutCollection extends BaseCollection {
       constraints.push(alignmentConstraintY);
     }
     this.colaConstraints = constraints;
+  }
+
+  // Get all descendants (children, grandchildren, etc.) of a shape
+  getDescendants(
+    shapeId: TLShapeId,
+    visited = new Set<TLShapeId>()
+  ): Set<TLShapeId> {
+    if (visited.has(shapeId)) return visited;
+    visited.add(shapeId);
+
+    // Find all links where this shape is the source
+    for (const [_, link] of this.colaLinks.entries()) {
+      if (link.source === shapeId) {
+        const targetId = link.target;
+        if (!visited.has(targetId)) {
+          // Recursively get descendants of the target
+          this.getDescendants(targetId, visited);
+        }
+      }
+    }
+
+    return visited;
   }
 }
 
