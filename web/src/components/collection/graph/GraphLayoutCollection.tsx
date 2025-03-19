@@ -118,8 +118,6 @@ export class GraphLayoutCollection extends BaseCollection {
         affectedIds.add(descendantId);
       }
     }
-    // If nothing is selected, we'll update all nodes
-    const shouldUpdateAll = selectedIds.length === 0;
 
     for (const node of this.graphSim.nodes() as ColaNode[]) {
       const shape = this.editor.getShape(node.id);
@@ -140,13 +138,16 @@ export class GraphLayoutCollection extends BaseCollection {
       node.rotation = shape.rotation;
 
       // Only update shapes that are selected or descendants of selected shapes
-      if (shouldUpdateAll || affectedIds.has(node.id)) {
+      if (affectedIds.has(node.id)) {
         this.editor.updateShape({
           id: node.id,
-          type: 'geo',
+          type: shape.type,
           x: node.x - x,
           y: node.y - y,
         });
+      } else {
+        node.x = shape.x;
+        node.y = shape.y;
       }
     }
   };
@@ -291,7 +292,7 @@ function getCornerToCenterOffset(w: number, h: number, rotation: number) {
 }
 
 function calcEdgeDistance(edge: ColaNodeLink) {
-  const LINK_DISTANCE = 100;
+  const LINK_DISTANCE = 250;
 
   // horizontal and vertical distances between centers
   const dx = edge.target.x - edge.source.x;
