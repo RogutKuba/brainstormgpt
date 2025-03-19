@@ -67,6 +67,8 @@ import { useRouter } from 'next/navigation';
 import { CollectionProvider } from '@/components/collection/base/CollectionProvider';
 import { GraphLayoutCollection } from '@/components/collection/graph/GraphLayoutCollection';
 import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
+import { PredictionTool } from '@/components/shape/prediction/PredictionTool';
+import { PredictionShapeUtil } from '@/components/shape/prediction/PredictionShape';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [GraphLayoutCollection];
@@ -103,6 +105,15 @@ const customUiOverrides: TLUiOverrides = {
         kbd: 'r',
         onSelect() {
           editor.setCurrentTool('rich-text');
+        },
+      },
+      prediction: {
+        id: PredictionTool.id,
+        label: 'Prediction',
+        icon: 'prediction',
+        kbd: 'p',
+        onSelect() {
+          editor.setCurrentTool('prediction');
         },
       },
     };
@@ -191,8 +202,8 @@ const CustomMainMenu = () => {
   );
 };
 
-const customTools = [LinkTool, RichTextTool];
-const customShapes = [LinkShapeUtil, RichTextShapeUtil];
+const customTools = [LinkTool, RichTextTool, PredictionTool];
+const customShapes = [LinkShapeUtil, RichTextShapeUtil, PredictionShapeUtil];
 
 function AiBrainstormBox() {
   const editor = useEditor();

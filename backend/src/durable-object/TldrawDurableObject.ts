@@ -23,6 +23,7 @@ const schema = createTLSchema({
     ...defaultShapeSchemas,
     link: {},
     'rich-text': {},
+    prediction: {},
   },
 });
 

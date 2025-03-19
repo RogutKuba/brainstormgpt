@@ -1,18 +1,18 @@
-import { bind, useEditor } from 'tldraw';
-import { useEffect } from 'react';
+import { useEditor } from 'tldraw';
+import { useEffect, useRef } from 'react';
 import './dev-ui.css';
 import { useCollection } from '../base/useCollection';
 
 export const GraphLayout = () => {
   const editor = useEditor();
   const { collection, size } = useCollection('graph');
+  const handlersRegistered = useRef(false);
 
   useEffect(() => {
     console.log('collection size', collection, size);
 
-    if (collection && editor) {
+    if (collection && editor && !handlersRegistered.current) {
       collection.add(editor.getCurrentPageShapes());
-
       console.log('adding event handlers');
 
       // register event handlers for shapes added to the page
@@ -54,6 +54,9 @@ export const GraphLayout = () => {
           }
         }
       );
+
+      // Mark that handlers have been registered
+      handlersRegistered.current = true;
     }
   }, [collection, editor]);
 
