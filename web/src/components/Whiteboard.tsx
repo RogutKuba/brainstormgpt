@@ -66,7 +66,7 @@ import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
 import { useRouter } from 'next/navigation';
 import { CollectionProvider } from '@/components/collection/base/CollectionProvider';
 import { GraphLayoutCollection } from '@/components/collection/graph/GraphLayoutCollection';
-import { GraphUi } from '@/components/collection/graph/GraphUi';
+import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [GraphLayoutCollection];
@@ -361,7 +361,7 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
     >
       {editor && (
         <CollectionProvider editor={editor} collections={collections}>
-          <GraphUi />
+          <GraphLayout />
         </CollectionProvider>
       )}
     </Tldraw>
