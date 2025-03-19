@@ -1,6 +1,7 @@
-import { Context } from 'hono';
 import { AppContext } from '..';
 import OpenAI from 'openai';
+import { ZodSchema } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
 
 export const LLMService = {
   generateMessage: async (params: {
@@ -10,8 +11,12 @@ export const LLMService = {
       sender: 'user' | 'system';
     }[];
     env: AppContext['Bindings'];
+    structuredOutput?: {
+      name: string;
+      schema: ZodSchema;
+    };
   }) => {
-    const { prompt, chatHistory, env } = params;
+    const { prompt, chatHistory, env, structuredOutput } = params;
 
     // Initialize OpenAI client with API key from environment
     const openai = new OpenAI({
@@ -20,7 +25,7 @@ export const LLMService = {
     });
 
     // Call OpenAI API
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
       messages: [
         ...chatHistory.map((message) => ({
@@ -29,15 +34,23 @@ export const LLMService = {
         })),
         { role: 'user', content: prompt },
       ],
+      response_format: structuredOutput
+        ? zodResponseFormat(structuredOutput.schema, structuredOutput.name)
+        : undefined,
     });
 
-    // Extract the response text
-    const answer = response.choices[0]?.message?.content;
-
-    if (!answer) {
-      throw new Error('Received no response from LLM');
+    if (completion.choices[0].finish_reason === 'length') {
+      // Handle the case where the model did not return a complete response
+      throw new Error('Incomplete response');
     }
 
-    return answer;
+    // Extract the response text
+    const answer = completion.choices[0].message;
+
+    if (structuredOutput) {
+      return structuredOutput.schema.parse(answer);
+    }
+
+    return answer.content;
   },
 };

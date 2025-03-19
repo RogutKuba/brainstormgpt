@@ -6,11 +6,13 @@ import { TreeNode } from './Shape.service';
 import { PageSummaryEntity, pageSummaryTable } from '../db/pageSummary.db';
 import { inArray } from 'drizzle-orm';
 import { getDbConnection } from '../db/client';
+import { z } from 'zod';
 
 type BrainStormResult = {
   type: 'add-text';
   text: string;
   parentId?: TLShapeId; // Optional parent shape ID to connect to
+  predictions?: string[]; // Added predictions field
 };
 
 // Helper function to extract shapes with text from the tree structure
@@ -142,6 +144,25 @@ async function extractShapesWithText(params: {
     .join('\n');
 }
 
+const newNodeSchema = z.object({
+  type: z.literal('add-text'),
+  text: z.string(),
+  parentId: z.string().optional(),
+  predictions: z.array(z.string()).optional(),
+});
+
+const brainstormResultSchema = z.object({
+  explanation: z.string(),
+  nodes: z.array(
+    z.object({
+      type: z.literal('add-text'),
+      text: z.string(),
+      parentId: z.string().optional(),
+      predictions: z.array(z.string()),
+    })
+  ),
+});
+
 export const BrainstormService = {
   generateBrainstorm: async (params: {
     prompt: string;
@@ -235,38 +256,7 @@ IMPORTANT FORMATTING GUIDELINES:
 8. Maintain consistent terminology and reference style across all nodes
 9. Avoid large blocks of text - aim for visual clarity with frequent paragraph breaks
 
-Format your response as:
-<explanation>Professional overview of how these new knowledge units extend and complement the existing structure</explanation>
-<node parent="shape-id-1">
-## Descriptive Title for This Concept
-
-Short paragraph explaining the first aspect of this concept. Keep to 2-3 sentences maximum.
-
-Another short paragraph developing a different aspect. Maintain brevity and clarity.
-
-A final short paragraph if needed to complete the concept. Remember to keep paragraphs short for visual clarity.
-</node>
-<node parent="shape-id-1">
-## Different Concept Title
-
-Short paragraph introducing this concept. Keep it concise and focused.
-
-Follow-up paragraph developing the idea further. Maintain the same brief style.
-</node>
-<node parent="shape-id-2">
-## Another Specific Concept
-
-Brief paragraph with professional terminology. Keep it short and precise.
-
-Second paragraph adding depth to the concept. Maintain brevity.
-</node>
-<node>
-## New Foundational Concept (only if addressing a significant gap)
-
-Short paragraph establishing this concept. Keep it concise.
-
-Follow-up paragraph providing more context. Maintain brevity throughout.
-</node>
+For each node, also include 2-3 predictions of follow-up questions the user might ask about this specific node. These should be natural extensions of the node's content.
 
 For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
         ', '
@@ -275,50 +265,33 @@ For extending existing ideas, use parent IDs from this list of deepest shapes: $
 Your goal is to create a cohesive knowledge structure where each node functions as its own mini-wiki article - self-contained yet connected to the broader context. Prioritize clarity, precision, and professional tone throughout. Remember to keep paragraphs SHORT (2-3 sentences) for optimal readability on a whiteboard.`,
       chatHistory,
       env: ctx.env,
+      structuredOutput: {
+        name: 'brainstormResult',
+        schema: brainstormResultSchema,
+      },
     });
 
     if (!newIdeasResult) {
       throw new Error('No response from LLM');
     }
 
-    // console.log('newIdeasResult', newIdeasResult);
+    // Since we're using structured output, we can directly use the parsed result
+    const typedResult = newIdeasResult as z.infer<
+      typeof brainstormResultSchema
+    >;
 
-    // Parse the LLM response to extract nodes and their parent relationships
-    const results: BrainStormResult[] = [];
-
-    // Extract the explanation if present
-    const explanationMatch = newIdeasResult.match(
-      /<explanation>([^<]+)<\/explanation>/
-    );
-
-    // Simple regex to extract nodes and their parents
-    const nodeRegex = /<node(?:\s+parent="([^"]+)")?>([^<]+)<\/node>/gs;
-    let match;
-
-    while ((match = nodeRegex.exec(newIdeasResult)) !== null) {
-      const parentId = match[1]; // This will be undefined for nodes without parents
-      const text = match[2].trim();
-
-      results.push({
-        type: 'add-text',
-        text: text.trim(),
-        ...(parentId && { parentId: parentId as TLShapeId }),
-      });
-    }
-
-    // If no ideas were extracted using the regex, fall back to using the whole response
-    if (results.length === 0) {
-      results.push({
-        type: 'add-text',
-        text: newIdeasResult.trim(),
-      });
-    }
+    // Map the structured output to our expected return format
+    const results: BrainStormResult[] = typedResult.nodes.map((node) => ({
+      type: 'add-text',
+      text: node.text,
+      ...(node.parentId && { parentId: node.parentId as TLShapeId }),
+      predictions: node.predictions,
+    }));
 
     return {
       newNodes: results,
       deepestLevel,
-      explanation:
-        explanationMatch?.[1].trim() ?? 'I generated some new ideas:',
+      explanation: typedResult.explanation,
     };
   },
 };
