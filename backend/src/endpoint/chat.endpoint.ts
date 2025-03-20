@@ -124,8 +124,15 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
       ],
     };
 
+    const existingShapeIds: Set<TLShapeId> = new Set(
+      snapshot.documents.map((doc) => doc.state.id as TLShapeId)
+    );
+
     // now rebalance the graph
-    const graphService = new GraphService({ snapshot: updatedSnapshot });
+    const graphService = new GraphService({
+      snapshot: updatedSnapshot,
+      shouldFix: existingShapeIds,
+    });
     const rebalancedNodes = graphService.rebalance();
 
     console.log('### PRINTING REBALANCED NODES ###');

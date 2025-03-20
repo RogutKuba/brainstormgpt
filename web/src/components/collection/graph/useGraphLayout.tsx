@@ -9,11 +9,8 @@ export const GraphLayout = () => {
   const handlersRegistered = useRef(false);
 
   useEffect(() => {
-    console.log('collection size', collection, size);
-
     if (collection && editor && !handlersRegistered.current) {
       collection.add(editor.getCurrentPageShapes());
-      console.log('adding event handlers');
 
       // register event handlers for shapes added to the page
       editor.store.sideEffects.registerAfterCreateHandler('shape', (shape) => {

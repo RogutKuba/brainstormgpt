@@ -16,6 +16,7 @@ type ColaNode = {
   width: number;
   height: number;
   rotation: number;
+  fixed: number;
 };
 
 type ColaIdLink = {
@@ -52,8 +53,8 @@ export class GraphService {
   colaLinks: ColaNodeLink[] = [];
   colaConstraints: ColaConstraint[] = [];
 
-  constructor(params: { snapshot: RoomSnapshot }) {
-    const { snapshot } = params;
+  constructor(params: { snapshot: RoomSnapshot; shouldFix: Set<TLShapeId> }) {
+    const { snapshot, shouldFix } = params;
 
     // find document
     const _document = snapshot.documents.find(
@@ -85,7 +86,7 @@ export class GraphService {
       );
     }
 
-    this.buildColaNodes(_shapes);
+    this.buildColaNodes(_shapes, shouldFix);
     this.buildColaLinks(_bindings);
 
     this.graph = new Layout();
@@ -94,7 +95,7 @@ export class GraphService {
   /**
    * Builds the cola nodes from the shapes
    */
-  private buildColaNodes(shapes: TLGeoShape[]) {
+  private buildColaNodes(shapes: TLGeoShape[], shouldFix: Set<TLShapeId>) {
     shapes.forEach((shape) => {
       const node: ColaNode = {
         id: shape.id,
@@ -103,6 +104,7 @@ export class GraphService {
         width: shape.props.w,
         height: shape.props.h,
         rotation: shape.rotation,
+        fixed: shouldFix.has(shape.id) ? 1 : 0,
       };
 
       this.colaNodes.set(shape.id, node);

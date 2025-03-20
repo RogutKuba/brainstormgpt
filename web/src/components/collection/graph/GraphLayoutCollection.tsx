@@ -126,6 +126,13 @@ export class GraphLayoutCollection extends BaseCollection {
 
       const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
 
+      // this.editor.updateShape({
+      //   id: node.id,
+      //   type: shape.type,
+      //   x: node.x - x,
+      //   y: node.y - y,
+      // });
+
       // Fix positions if we're dragging them
       if (selectedIds.includes(node.id)) {
         node.x = shape.x + x;
@@ -170,8 +177,6 @@ export class GraphLayoutCollection extends BaseCollection {
   };
 
   addGeo = (shape: TLShape) => {
-    console.log('shape geo', this.editor.getShapeGeometry(shape));
-
     const bounds = this.editor.getShapeGeometry(shape)?.bounds;
     if (!bounds) return;
 
