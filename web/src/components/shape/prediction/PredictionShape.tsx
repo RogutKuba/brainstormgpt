@@ -48,17 +48,23 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
     const { text, parentId } = shape.props;
     const { handleSendMessage } = useChat();
 
-    const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
+    const selectedIds = this.editor.getSelectedShapeIds();
 
-    const shouldHighlight = this.editor
-      .getSelectedShapeIds()
-      .find((id) => id === shape.id || id === parentId);
+    const isSelected =
+      selectedIds.includes(shape.id) && selectedIds.length === 1;
+
+    const shouldHighlight = selectedIds.some(
+      (id) => id === shape.id || id === parentId
+    );
 
     const handleConfirm = async () => {
       await handleSendMessage({
         message: text,
         selectedItemIds: parentId ? [parentId] : [],
       });
+
+      // handle reject will just delete the shape and arrow
+      handleReject();
     };
 
     const handleReject = () => {
