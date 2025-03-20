@@ -155,7 +155,7 @@ const brainstormResultSchema = z.object({
   explanation: z.string(),
   nodes: z.array(
     z.object({
-      type: z.literal('add-text'),
+      type: z.string(),
       text: z.string(),
       parentId: z.string().optional(),
       predictions: z.array(z.string()),

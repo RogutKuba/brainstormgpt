@@ -79,22 +79,22 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     // need to construct tree of shapes from the ids and bindings between them
     const tree = shapeService.getSelectedTree(selectedItems);
 
-    // const { newNodes, explanation } =
-    //   await BrainstormService.generateBrainstorm({
-    //     prompt: message,
-    //     chatHistory,
-    //     tree,
-    //     ctx,
-    //   });
+    const { newNodes, explanation } =
+      await BrainstormService.generateBrainstorm({
+        prompt: message,
+        chatHistory,
+        tree,
+        ctx,
+      });
 
-    const newNodes: BrainStormResult[] = [
-      {
-        text: 'Hello',
-        type: 'add-text',
-        predictions: ['Hello', 'World'],
-      },
-    ];
-    const explanation = 'Hello, world!';
+    // const newNodes: BrainStormResult[] = [
+    //   {
+    //     text: 'Hello',
+    //     type: 'add-text',
+    //     predictions: ['Hello', 'World'],
+    //   },
+    // ];
+    // const explanation = 'Hello, world!';
 
     const { shapes: newShapes, bindings: newBindings } =
       shapeService.getTlShapesAndBindings(newNodes);

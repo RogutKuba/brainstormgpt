@@ -453,8 +453,8 @@ export class ShapeService {
           opacity: 1,
           meta: {},
           props: {
-            w: width,
-            h: height,
+            w: 300,
+            h: 300,
             text: prediction,
             parentId: newShapeId,
             arrowId: predictionArrowId,

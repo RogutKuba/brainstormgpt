@@ -121,8 +121,8 @@ export class GraphLayoutCollection extends BaseCollection {
 
     for (const node of this.graphSim.nodes() as ColaNode[]) {
       const shape = this.editor.getShape(node.id);
-      const { w, h } = this.editor.getShapeGeometry(node.id).bounds;
       if (!shape) continue;
+      const { w, h } = this.editor.getShapeGeometry(node.id)?.bounds;
 
       const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
 
@@ -170,7 +170,12 @@ export class GraphLayoutCollection extends BaseCollection {
   };
 
   addGeo = (shape: TLShape) => {
-    const { w, h } = this.editor.getShapeGeometry(shape).bounds;
+    console.log('shape geo', this.editor.getShapeGeometry(shape));
+
+    const bounds = this.editor.getShapeGeometry(shape)?.bounds;
+    if (!bounds) return;
+
+    const { w, h } = bounds;
     const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
     const node: ColaNode = {
       id: shape.id,

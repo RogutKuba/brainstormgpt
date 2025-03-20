@@ -22,17 +22,9 @@ import {
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
-import { useSendMessage } from '@/query/workspace.query';
 import { LinkShape } from '@/components/shape/link/LinkShape';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
-
-type Message = {
-  id: string;
-  content: string;
-  sender: 'user' | 'system';
-  timestamp: Date;
-  level?: 'error' | 'info' | 'warning';
-};
+import { useChat } from './ChatContext';
 
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();
@@ -46,9 +38,8 @@ export const ChatWindow: React.FC = () => {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const { sendMessage } = useSendMessage();
-  const [isLoading, setIsLoading] = useState(false);
+  // Use the chat context instead of local state
+  const { messages, isLoading, handleSendMessage, clearMessages } = useChat();
 
   // Track selected items from TLDraw
   const selectedItems = useValue(
@@ -175,65 +166,19 @@ export const ChatWindow: React.FC = () => {
     };
   }, [isDragging]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const onSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Check if input has more than 2 characters
     if (inputValue.trim().length > 2 && !isLoading) {
-      // Add user message
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        content: inputValue,
-        sender: 'user',
-        timestamp: new Date(),
-      };
+      // Use the handleSendMessage from context
+      await handleSendMessage({
+        message: inputValue,
+        selectedItemIds: selectedItems.map((item) => item.id),
+      });
 
       // Clear input field
       setInputValue('');
-
-      try {
-        setIsLoading(true);
-        setMessages((prev) => [...prev, userMessage]);
-
-        // console.log('userMessage', userMessage);
-
-        // Format chat history for the API
-        const formattedChatHistory = messages.map((msg) => ({
-          content: msg.content,
-          sender: msg.sender,
-        }));
-
-        const response = await sendMessage({
-          message: userMessage.content,
-          chatHistory: formattedChatHistory,
-          selectedItems: selectedItems.map((item) => item.id),
-        });
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            content: response.message,
-            sender: 'system',
-            timestamp: new Date(),
-          },
-        ]);
-      } catch (error) {
-        console.error('Error fetching chat response:', error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            content:
-              "Sorry, I couldn't process your request. Please try again.",
-            sender: 'system',
-            timestamp: new Date(),
-            level: 'error',
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
     }
   };
 
@@ -260,7 +205,7 @@ export const ChatWindow: React.FC = () => {
             className='p-0 text-gray-200 hover:text-white hover:bg-white/10 rounded transition-colors duration-200'
             onClick={(e) => {
               e.stopPropagation();
-              setMessages([]);
+              clearMessages();
             }}
           >
             <RiAddLine className='h-5 w-5' />
@@ -329,11 +274,6 @@ export const ChatWindow: React.FC = () => {
                     key={message.id}
                     className={cx('flex flex-col select-auto')}
                   >
-                    {/* <div className='flex items-center mb-1'>
-                      <span className='text-xs font-medium text-gray-500'>
-                        {message.sender === 'user' ? 'You' : 'AI Assistant'}
-                      </span>
-                    </div> */}
                     <div
                       className={cx(
                         'p-3 rounded-lg select-auto',
@@ -381,7 +321,7 @@ export const ChatWindow: React.FC = () => {
 
           {/* Input section - fixed at bottom */}
           <CardFooter className='p-2 border-t border-gray-200 bg-white shrink-0'>
-            <form onSubmit={handleSendMessage} className='w-full'>
+            <form onSubmit={onSendMessage} className='w-full'>
               <div className='relative'>
                 <textarea
                   placeholder={
@@ -397,7 +337,7 @@ export const ChatWindow: React.FC = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSendMessage(e);
+                      onSendMessage(e);
                     }
                   }}
                 />

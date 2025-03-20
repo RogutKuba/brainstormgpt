@@ -1,6 +1,6 @@
 import { AppContext } from '..';
 import OpenAI from 'openai';
-import { ZodSchema } from 'zod';
+import { ZodObject, ZodSchema } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 
 export const LLMService = {
@@ -11,9 +11,9 @@ export const LLMService = {
       sender: 'user' | 'system';
     }[];
     env: AppContext['Bindings'];
-    structuredOutput?: {
+    structuredOutput: {
       name: string;
-      schema: ZodSchema;
+      schema: ZodObject<any>;
     };
   }) => {
     const { prompt, chatHistory, env, structuredOutput } = params;
@@ -34,9 +34,10 @@ export const LLMService = {
         })),
         { role: 'user', content: prompt },
       ],
-      response_format: structuredOutput
-        ? zodResponseFormat(structuredOutput.schema, structuredOutput.name)
-        : undefined,
+      response_format: zodResponseFormat(
+        structuredOutput.schema,
+        structuredOutput.name
+      ),
     });
 
     if (completion.choices[0].finish_reason === 'length') {
@@ -44,13 +45,16 @@ export const LLMService = {
       throw new Error('Incomplete response');
     }
 
-    // Extract the response text
-    const answer = completion.choices[0].message;
+    const choice = completion.choices[0];
+
+    console.log('choice', JSON.parse(choice.message.content!));
 
     if (structuredOutput) {
-      return structuredOutput.schema.parse(answer);
+      // @ts-ignore
+      return structuredOutput.schema.parse(JSON.parse(choice.message.content));
     }
 
-    return answer.content;
+    // Extract the response text
+    return choice.message.content;
   },
 };
