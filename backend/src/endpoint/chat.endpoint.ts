@@ -40,6 +40,9 @@ const sendMessageRoute = createRoute({
               .openapi({
                 description: 'Previous chat messages for context',
               }),
+            predictionId: z.string().nullable().openapi({
+              description: 'Prediction id to use for context',
+            }),
           }),
         },
       },
@@ -66,7 +69,8 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
     const { workspaceId } = ctx.req.valid('param');
-    const { message, chatHistory, selectedItems } = ctx.req.valid('json');
+    const { message, chatHistory, selectedItems, predictionId } =
+      ctx.req.valid('json');
 
     const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
     const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
@@ -160,6 +164,11 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     );
     await workspace.updateShapes(rebalancedShapes, { createIfMissing: true });
     await workspace.addRecords(newBindings);
+
+    // if predictionId is provided, remove it from the snapshot
+    if (predictionId) {
+      await workspace.removeShape(predictionId);
+    }
 
     return ctx.json({ message: explanation }, 200);
   }

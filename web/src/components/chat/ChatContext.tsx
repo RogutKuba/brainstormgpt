@@ -2,9 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useSendMessage } from '@/query/workspace.query';
-import { useEditor, useValue } from 'tldraw';
-import { LinkShape } from '@/components/shape/link/LinkShape';
-import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 
 // Define the Message type
 export type Message = {
@@ -22,6 +19,8 @@ interface ChatContextValue {
   handleSendMessage: (params: {
     message: string;
     selectedItemIds: string[];
+    workspaceId: string;
+    predictionId: string | null;
   }) => Promise<void>;
   clearMessages: () => void;
 }
@@ -42,8 +41,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const handleSendMessage = async (params: {
+    workspaceId: string;
     message: string;
     selectedItemIds: string[];
+    predictionId: string | null;
   }) => {
     // Check if input has more than 2 characters
     if (params.message.trim().length > 2 && !isLoading) {
@@ -69,6 +70,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           message: userMessage.content,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
+          workspaceId: params.workspaceId,
+          predictionId: params.predictionId,
         });
 
         setMessages((prev) => [

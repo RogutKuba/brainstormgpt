@@ -25,9 +25,11 @@ import { useEditor, useValue } from 'tldraw';
 import { LinkShape } from '@/components/shape/link/LinkShape';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { useChat } from './ChatContext';
-
+import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();
+  const workspaceId = useCurrentWorkspaceId();
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState({
@@ -171,14 +173,16 @@ export const ChatWindow: React.FC = () => {
 
     // Check if input has more than 2 characters
     if (inputValue.trim().length > 2 && !isLoading) {
+      const message = inputValue;
+      setInputValue('');
+
       // Use the handleSendMessage from context
       await handleSendMessage({
-        message: inputValue,
+        message,
         selectedItemIds: selectedItems.map((item) => item.id),
+        workspaceId,
+        predictionId: null,
       });
-
-      // Clear input field
-      setInputValue('');
     }
   };
 

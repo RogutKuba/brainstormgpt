@@ -115,14 +115,6 @@ export class TldrawDurableObject extends DurableObject<Environment> {
             // and persist whenever the data in the room changes
             this.schedulePersistToR2();
           },
-          log: {
-            warn: (message) => {
-              console.warn('warn', message);
-            },
-            error: (message) => {
-              console.error('error', message);
-            },
-          },
         });
       })();
     }
@@ -193,12 +185,12 @@ export class TldrawDurableObject extends DurableObject<Environment> {
 
   /**
    * Removes a shape from the store.
-   * @param shape - The shape to remove.
+   * @param shapeId - The ID of the shape to remove.
    */
-  async removeShape(shape: TLShape) {
+  async removeShape(shapeId: string) {
     const room = await this.getRoom();
     room.updateStore((store) => {
-      store.delete(shape.id);
+      store.delete(shapeId);
     });
   }
 

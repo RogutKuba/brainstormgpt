@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import {
   RiBrain2Fill,
@@ -11,20 +10,13 @@ import {
   RiLinkM,
   RiBookLine,
   RiStarLine,
-  RiCheckboxCircleLine,
-  RiNodeTree,
-  RiGitBranchLine,
   RiGitMergeLine,
   RiMultiImageLine,
   RiGuideLine,
 } from '@remixicon/react';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 export default function Home() {
-  const router = useRouter();
-
   return (
     <div className='min-h-screen bg-gradient-to-b from-blue-500 via-blue-400 to-blue-500 text-white overflow-hidden relative'>
       {/* Background decorative elements */}

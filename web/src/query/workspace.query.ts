@@ -3,7 +3,6 @@ import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useMutation } from '@tanstack/react-query';
-import { useToasts } from 'tldraw';
 
 type WorkspaceEntity = {
   id: string;
@@ -11,14 +10,6 @@ type WorkspaceEntity = {
   ownerId: string;
   name: string;
   goalPrompt: string | null;
-};
-
-type Message = {
-  id: string;
-  content: string;
-  sender: 'user' | 'system';
-  timestamp: string;
-  level: 'error' | 'info' | 'warning';
 };
 
 export const useWorkspaces = () => {
@@ -72,16 +63,16 @@ export const useCreateWorkspace = () => {
 };
 
 export const useSendMessage = () => {
-  const currentWorkspaceId = useCurrentWorkspaceId();
-
   const mutation = useMutation({
     mutationFn: async (params: {
+      workspaceId: string;
       message: string;
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
+      predictionId: string | null;
     }) => {
       const response = await clientFetch(
-        `/workspace/${currentWorkspaceId}/chat`,
+        `/workspace/${params.workspaceId}/chat`,
         {
           method: 'POST',
           body: JSON.stringify(params),
