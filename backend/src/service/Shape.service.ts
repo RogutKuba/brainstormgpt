@@ -443,6 +443,33 @@ export class ShapeService {
         const predictionShapeId = this.generateShapeId('pr_t');
         const predictionArrowId = this.generateShapeId('pr_a');
 
+        // Calculate width and height based on prediction text length
+        const PREDICTION_MIN_HEIGHT = 200;
+        const PREDICTION_MIN_WIDTH = 350;
+        const PREDICTION_CHARS_PER_LINE = 35;
+        const PREDICTION_HEIGHT_PER_LINE = 60;
+
+        // Scale width based on text length - prioritize width over height
+        const predictionTextLength = prediction.length;
+        const predictionWidthScale = Math.min(
+          2.2,
+          1 + predictionTextLength / 350
+        ); // Cap at 2.2x original width
+        const predictionWidth = Math.ceil(
+          PREDICTION_MIN_WIDTH * predictionWidthScale
+        );
+
+        // Calculate height based on text length and adjusted width
+        const predictionCharsPerWidthAdjustedLine =
+          PREDICTION_CHARS_PER_LINE * (predictionWidth / PREDICTION_MIN_WIDTH);
+        const predictionNumLines = Math.ceil(
+          predictionTextLength / predictionCharsPerWidthAdjustedLine
+        );
+        const predictionHeight = Math.max(
+          predictionNumLines * PREDICTION_HEIGHT_PER_LINE,
+          PREDICTION_MIN_HEIGHT
+        );
+
         const predictionShape: PredictionShape = {
           id: predictionShapeId,
           type: 'prediction',
@@ -453,8 +480,8 @@ export class ShapeService {
           opacity: 1,
           meta: {},
           props: {
-            w: 300,
-            h: 300,
+            w: predictionWidth,
+            h: predictionHeight,
             text: prediction,
             parentId: newShapeId,
             arrowId: predictionArrowId,

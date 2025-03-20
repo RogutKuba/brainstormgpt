@@ -118,11 +118,10 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
 
     return (
       <HTMLContainer
-        style={{
-          overflow: 'hidden',
-          width: shape.props.w,
-          height: shape.props.h,
-        }}
+        className={cn(
+          'relative flex flex-col items-center justify-center h-full',
+          shouldHighlight ? 'opacity-100' : 'opacity-70'
+        )}
       >
         <div className='relative flex flex-col items-center justify-center h-full'>
           <svg
@@ -140,13 +139,13 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
             />
           </svg>
 
-          <div className='relative z-10 flex flex-col items-center justify-center h-full p-4'>
+          <div className='relative z-10 flex flex-col items-center justify-center h-full p-8'>
             <div className='text-center text-xl font-medium text-primary'>
               {text}
             </div>
 
             {isSelected && (
-              <div className='absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-3 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md'>
+              <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2'>
                 <button
                   className='pointer-events-auto cursor-pointer p-1.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-all duration-200 flex items-center justify-center'
                   onClick={handleReject}
@@ -177,6 +176,28 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
     return (
       <path d={getCloudPath(shape.props.w, shape.props.h, shape.id, 'm', 1)} />
     );
+  }
+
+  /**
+   * Handle confirm
+   */
+  handleConfirm(shape: PredictionShape) {
+    this.editor.select(shape.id);
+  }
+
+  handleReject(shape: PredictionShape) {
+    this.editor.deleteShapes([shape.id]);
+  }
+
+  override onDoubleClick(shape: PredictionShape):
+    | void
+    | ({
+        id: TLShapeId;
+        meta?: Partial<JsonObject> | undefined;
+        props?: Partial<PredictionShapeProps> | undefined;
+        type: 'prediction';
+      } & Partial<Omit<PredictionShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    this.handleConfirm(shape);
   }
 
   override canEdit(_shape: PredictionShape): boolean {
