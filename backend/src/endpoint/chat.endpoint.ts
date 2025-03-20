@@ -167,7 +167,7 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
 
     // if predictionId is provided, remove it from the snapshot
     if (predictionId) {
-      await workspace.removeShape(predictionId);
+      await workspace.removePrediction(predictionId);
     }
 
     return ctx.json({ message: explanation }, 200);

@@ -16,6 +16,7 @@ import throttle from 'lodash.throttle';
 import { Environment } from '../types';
 import { DurableObject } from 'cloudflare:workers';
 import { ShapeService } from '../service/Shape.service';
+import { PredictionShape } from '../shapes/Prediction.shape';
 
 // add custom shapes and bindings here if needed:
 const schema = createTLSchema({
@@ -191,6 +192,21 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     const room = await this.getRoom();
     room.updateStore((store) => {
       store.delete(shapeId);
+    });
+  }
+
+  /**
+   * Remove prediction and arrows from the store.
+   * @param predictionId - The ID of the prediction to remove.
+   */
+  async removePrediction(predictionId: string) {
+    const room = await this.getRoom();
+    room.updateStore((store) => {
+      const shape = store.get(predictionId) as PredictionShape;
+      if (shape && shape.type === 'prediction' && shape.props.arrowId) {
+        store.delete(predictionId);
+        store.delete(shape.props.arrowId);
+      }
     });
   }
 
