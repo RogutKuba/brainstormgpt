@@ -8,7 +8,7 @@ import { inArray } from 'drizzle-orm';
 import { getDbConnection } from '../db/client';
 import { z } from 'zod';
 
-type BrainStormResult = {
+export type BrainStormResult = {
   type: 'add-text';
   text: string;
   parentId?: TLShapeId; // Optional parent shape ID to connect to

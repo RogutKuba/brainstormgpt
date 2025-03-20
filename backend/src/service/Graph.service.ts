@@ -172,7 +172,7 @@ export class GraphService {
       .handleDisconnected(true);
 
     // Start the layout and run it for a number of iterations
-    this.graph.start(50, 0, 10, 0);
+    this.graph.start(60, 0, 0, 0, true, false);
 
     // Return the updated node positions
     return nodes.map((node) => ({

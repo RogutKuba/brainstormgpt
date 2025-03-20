@@ -1,7 +1,10 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { AppContext } from '..';
 import { ErrorResponses } from './errors.js';
-import { BrainstormService } from '../service/Brainstorm.service';
+import {
+  BrainStormResult,
+  BrainstormService,
+} from '../service/Brainstorm.service';
 import { ShapeService } from '../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
 import { TLShape, TLArrowBinding, TLShapeId } from 'tldraw';
@@ -76,21 +79,25 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
     // need to construct tree of shapes from the ids and bindings between them
     const tree = shapeService.getSelectedTree(selectedItems);
 
-    const { newNodes, explanation } =
-      await BrainstormService.generateBrainstorm({
-        prompt: message,
-        chatHistory,
-        tree,
-        ctx,
-      });
+    // const { newNodes, explanation } =
+    //   await BrainstormService.generateBrainstorm({
+    //     prompt: message,
+    //     chatHistory,
+    //     tree,
+    //     ctx,
+    //   });
+
+    const newNodes: BrainStormResult[] = [
+      {
+        text: 'Hello',
+        type: 'add-text',
+        predictions: ['Hello', 'World'],
+      },
+    ];
+    const explanation = 'Hello, world!';
 
     const { shapes: newShapes, bindings: newBindings } =
-      shapeService.getShapePlacements(
-        newNodes.map((node) => ({
-          text: node.text,
-          parentId: node.parentId ?? null,
-        }))
-      );
+      shapeService.getTlShapesAndBindings(newNodes);
     const newShapeMap = new Map(newShapes.map((shape) => [shape.id, shape]));
     console.log('newShapes', [...newShapeMap.keys()]);
 
@@ -133,16 +140,24 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
       return node;
     });
 
-    console.log('### PRINTING REBALANCED SHAPES ###');
-    // print out the rebalanced shapes
-    rebalancedShapes.forEach((shape) => {
-      if (newShapeMap.has(shape.id)) {
-        console.log('shape', shape.id, shape.x, shape.y);
-      }
-    });
+    // console.log('### PRINTING REBALANCED SHAPES ###');
+    // // print out the rebalanced shapes
+    // rebalancedShapes.forEach((shape) => {
+    //   if (newShapeMap.has(shape.id)) {
+    //     console.log('shape', shape.id, shape.x, shape.y);
+    //   }
+    // });
 
-    console.log('rebalancedShapes', rebalancedShapes);
-
+    console.log(
+      'rebalancedShapes',
+      rebalancedShapes.map((shape) => {
+        return {
+          id: shape.id,
+          x: shape.x,
+          y: shape.y,
+        };
+      })
+    );
     await workspace.updateShapes(rebalancedShapes, { createIfMissing: true });
     await workspace.addRecords(newBindings);
 
