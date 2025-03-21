@@ -1,4 +1,8 @@
 import {
+  RichTextShape,
+  RichTextShapeUtil,
+} from '@/components/shape/rich-text/RichTextShape';
+import {
   Editor,
   useEditor,
   TLShapeId,
@@ -11,6 +15,8 @@ type BrainstormResult = {
   type: 'add-text';
   text: string;
   parentId?: TLShapeId;
+  id?: TLShapeId;
+  predictions?: string[];
 };
 
 export const BrainstormToolCalls = {
@@ -20,52 +26,39 @@ export const BrainstormToolCalls = {
   }) => {
     const { result, editor } = params;
 
-    console.log('handleBrainstormResult', result);
+    console.log('got result', result);
 
-    // If we have multiple results with the same parentId, use the radial layout
-    const resultsByParent = new Map<TLShapeId, BrainstormResult[]>();
-
-    // Group results by parentId
     for (const r of result) {
-      if (r.type === 'add-text' && r.parentId) {
-        if (!resultsByParent.has(r.parentId)) {
-          resultsByParent.set(r.parentId, []);
-        }
-        resultsByParent.get(r.parentId)!.push(r);
+      if (r.parentId) {
+        // Add to existing parent
+        const parentShape = editor.getShape(r.parentId);
+        if (!parentShape) continue;
+
+        addMultipleIdeasWithIds([r], parentShape, editor);
+      } else {
+        console.log('adding standalone', r);
+        // Add to standalone
+        addStandaloneIdeas([r], editor);
       }
     }
-
-    // Process each parent separately
-    for (const [parentId, results] of resultsByParent.entries()) {
-      const parentShape = editor.getShape(parentId);
-      if (!parentShape) continue;
-
-      addMultipleIdeas(results, parentShape, editor);
-    }
-
-    // // Handle any results without parentId
-    // for (const r of result) {
-    //   if (r.type === 'add-text' && !r.parentId) {
-    //     // Handle standalone ideas if needed
-    //     // ...
-    //   }
-    // }
   },
 };
 
-// Function to add multiple ideas using improved layout
-function addMultipleIdeas(
+// Function to add multiple ideas using server-generated IDs
+function addMultipleIdeasWithIds(
   results: BrainstormResult[],
   parentShape: TLShape,
   editor: Editor
 ) {
   const parentBounds = editor.getShapePageBounds(parentShape.id)!;
 
-  // Process each result individually using the improved findOptimalPosition
+  // Process each result individually
   for (const result of results) {
     if (result.type !== 'add-text') continue;
 
-    const textShapeID = `shape:${crypto.randomUUID()}` as TLShapeId;
+    // Use the server-generated ID instead of creating a new one
+    const textShapeID =
+      result.id || (`shape:${crypto.randomUUID()}` as TLShapeId);
     const arrowShapeID = `shape:${crypto.randomUUID()}` as TLShapeId;
 
     // Find optimal position for this idea
@@ -89,7 +82,7 @@ function addMultipleIdeas(
       };
     })();
 
-    // Create the text shape
+    // Create the text shape with the server-generated ID
     editor.createShapes([
       {
         id: textShapeID,
@@ -141,19 +134,6 @@ function addMultipleIdeas(
       },
     ]);
 
-    console.log('creating bindings', [
-      {
-        fromId: parentShape.id,
-        toId: arrowShapeID,
-        type: 'parent-to-arrow',
-      },
-      {
-        fromId: arrowShapeID,
-        toId: textShapeID,
-        type: 'arrow-to-child',
-      },
-    ]);
-
     // Create bindings
     editor.createBindings([
       // parent to arrow binding
@@ -179,7 +159,78 @@ function addMultipleIdeas(
         },
       },
     ]);
+
+    // If there are predictions, create prediction shapes
+    if (result.predictions && result.predictions.length > 0) {
+      createPredictionShapes(textShapeID, result.predictions, editor);
+    }
   }
+}
+
+// Function to add standalone ideas (without a parent)
+function addStandaloneIdeas(results: BrainstormResult[], editor: Editor) {
+  // Get the current viewport center
+  const viewport = editor.getViewportPageBounds();
+  const centerX = viewport.center.x;
+  const centerY = viewport.center.y;
+
+  // Arrange standalone ideas in a grid or circle around the viewport center
+  results.forEach((result, index) => {
+    // Use the server-generated ID
+    const textShapeID =
+      result.id || (`shape:${crypto.randomUUID()}` as TLShapeId);
+
+    // Calculate position in a circle or grid
+    const angle = (index / results.length) * Math.PI * 2;
+    const radius = 200; // Distance from center
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+
+    // Calculate box size
+    const boxSize = (() => {
+      const CHARS_PER_LINE = 40;
+      const LINE_HEIGHT = 20;
+
+      const numLines = Math.ceil(result.text.length / CHARS_PER_LINE);
+      const height = Math.max(numLines * LINE_HEIGHT, 40);
+      const width = Math.min(result.text.length * 8, CHARS_PER_LINE * 10);
+
+      return {
+        width: Math.max(width, 150),
+        height: Math.max(height, 40),
+      };
+    })();
+
+    // Create the shape
+    editor.createShapes<RichTextShape>([
+      {
+        id: textShapeID,
+        type: 'rich-text',
+        props: {
+          text: result.text,
+          h: boxSize.height,
+          w: boxSize.width,
+        },
+        x,
+        y,
+      },
+    ]);
+
+    // If there are predictions, create prediction shapes
+    if (result.predictions && result.predictions.length > 0) {
+      createPredictionShapes(textShapeID, result.predictions, editor);
+    }
+  });
+}
+
+// Helper function to create prediction shapes
+function createPredictionShapes(
+  parentId: TLShapeId,
+  predictions: string[],
+  editor: Editor
+) {
+  // Implementation for creating prediction shapes
+  // This would depend on your existing prediction shape implementation
 }
 
 // Function to find the optimal position for a new shape

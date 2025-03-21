@@ -1,6 +1,15 @@
 import { useState } from 'react';
-
 import { useCallback } from 'react';
+import { Editor, TLShapeId } from 'tldraw';
+import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
+
+export type StreamedNode = {
+  id: TLShapeId;
+  type: string;
+  text: string;
+  parentId?: TLShapeId;
+  predictions?: string[];
+};
 
 export const useStreamMessage = () => {
   const [streamingState, setStreamingState] = useState<{
@@ -8,11 +17,13 @@ export const useStreamMessage = () => {
     chunks: string;
     status: string | null;
     error: string | null;
+    nodes: StreamedNode[];
   }>({
     isStreaming: false,
     chunks: '',
     status: null,
     error: null,
+    nodes: [],
   });
 
   const streamMessage = useCallback(
@@ -22,9 +33,10 @@ export const useStreamMessage = () => {
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
       predictionId: string | null;
+      editor: Editor;
       onChunk?: (chunk: string) => void;
       onStatus?: (status: string) => void;
-      onComplete?: (message: string, nodes: string[]) => void;
+      onComplete?: (message: string, nodes: StreamedNode[]) => void;
       onError?: (error: string) => void;
     }) => {
       try {
@@ -34,6 +46,7 @@ export const useStreamMessage = () => {
           chunks: '',
           status: null,
           error: null,
+          nodes: [],
         });
 
         // Create the request URL
@@ -68,7 +81,9 @@ export const useStreamMessage = () => {
 
         // Create a text decoder to convert Uint8Array to string
         const decoder = new TextDecoder();
-        let accumulatedChunks = '';
+
+        // Track nodes that have already been created
+        const createdNodeIds = new Set<TLShapeId>();
 
         // Process the stream
         while (true) {
@@ -78,71 +93,98 @@ export const useStreamMessage = () => {
           // Decode the chunk
           const chunk = decoder.decode(value, { stream: true });
 
-          // Process SSE format (event: type\ndata: {...}\n\n)
+          // Process each event in the chunk
           const events = chunk.split('\n\n').filter(Boolean);
 
           for (const event of events) {
-            const [eventType, eventData] = event.split('\n');
+            const lines = event.split('\n');
 
-            if (!eventType || !eventData) continue;
+            if (lines.length < 2) continue;
 
-            const type = eventType.replace('event: ', '');
-            const data = JSON.parse(eventData.replace('data: ', ''));
+            const eventType = lines[0].replace('event: ', '');
+            const data = lines[1].replace('data: ', '');
 
-            switch (type) {
-              case 'start':
-                setStreamingState((prev) => ({
-                  ...prev,
-                  status: data.status,
-                }));
-                params.onStatus?.(data.status);
-                break;
+            try {
+              // console.log('eventType', eventType);
+              // console.log('data', data);
+              const parsedData = JSON.parse(data);
 
-              case 'chunk':
-                accumulatedChunks += data.chunk;
-                setStreamingState((prev) => ({
-                  ...prev,
-                  chunks: accumulatedChunks,
-                }));
-                params.onChunk?.(data.chunk);
-                break;
+              switch (eventType) {
+                case 'processing':
+                  setStreamingState((prev) => ({
+                    ...prev,
+                    status: parsedData.status,
+                  }));
+                  params.onStatus?.(parsedData.status);
+                  break;
 
-              case 'processing':
-                setStreamingState((prev) => ({
-                  ...prev,
-                  status: data.status,
-                }));
-                params.onStatus?.(data.status);
-                break;
+                case 'chunk':
+                  setStreamingState((prev) => ({
+                    ...prev,
+                    chunks: prev.chunks + parsedData.chunk,
+                  }));
+                  params.onChunk?.(parsedData.chunk);
+                  break;
 
-              case 'complete':
-                setStreamingState((prev) => ({
-                  ...prev,
-                  isStreaming: false,
-                  status: 'complete',
-                }));
-                // The message now might include nodes data
-                const completeData = {
-                  message: data.message,
-                  nodes: data.nodes || [],
-                };
-                params.onComplete?.(completeData.message, completeData.nodes);
-                return completeData.message;
+                case 'nodes':
+                  if (parsedData.nodes && Array.isArray(parsedData.nodes)) {
+                    const nodes = parsedData.nodes;
+                    console.log('nodes', parsedData.nodes);
 
-              case 'error':
-                setStreamingState((prev) => ({
-                  ...prev,
-                  isStreaming: false,
-                  error: data.error,
-                }));
-                params.onError?.(data.error);
-                throw new Error(data.error);
+                    if (parsedData.nodes.length > 0) {
+                      // Create the new nodes
+                      BrainstormToolCalls.handleBrainstormResult({
+                        result: nodes,
+                        editor: params.editor,
+                      });
+
+                      // Update state with all nodes
+                      setStreamingState((prev) => ({
+                        ...prev,
+                        // nodes: [...prev.nodes, ...newNodes],
+                      }));
+                    }
+                  }
+                  break;
+
+                case 'complete':
+                  setStreamingState((prev) => ({
+                    ...prev,
+                    isStreaming: false,
+                    chunks: parsedData.message,
+                    nodes: parsedData.nodes || prev.nodes,
+                  }));
+
+                  // Create any remaining nodes that weren't created during streaming
+                  if (parsedData.nodes && Array.isArray(parsedData.nodes)) {
+                    BrainstormToolCalls.handleBrainstormResult({
+                      result: parsedData.nodes,
+                      editor: params.editor,
+                    });
+                  }
+
+                  params.onComplete?.(
+                    parsedData.message,
+                    parsedData.nodes || []
+                  );
+                  break;
+
+                case 'error':
+                  setStreamingState((prev) => ({
+                    ...prev,
+                    isStreaming: false,
+                    error: parsedData.error,
+                  }));
+                  params.onError?.(parsedData.error);
+                  break;
+              }
+            } catch (error) {
+              console.log('Error parsing event data:', event);
             }
           }
         }
-
-        return accumulatedChunks;
       } catch (error) {
+        console.error('Error streaming message:', error);
         setStreamingState((prev) => ({
           ...prev,
           isStreaming: false,
@@ -151,14 +193,15 @@ export const useStreamMessage = () => {
         params.onError?.(
           error instanceof Error ? error.message : 'Unknown error'
         );
-        throw error;
       }
+
+      return streamingState;
     },
     []
   );
 
   return {
+    streamingState,
     streamMessage,
-    ...streamingState,
   };
 };

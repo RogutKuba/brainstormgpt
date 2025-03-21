@@ -6,6 +6,8 @@ import {
   brainstormResultSchema,
   BrainstormService,
 } from '../service/Brainstorm.service';
+import { ShapeService } from '../service/Shape.service';
+import { RoomSnapshot } from '@tldraw/sync-core';
 
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
@@ -79,11 +81,21 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
             encoder.encode('event: start\ndata: {"status":"started"}\n\n')
           );
 
+          // Get the workspace snapshot
+          const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+          const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
+          const snapshot =
+            (await workspace.getCurrentSnapshot()) as unknown as RoomSnapshot;
+
+          // Create shape service and get the tree
+          const shapeService = new ShapeService(snapshot);
+          const tree = shapeService.getSelectedTree(selectedItems);
+
           // Use LLMService to stream the response
           const brainstormResult = await BrainstormService.streamBrainstorm({
             prompt: message,
             chatHistory,
-            tree: [],
+            tree,
             streamController: controller,
             ctx,
           });

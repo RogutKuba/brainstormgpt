@@ -145,13 +145,6 @@ async function extractShapesWithText(params: {
     .join('\n');
 }
 
-const newNodeSchema = z.object({
-  type: z.literal('add-text'),
-  text: z.string(),
-  parentId: z.string().optional(),
-  predictions: z.array(z.string()).optional(),
-});
-
 export const brainstormResultSchema = z.object({
   explanation: z.string(),
   nodes: z.array(
@@ -163,6 +156,20 @@ export const brainstormResultSchema = z.object({
     })
   ),
 });
+
+const brainstormStreamSchema = z
+  .object({
+    explanation: z.string(),
+    nodes: z.array(
+      z.object({
+        type: z.string(),
+        text: z.string(),
+        parentId: z.string().nullable(),
+        predictions: z.array(z.string()),
+      })
+    ),
+  })
+  .partial();
 
 export const BrainstormService = {
   generateBrainstorm: async (params: {
@@ -313,6 +320,15 @@ Your goal is to create a cohesive knowledge structure where each node functions 
     let accumulatedExplanation = '';
     let lastSentExplanationLength = 0;
 
+    // Track accumulated nodes to avoid duplicating
+    let accumulatedNodes: {
+      id: string;
+      type: string;
+      text: string;
+      parentId?: string;
+      predictions?: string[];
+    }[] = [];
+
     const formattedShapes = await extractShapesWithText({ tree, ctx });
 
     // Find the deepest level in the tree
@@ -403,33 +419,73 @@ Your goal is to create a cohesive knowledge structure where each node functions 
           .safeParse(parsedContent);
 
         if (error) {
-          console.error('Error parsing content:', error);
+          console.error('Error parsing content:', parsedContent);
           return;
         }
 
-        if (data && data.explanation) {
-          // Only stream the new part of the explanation
-          const newExplanation = data.explanation;
+        if (data) {
+          // Handle explanation streaming
+          if (data.explanation) {
+            const newExplanation = data.explanation;
 
-          if (newExplanation.length > accumulatedExplanation.length) {
-            // Get only the new part of the explanation
-            const newChunk = newExplanation.substring(
-              lastSentExplanationLength
-            );
+            if (newExplanation.length > accumulatedExplanation.length) {
+              // Get only the new part of the explanation
+              const newChunk = newExplanation.substring(
+                lastSentExplanationLength
+              );
 
-            if (newChunk.trim()) {
-              // Send the new chunk to the client
+              if (newChunk.trim()) {
+                // Send the new chunk to the client
+                streamController.enqueue(
+                  encoder.encode(
+                    `event: chunk\ndata: ${JSON.stringify({
+                      chunk: newChunk,
+                    })}\n\n`
+                  )
+                );
+
+                // Update tracking variables
+                accumulatedExplanation = newExplanation;
+                lastSentExplanationLength = newExplanation.length;
+              }
+            }
+          }
+
+          // Handle nodes streaming
+          if (data.nodes && data.nodes.length > 0) {
+            // Process only new nodes that haven't been sent yet
+            const newNodes = data.nodes.slice(accumulatedNodes.length);
+
+            if (newNodes.length > 0) {
+              // Generate consistent IDs for new nodes
+              const nodesWithIds = newNodes.map((node, index) => {
+                // Create a deterministic ID based on the node's index in the overall array
+                const nodeId = `shape:${crypto.randomUUID()}` as TLShapeId;
+
+                // if parentId is 'none', set to undefined
+                const parentId =
+                  node.parentId === 'none' ? undefined : node.parentId;
+
+                return {
+                  id: nodeId,
+                  type: node.type,
+                  text: node.text,
+                  parentId: parentId as TLShapeId | undefined,
+                  predictions: node.predictions || [],
+                };
+              });
+
+              // Add to accumulated nodes
+              accumulatedNodes = [...accumulatedNodes, ...nodesWithIds];
+
+              // Send the new nodes to the client
               streamController.enqueue(
                 encoder.encode(
-                  `event: chunk\ndata: ${JSON.stringify({
-                    chunk: newChunk,
+                  `event: nodes\ndata: ${JSON.stringify({
+                    nodes: nodesWithIds,
                   })}\n\n`
                 )
               );
-
-              // Update tracking variables
-              accumulatedExplanation = newExplanation;
-              lastSentExplanationLength = newExplanation.length;
             }
           }
         }
@@ -442,17 +498,38 @@ Your goal is to create a cohesive knowledge structure where each node functions 
         const finalContent = JSON.parse(response.choices[0].message.content);
         const validatedResult = brainstormResultSchema.parse(finalContent);
 
+        // Generate final IDs for any nodes that weren't streamed yet
+        const finalNodes = validatedResult.nodes.map((node, index) => {
+          // If we already have this node in accumulated nodes, use that ID
+          if (index < accumulatedNodes.length) {
+            return accumulatedNodes[index];
+          }
+
+          // Otherwise generate a new ID
+          const nodeId = `shape:${crypto.randomUUID()}` as TLShapeId;
+          return {
+            id: nodeId,
+            type: node.type,
+            text: node.text,
+            parentId: node.parentId as TLShapeId | undefined,
+            predictions: node.predictions || [],
+          };
+        });
+
         // Send the complete message
         streamController.enqueue(
           encoder.encode(
             `event: complete\ndata: ${JSON.stringify({
               message: validatedResult.explanation,
-              nodes: validatedResult.nodes,
+              nodes: finalNodes,
             })}\n\n`
           )
         );
       } catch (error) {
-        console.error('Error parsing final content:', error);
+        console.error(
+          'Error parsing final content:',
+          response.choices[0].message.content
+        );
         streamController.enqueue(
           encoder.encode(
             `event: error\ndata: ${JSON.stringify({

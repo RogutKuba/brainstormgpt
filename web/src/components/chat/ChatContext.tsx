@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useSendMessage } from '@/query/workspace.query';
 import { useStreamMessage } from '@/query/stream.query';
+import { Editor } from 'tldraw';
 
 // Define the Message type
 export type Message = {
@@ -24,6 +25,7 @@ interface ChatContextValue {
     selectedItemIds: string[];
     workspaceId: string;
     predictionId: string | null;
+    editor: Editor;
   }) => Promise<void>;
   clearMessages: () => void;
 }
@@ -48,6 +50,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     message: string;
     selectedItemIds: string[];
     predictionId: string | null;
+    editor: Editor;
   }) => {
     // Check if input has more than 2 characters
     if (params.message.trim().length > 2 && !isLoading) {
@@ -165,6 +168,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
               return updatedMessages;
             });
           },
+          editor: params.editor,
         });
       } catch (error) {
         console.error('Error fetching chat response:', error);
