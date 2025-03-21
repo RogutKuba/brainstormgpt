@@ -297,12 +297,24 @@ export const ChatWindow: React.FC = () => {
                       >
                         {message.content}
                       </p>
+
+                      {/* Show status updates for streaming messages */}
+                      {message.status && message.sender === 'system' && (
+                        <div className='mt-2 text-xs text-gray-500'>
+                          {message.status === 'processing_shapes' &&
+                            'Processing shapes...'}
+                          {message.status === 'rebalancing_graph' &&
+                            'Rebalancing graph...'}
+                          {message.status === 'updating_workspace' &&
+                            'Updating workspace...'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
 
-                {/* Loading indicator bubble */}
-                {isLoading && (
+                {/* We don't need the separate loading indicator anymore since we show streaming in-place */}
+                {isLoading && !messages.some((m) => m.isStreaming) && (
                   <div className='flex flex-col'>
                     <div className='bg-white border border-gray-200 text-gray-800 p-3 rounded-lg'>
                       <div className='flex space-x-2'>

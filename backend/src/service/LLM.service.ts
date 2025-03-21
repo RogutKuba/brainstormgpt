@@ -57,4 +57,57 @@ export const LLMService = {
     // Extract the response text
     return choice.message.content;
   },
+
+  streamMessage: async (params: {
+    prompt: string;
+    chatHistory: {
+      content: string;
+      sender: 'user' | 'system';
+    }[];
+    env: AppContext['Bindings'];
+    structuredOutput: {
+      name: string;
+      schema: ZodObject<any>;
+    };
+    onNewContent: (parsedContent: unknown) => void;
+  }) => {
+    const { prompt, chatHistory, env, structuredOutput, onNewContent } = params;
+
+    // Initialize OpenAI client with API key from environment
+    const openai = new OpenAI({
+      apiKey: env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
+
+    const stream = openai.beta.chat.completions
+      .stream({
+        model: 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
+        messages: [
+          ...chatHistory.map((message) => ({
+            role: message.sender,
+            content: message.content,
+          })),
+          { role: 'user', content: prompt },
+        ],
+        response_format: zodResponseFormat(
+          structuredOutput.schema,
+          structuredOutput.name
+        ),
+      })
+      .on('refusal.done', () => console.log('request refused'))
+      .on('content.delta', ({ snapshot, parsed }) => {
+        // console.log('content:', snapshot);
+        // console.log('parsed:', parsed);
+        onNewContent(parsed);
+      })
+      .on('content.done', (props) => {
+        console.log(props);
+      });
+
+    await stream.done();
+
+    const finalCompletion = await stream.finalChatCompletion();
+
+    return finalCompletion;
+  },
 };

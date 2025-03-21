@@ -16,7 +16,7 @@ type ColaNode = {
   width: number;
   height: number;
   rotation: number;
-  color?: string;
+  fixed: number; // 1 means fixed, 0 means movable
 };
 type ColaIdLink = {
   source: TLShapeId;
@@ -85,39 +85,39 @@ export class GraphLayoutCollection extends BaseCollection {
     this.refreshGraph();
   }
 
-  override onShapeChange(prev: TLShape, next: TLShape) {
-    if (prev.type === 'geo' && next.type === 'geo') {
-      const prevShape = prev as TLGeoShape;
-      const nextShape = next as TLGeoShape;
-      // update color if its changed and refresh constraints which use this
-      if (prevShape.props.color !== nextShape.props.color) {
-        const existingNode = this.colaNodes.get(next.id);
-        if (existingNode) {
-          this.colaNodes.set(next.id, {
-            ...existingNode,
-            color: nextShape.props.color,
-          });
-        }
-        this.refreshGraph();
-      }
-    }
-  }
+  // override onShapeChange(prev: TLShape, next: TLShape) {
+  //   if (prev.type === 'geo' && next.type === 'geo') {
+  //     const prevShape = prev as TLGeoShape;
+  //     const nextShape = next as TLGeoShape;
+  //     // update color if its changed and refresh constraints which use this
+  //     if (prevShape.props.color !== nextShape.props.color) {
+  //       const existingNode = this.colaNodes.get(next.id);
+  //       if (existingNode) {
+  //         this.colaNodes.set(next.id, {
+  //           ...existingNode,
+  //           color: nextShape.props.color,
+  //         });
+  //       }
+  //       this.refreshGraph();
+  //     }
+  //   }
+  // }
 
   step = () => {
     this.graphSim.start(1, 0, 0, 0, true, false);
 
     const selectedIds = this.editor.getSelectedShapeIds();
 
-    // Get all descendants of selected shapes
-    const affectedIds = new Set<TLShapeId>();
+    // // Get all descendants of selected shapes
+    // const affectedIds = new Set<TLShapeId>();
 
-    for (const selectedId of selectedIds) {
-      affectedIds.add(selectedId);
-      const descendants = this.getDescendants(selectedId);
-      for (const descendantId of descendants) {
-        affectedIds.add(descendantId);
-      }
-    }
+    // for (const selectedId of selectedIds) {
+    //   affectedIds.add(selectedId);
+    //   const descendants = this.getDescendants(selectedId);
+    //   for (const descendantId of descendants) {
+    //     affectedIds.add(descendantId);
+    //   }
+    // }
 
     for (const node of this.graphSim.nodes() as ColaNode[]) {
       const shape = this.editor.getShape(node.id);
@@ -133,29 +133,36 @@ export class GraphLayoutCollection extends BaseCollection {
       //   y: node.y - y,
       // });
 
-      // Fix positions if we're dragging them
-      if (selectedIds.includes(node.id)) {
-        node.x = shape.x + x;
-        node.y = shape.y + y;
-      }
-
       // Update shape props
       node.width = w;
       node.height = h;
       node.rotation = shape.rotation;
 
-      // Only update shapes that are selected or descendants of selected shapes
-      if (affectedIds.has(node.id)) {
+      // Fix positions if we're dragging them
+      if (selectedIds.includes(node.id)) {
+        node.x = shape.x + x;
+        node.y = shape.y + y;
+      } else {
         this.editor.updateShape({
           id: node.id,
           type: shape.type,
           x: node.x - x,
           y: node.y - y,
         });
-      } else {
-        node.x = shape.x;
-        node.y = shape.y;
       }
+
+      // // Only update shapes that are selected or descendants of selected shapes
+      // if (affectedIds.has(node.id)) {
+      //   this.editor.updateShape({
+      //     id: node.id,
+      //     type: shape.type,
+      //     x: node.x - x,
+      //     y: node.y - y,
+      //   });
+      // } else {
+      //   node.x = shape.x;
+      //   node.y = shape.y;
+      // }
     }
   };
 
@@ -189,7 +196,8 @@ export class GraphLayoutCollection extends BaseCollection {
       width: w,
       height: h,
       rotation: shape.rotation,
-      color: (shape.props as any).color,
+      // default to movable
+      fixed: 0,
     };
     this.colaNodes.set(shape.id, node);
   };
@@ -242,26 +250,7 @@ export class GraphLayoutCollection extends BaseCollection {
       offsets: [],
     };
 
-    // Iterate over shapes and generate constraints based on conditions
-    for (const node of this.colaNodes.values()) {
-      if (node.color === 'red') {
-        // Add alignment offset for red shapes
-        alignmentConstraintX.offsets.push({ node: node.id, offset: 0 });
-      }
-      if (node.color === 'blue') {
-        // Add alignment offset for red shapes
-        alignmentConstraintY.offsets.push({ node: node.id, offset: 0 });
-      }
-    }
-
-    const constraints = [];
-    if (alignmentConstraintX.offsets.length > 0) {
-      constraints.push(alignmentConstraintX);
-    }
-    if (alignmentConstraintY.offsets.length > 0) {
-      constraints.push(alignmentConstraintY);
-    }
-    this.colaConstraints = constraints;
+    this.colaConstraints = [];
   }
 
   // Get all descendants (children, grandchildren, etc.) of a shape

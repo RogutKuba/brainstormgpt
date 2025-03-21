@@ -7,6 +7,7 @@ import { PageSummaryEntity, pageSummaryTable } from '../db/pageSummary.db';
 import { inArray } from 'drizzle-orm';
 import { getDbConnection } from '../db/client';
 import { z } from 'zod';
+import { ReadableStreamController } from 'stream/web';
 
 export type BrainStormResult = {
   type: 'add-text';
@@ -151,7 +152,7 @@ const newNodeSchema = z.object({
   predictions: z.array(z.string()).optional(),
 });
 
-const brainstormResultSchema = z.object({
+export const brainstormResultSchema = z.object({
   explanation: z.string(),
   nodes: z.array(
     z.object({
@@ -293,5 +294,175 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       deepestLevel,
       explanation: typedResult.explanation,
     };
+  },
+
+  streamBrainstorm: async (params: {
+    prompt: string;
+    chatHistory: {
+      content: string;
+      sender: 'user' | 'system';
+    }[];
+    tree: TreeNode[];
+    streamController: ReadableStreamController<any>;
+    ctx: Context<AppContext>;
+  }) => {
+    const { prompt, chatHistory, streamController, tree, ctx } = params;
+    const encoder = new TextEncoder();
+
+    // Track the accumulated explanation to avoid duplicating content
+    let accumulatedExplanation = '';
+    let lastSentExplanationLength = 0;
+
+    const formattedShapes = await extractShapesWithText({ tree, ctx });
+
+    // Find the deepest level in the tree
+    const findDeepestLevel = (nodes: TreeNode[], currentLevel = 1): number => {
+      if (nodes.length === 0) return currentLevel - 1;
+
+      const childLevels = nodes.map((node) =>
+        findDeepestLevel(node.children, currentLevel + 1)
+      );
+
+      return Math.max(currentLevel, ...childLevels);
+    };
+
+    const deepestLevel = findDeepestLevel(tree);
+
+    // Find the IDs of shapes at the deepest level
+    const findDeepestShapeIds = (
+      nodes: TreeNode[],
+      currentLevel = 1,
+      targetLevel: number
+    ): string[] => {
+      if (currentLevel === targetLevel) {
+        return nodes.map((node) => node.id);
+      }
+
+      return nodes.flatMap((node) =>
+        findDeepestShapeIds(node.children, currentLevel + 1, targetLevel)
+      );
+    };
+
+    const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
+
+    // Send processing status
+    streamController.enqueue(
+      encoder.encode(
+        'event: processing\ndata: {"status":"Generating ideas..."}\n\n'
+      )
+    );
+
+    const response = await LLMService.streamMessage({
+      prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You create concise, well-articulated nodes that function as interconnected knowledge units. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
+      
+Based on these whiteboard nodes:
+
+<existing-nodes>
+${formattedShapes}
+</existing-nodes>
+
+<user-prompt>
+${prompt}
+</user-prompt>
+
+First, provide a brief, professional explanation of your new content elements. Focus on logical relationships and conceptual connections.
+
+IMPORTANT: When you see link nodes in the existing content, understand that users CANNOT see the content of these links directly on their whiteboard. The link summaries and key points are only visible to you as context. If you want to reference information from links, you should include that information explicitly in your new nodes.
+
+PRIORITIZE extending the DEEPEST level of thinking in the existing nodes (level ${deepestLevel}). This should be your primary focus.
+
+However, if you identify a significant gap in the knowledge structure that requires a new top-level or mid-level concept, you may suggest such additions when clearly justified.
+
+IMPORTANT FORMATTING GUIDELINES:
+1. Create each node as a self-contained, wiki-like knowledge unit focused on ONE specific concept
+2. Format each node with a clear, descriptive title followed by comprehensive content
+3. Use proper markdown formatting with headings (##) for titles
+4. Write in a professional, objective tone appropriate for knowledge documentation
+5. Ensure each node can stand alone while also connecting to the broader knowledge structure
+6. Break content into SHORT PARAGRAPHS of 2-3 sentences each for easy readability
+7. Use bullet points only when presenting lists of specific items
+8. Maintain consistent terminology and reference style across all nodes
+9. Avoid large blocks of text - aim for visual clarity with frequent paragraph breaks
+
+For each node, also include 2-3 predictions of follow-up questions the user might ask about this specific node. These should be natural extensions of the node's content.
+
+For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
+        ', '
+      )}
+
+Your goal is to create a cohesive knowledge structure where each node functions as its own mini-wiki article - self-contained yet connected to the broader context. Prioritize clarity, precision, and professional tone throughout. Remember to keep paragraphs SHORT (2-3 sentences) for optimal readability on a whiteboard.`,
+      chatHistory,
+      env: ctx.env,
+      structuredOutput: {
+        name: 'brainstormResult',
+        schema: brainstormResultSchema,
+      },
+      onNewContent: (parsedContent) => {
+        const { data, error } = brainstormResultSchema
+          .partial()
+          .safeParse(parsedContent);
+
+        if (error) {
+          console.error('Error parsing content:', error);
+          return;
+        }
+
+        if (data && data.explanation) {
+          // Only stream the new part of the explanation
+          const newExplanation = data.explanation;
+
+          if (newExplanation.length > accumulatedExplanation.length) {
+            // Get only the new part of the explanation
+            const newChunk = newExplanation.substring(
+              lastSentExplanationLength
+            );
+
+            if (newChunk.trim()) {
+              // Send the new chunk to the client
+              streamController.enqueue(
+                encoder.encode(
+                  `event: chunk\ndata: ${JSON.stringify({
+                    chunk: newChunk,
+                  })}\n\n`
+                )
+              );
+
+              // Update tracking variables
+              accumulatedExplanation = newExplanation;
+              lastSentExplanationLength = newExplanation.length;
+            }
+          }
+        }
+      },
+    });
+
+    // Send complete message with the final result
+    if (response.choices[0].message.content) {
+      try {
+        const finalContent = JSON.parse(response.choices[0].message.content);
+        const validatedResult = brainstormResultSchema.parse(finalContent);
+
+        // Send the complete message
+        streamController.enqueue(
+          encoder.encode(
+            `event: complete\ndata: ${JSON.stringify({
+              message: validatedResult.explanation,
+              nodes: validatedResult.nodes,
+            })}\n\n`
+          )
+        );
+      } catch (error) {
+        console.error('Error parsing final content:', error);
+        streamController.enqueue(
+          encoder.encode(
+            `event: error\ndata: ${JSON.stringify({
+              error: 'Failed to parse final content',
+            })}\n\n`
+          )
+        );
+      }
+    }
+
+    return response;
   },
 };

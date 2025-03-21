@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useSendMessage } from '@/query/workspace.query';
+import { useStreamMessage } from '@/query/stream.query';
 
 // Define the Message type
 export type Message = {
@@ -10,6 +11,8 @@ export type Message = {
   sender: 'user' | 'system';
   timestamp: Date;
   level?: 'error' | 'info' | 'warning';
+  status?: string;
+  isStreaming?: boolean;
 };
 
 // Define the context value type
@@ -34,7 +37,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { sendMessage } = useSendMessage();
+  const { streamMessage } = useStreamMessage();
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -66,36 +69,105 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           sender: msg.sender,
         }));
 
-        const response = await sendMessage({
+        // Create a placeholder for the AI response
+        const aiMessageId = (Date.now() + 1).toString();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: aiMessageId,
+            content: '',
+            sender: 'system',
+            timestamp: new Date(),
+            isStreaming: true,
+          },
+        ]);
+
+        // Use streaming API
+        await streamMessage({
           message: userMessage.content,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
           workspaceId: params.workspaceId,
           predictionId: params.predictionId,
-        });
+          onChunk: (chunk) => {
+            // Update the AI message with each new chunk
+            setMessages((prev) => {
+              const updatedMessages = [...prev];
+              const aiMessageIndex = updatedMessages.findIndex(
+                (msg) => msg.id === aiMessageId
+              );
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            content: response.message,
-            sender: 'system',
-            timestamp: new Date(),
+              if (aiMessageIndex !== -1) {
+                updatedMessages[aiMessageIndex] = {
+                  ...updatedMessages[aiMessageIndex],
+                  content: updatedMessages[aiMessageIndex].content + chunk,
+                };
+              }
+
+              return updatedMessages;
+            });
           },
-        ]);
+          onStatus: (status) => {
+            // Update the AI message status
+            setMessages((prev) => {
+              const updatedMessages = [...prev];
+              const aiMessageIndex = updatedMessages.findIndex(
+                (msg) => msg.id === aiMessageId
+              );
+
+              if (aiMessageIndex !== -1) {
+                updatedMessages[aiMessageIndex] = {
+                  ...updatedMessages[aiMessageIndex],
+                  status,
+                };
+              }
+
+              return updatedMessages;
+            });
+          },
+          onComplete: (finalMessage) => {
+            // Update the AI message with the complete response
+            setMessages((prev) => {
+              const updatedMessages = [...prev];
+              const aiMessageIndex = updatedMessages.findIndex(
+                (msg) => msg.id === aiMessageId
+              );
+
+              if (aiMessageIndex !== -1) {
+                updatedMessages[aiMessageIndex] = {
+                  ...updatedMessages[aiMessageIndex],
+                  content: finalMessage,
+                  isStreaming: false,
+                  status: 'complete',
+                };
+              }
+
+              return updatedMessages;
+            });
+          },
+          onError: (error) => {
+            // Update the AI message with the error
+            setMessages((prev) => {
+              const updatedMessages = [...prev];
+              const aiMessageIndex = updatedMessages.findIndex(
+                (msg) => msg.id === aiMessageId
+              );
+
+              if (aiMessageIndex !== -1) {
+                updatedMessages[aiMessageIndex] = {
+                  ...updatedMessages[aiMessageIndex],
+                  content: `Error: ${error}`,
+                  isStreaming: false,
+                  level: 'error',
+                };
+              }
+
+              return updatedMessages;
+            });
+          },
+        });
       } catch (error) {
         console.error('Error fetching chat response:', error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            content:
-              "Sorry, I couldn't process your request. Please try again.",
-            sender: 'system',
-            timestamp: new Date(),
-            level: 'error',
-          },
-        ]);
       } finally {
         setIsLoading(false);
       }

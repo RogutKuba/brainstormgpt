@@ -1,5 +1,4 @@
 import { clientFetch } from '@/query/client';
-import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useMutation } from '@tanstack/react-query';
