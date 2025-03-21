@@ -1055,8 +1055,6 @@ export class ShapeService {
       layer++;
     }
 
-    console.log('no space found');
-
     // Fallback if no space found
     return this.findPositionAwayFromShapes(gridInfo, bounds, gridSize);
   }

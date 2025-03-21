@@ -10,6 +10,7 @@ import {
   TLArrowShape,
   TLBindingId,
   TLShapeId,
+  ZERO_INDEX_KEY,
 } from 'tldraw';
 import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
@@ -317,10 +318,7 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
     } else {
       const { width, height } = calculateNodeSize(nodeChunk.chunk);
 
-      const newTextShape: Pick<
-        RichTextShape,
-        'id' | 'type' | 'props' | 'index'
-      > = {
+      const newTextShape: Pick<RichTextShape, 'id' | 'type' | 'props'> = {
         id: nodeChunk.id as TLShapeId,
         type: 'rich-text',
         props: {
@@ -328,7 +326,6 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
           w: width,
           text: nodeChunk.chunk,
         },
-        index: 'a2' as IndexKey,
       };
 
       if (
@@ -340,7 +337,7 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
         const newArrowShape: Pick<TLArrowShape, 'id' | 'type' | 'index'> = {
           id: createShapeId(),
           type: 'arrow',
-          index: 'a1' as IndexKey,
+          index: ZERO_INDEX_KEY,
         };
 
         // create bindings
@@ -354,8 +351,8 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
                 x: 0.5,
                 y: 0.5,
               },
-              isExact: true,
-              isPrecise: true,
+              isExact: false,
+              isPrecise: false,
             },
             fromId: newArrowShape.id,
             toId: nodeChunk.parentId as TLShapeId,
@@ -371,8 +368,8 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
                 x: 0.5,
                 y: 0.5,
               },
-              isExact: true,
-              isPrecise: true,
+              isExact: false,
+              isPrecise: false,
             },
             fromId: newArrowShape.id,
             toId: nodeChunk.id as TLShapeId,
