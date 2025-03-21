@@ -157,16 +157,17 @@ export const brainstormResultSchema = z.object({
   ),
 });
 
-const brainstormStreamSchema = z
+export const brainstormStreamSchema = z
   .object({
     explanation: z.string(),
     nodes: z.array(
-      z.object({
-        type: z.string(),
-        text: z.string(),
-        parentId: z.string().nullable(),
-        predictions: z.array(z.string()),
-      })
+      z
+        .object({
+          type: z.string(),
+          text: z.string(),
+          parentId: z.string().or(z.literal('none')).nullable(),
+        })
+        .partial()
     ),
   })
   .partial();
@@ -303,6 +304,12 @@ Your goal is to create a cohesive knowledge structure where each node functions 
     };
   },
 
+  // #########################################################
+  // #########################################################
+  // STREAMING VERSION
+  // #########################################################
+  // #########################################################
+
   streamBrainstorm: async (params: {
     prompt: string;
     chatHistory: {
@@ -412,8 +419,8 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       chatHistory,
       env: ctx.env,
       structuredOutput: {
-        name: 'brainstormResult',
-        schema: brainstormResultSchema,
+        name: 'brainstormStream',
+        schema: brainstormStreamSchema,
       },
       onNewContent: (parsedContent) =>
         BrainstormService.handleStreamContent({
@@ -523,15 +530,15 @@ Your goal is to create a cohesive knowledge structure where each node functions 
           };
         });
 
-        // Send the complete message
-        streamController.enqueue(
-          encoder.encode(
-            `event: complete\ndata: ${JSON.stringify({
-              message: validatedResult.explanation,
-              nodes: finalNodes,
-            })}\n\n`
-          )
-        );
+        // // Send the complete message
+        // streamController.enqueue(
+        //   encoder.encode(
+        //     `event: complete\ndata: ${JSON.stringify({
+        //       message: validatedResult.explanation,
+        //       nodes: finalNodes,
+        //     })}\n\n`
+        //   )
+        // );
       } catch (error) {
         console.error(
           'Error parsing final content:',
@@ -556,11 +563,16 @@ Your goal is to create a cohesive knowledge structure where each node functions 
   }) => {
     const { streamService, parsedContent } = params;
 
-    const { data, error } = brainstormResultSchema
+    const { data, error } = brainstormStreamSchema
       .partial()
       .safeParse(parsedContent);
 
     if (error) {
+      console.error(
+        'Error parsing content:',
+        parsedContent,
+        error?.errors.map((e) => `${e.path}: ${e.message}`)
+      );
       return;
     }
 

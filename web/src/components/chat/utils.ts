@@ -15,8 +15,10 @@ export const calculateNodeSize = (text: string) => {
   const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
   const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
+  const padding = 10;
+
   return {
-    height,
-    width,
+    height: height + padding,
+    width: width + padding,
   };
 };

@@ -104,7 +104,7 @@ export class GraphLayoutCollection extends BaseCollection {
   // }
 
   step = () => {
-    this.graphSim.start(1, 0, 0, 0, true, false);
+    this.graphSim.start(1, 0, 0, 0, true, false).handleDisconnected(true);
 
     const selectedIds = this.editor.getSelectedShapeIds();
 
@@ -234,8 +234,8 @@ export class GraphLayoutCollection extends BaseCollection {
       .constraints(constraints)
       // you could use .linkDistance(250) too, which is stable but does not handle size/rotation
       .linkDistance((edge) => calcEdgeDistance(edge as ColaNodeLink))
-      .avoidOverlaps(true)
-      .handleDisconnected(true);
+      .avoidOverlaps(true);
+    // .handleDisconnected(true);
   }
 
   refreshConstraints() {

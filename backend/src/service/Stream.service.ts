@@ -2,6 +2,7 @@ import { ReadableStreamController } from 'stream/web';
 import { TLShapeId } from 'tldraw';
 import { z } from 'zod';
 import { generateTlShapeId } from '../lib/id';
+import { brainstormStreamSchema } from './Brainstorm.service';
 
 export class StreamService {
   // SCHEMAS
@@ -79,7 +80,7 @@ export class StreamService {
    * @param nodes - The nodes to be streamed
    */
   public handleNodes = async (
-    nodes: z.infer<typeof this.streamedNodeSchema>[] | undefined
+    nodes: z.infer<typeof brainstormStreamSchema>['nodes'] | undefined
   ) => {
     if (!nodes) return;
 
@@ -116,6 +117,8 @@ export class StreamService {
           chunk,
           parentId: node.parentId ?? null,
         };
+
+        console.log('sending-node-chunk', toSend);
 
         this.streamController.enqueue(
           this.encoder.encode(

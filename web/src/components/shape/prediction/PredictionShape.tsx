@@ -91,6 +91,7 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
         selectedItemIds: parentId ? [parentId] : [],
         workspaceId,
         predictionId: shape.id,
+        editor: this.editor,
       });
     };
 

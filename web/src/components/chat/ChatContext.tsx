@@ -93,7 +93,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           workspaceId: params.workspaceId,
           predictionId: params.predictionId,
           onChunk: (chunk) => {
-            console.log('got a chunk', chunk);
             // Update the AI message with each new chunk
             setMessages((prev) => {
               const updatedMessages = [...prev];
