@@ -8,9 +8,9 @@ import { inArray } from 'drizzle-orm';
 import { getDbConnection } from '../db/client';
 import { z } from 'zod';
 import { ReadableStreamController } from 'stream/web';
+import { StreamService } from './Stream.service';
 
 export type BrainStormResult = {
-  type: 'add-text';
   text: string;
   parentId?: TLShapeId; // Optional parent shape ID to connect to
   predictions?: string[]; // Added predictions field
@@ -152,7 +152,7 @@ export const brainstormResultSchema = z.object({
       type: z.string(),
       text: z.string(),
       parentId: z.string().optional(),
-      predictions: z.array(z.string()),
+      // predictions: z.array(z.string()),
     })
   ),
 });
@@ -293,7 +293,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       type: 'add-text',
       text: node.text,
       ...(node.parentId && { parentId: node.parentId as TLShapeId }),
-      predictions: node.predictions,
+      predictions: [],
     }));
 
     return {
@@ -361,6 +361,8 @@ Your goal is to create a cohesive knowledge structure where each node functions 
 
     const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
 
+    const streamService = new StreamService(streamController);
+
     // Send processing status
     streamController.enqueue(
       encoder.encode(
@@ -413,84 +415,89 @@ Your goal is to create a cohesive knowledge structure where each node functions 
         name: 'brainstormResult',
         schema: brainstormResultSchema,
       },
-      onNewContent: (parsedContent) => {
-        const { data, error } = brainstormResultSchema
-          .partial()
-          .safeParse(parsedContent);
-
-        if (error) {
-          console.error('Error parsing content:', parsedContent);
-          return;
-        }
-
-        if (data) {
-          // Handle explanation streaming
-          if (data.explanation) {
-            const newExplanation = data.explanation;
-
-            if (newExplanation.length > accumulatedExplanation.length) {
-              // Get only the new part of the explanation
-              const newChunk = newExplanation.substring(
-                lastSentExplanationLength
-              );
-
-              if (newChunk.trim()) {
-                // Send the new chunk to the client
-                streamController.enqueue(
-                  encoder.encode(
-                    `event: chunk\ndata: ${JSON.stringify({
-                      chunk: newChunk,
-                    })}\n\n`
-                  )
-                );
-
-                // Update tracking variables
-                accumulatedExplanation = newExplanation;
-                lastSentExplanationLength = newExplanation.length;
-              }
-            }
-          }
-
-          // Handle nodes streaming
-          if (data.nodes && data.nodes.length > 0) {
-            // Process only new nodes that haven't been sent yet
-            const newNodes = data.nodes.slice(accumulatedNodes.length);
-
-            if (newNodes.length > 0) {
-              // Generate consistent IDs for new nodes
-              const nodesWithIds = newNodes.map((node, index) => {
-                // Create a deterministic ID based on the node's index in the overall array
-                const nodeId = `shape:${crypto.randomUUID()}` as TLShapeId;
-
-                // if parentId is 'none', set to undefined
-                const parentId =
-                  node.parentId === 'none' ? undefined : node.parentId;
-
-                return {
-                  id: nodeId,
-                  type: node.type,
-                  text: node.text,
-                  parentId: parentId as TLShapeId | undefined,
-                  predictions: node.predictions || [],
-                };
-              });
-
-              // Add to accumulated nodes
-              accumulatedNodes = [...accumulatedNodes, ...nodesWithIds];
-
-              // Send the new nodes to the client
-              streamController.enqueue(
-                encoder.encode(
-                  `event: nodes\ndata: ${JSON.stringify({
-                    nodes: nodesWithIds,
-                  })}\n\n`
-                )
-              );
-            }
-          }
-        }
-      },
+      onNewContent: (parsedContent) =>
+        BrainstormService.handleStreamContent({
+          streamService,
+          parsedContent,
+        }),
     });
+    // const { data, error } = brainstormResultSchema
+    //   .partial()
+    //   .safeParse(parsedContent);
+
+    // if (error) {
+    //   console.error('Error parsing content:', parsedContent);
+    //   return;
+    // }
+
+    // if (data) {
+    //   // Handle explanation streaming
+    //   if (data.explanation) {
+    //     const newExplanation = data.explanation;
+
+    //     if (newExplanation.length > accumulatedExplanation.length) {
+    //       // Get only the new part of the explanation
+    //       const newChunk = newExplanation.substring(
+    //         lastSentExplanationLength
+    //       );
+
+    //       if (newChunk.trim()) {
+    //         // Send the new chunk to the client
+    //         streamController.enqueue(
+    //           encoder.encode(
+    //             `event: chunk\ndata: ${JSON.stringify({
+    //               chunk: newChunk,
+    //             })}\n\n`
+    //           )
+    //         );
+
+    //         // Update tracking variables
+    //         accumulatedExplanation = newExplanation;
+    //         lastSentExplanationLength = newExplanation.length;
+    //       }
+    //     }
+    //   }
+
+    //   // Handle nodes streaming
+    //   if (data.nodes && data.nodes.length > 0) {
+    //     // Process only new nodes that haven't been sent yet
+    //     const newNodes = data.nodes.slice(accumulatedNodes.length);
+
+    //     if (newNodes.length > 0) {
+    //       // Generate consistent IDs for new nodes
+    //       const nodesWithIds = newNodes.map((node, index) => {
+    //         // Create a deterministic ID based on the node's index in the overall array
+    //         const nodeId = `shape:${crypto.randomUUID()}` as TLShapeId;
+
+    //         // if parentId is 'none', set to undefined
+    //         const parentId =
+    //           node.parentId === 'none' ? undefined : node.parentId;
+
+    //         return {
+    //           id: nodeId,
+    //           type: node.type,
+    //           text: node.text,
+    //           parentId: parentId as TLShapeId | undefined,
+    //           predictions: node.predictions || [],
+    //         };
+    //       });
+
+    //       // Add to accumulated nodes
+    //       accumulatedNodes = [...accumulatedNodes, ...nodesWithIds];
+
+    //       // Send the new nodes to the client
+    //       streamController.enqueue(
+    //         encoder.encode(
+    //           `event: nodes\ndata: ${JSON.stringify({
+    //             nodes: nodesWithIds,
+    //           })}\n\n`
+    //         )
+    //       );
+    //     }
+    //   }
+    //     }
+    //   },
+    // });
 
     // Send complete message with the final result
     if (response.choices[0].message.content) {
@@ -512,7 +519,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
             type: node.type,
             text: node.text,
             parentId: node.parentId as TLShapeId | undefined,
-            predictions: node.predictions || [],
+            predictions: [],
           };
         });
 
@@ -541,5 +548,27 @@ Your goal is to create a cohesive knowledge structure where each node functions 
     }
 
     return response;
+  },
+
+  handleStreamContent: async (params: {
+    streamService: StreamService;
+    parsedContent: unknown;
+  }) => {
+    const { streamService, parsedContent } = params;
+
+    const { data, error } = brainstormResultSchema
+      .partial()
+      .safeParse(parsedContent);
+
+    if (error) {
+      return;
+    }
+
+    if (data) {
+      const { explanation, nodes } = data;
+
+      streamService.handleExplanation(explanation);
+      streamService.handleNodes(nodes);
+    }
   },
 };

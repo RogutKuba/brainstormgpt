@@ -1,3 +1,5 @@
+import { TLShapeId } from 'tldraw';
+
 const Entities = {
   user: 'u_',
   session: 's_',
@@ -25,4 +27,12 @@ export const generateId = <T extends keyof Entities>(entity: T): Id<T> => {
     .join('');
 
   return `${entityPrefix}${hash}` as Id<T>;
+};
+
+export const generateTlShapeId = (prefix?: string): TLShapeId => {
+  const values = crypto.getRandomValues(new Uint8Array(8));
+  const hash = Array.from(values)
+    .map((byte) => byte.toString(16))
+    .join('');
+  return `shape:${prefix ? `${prefix}:` : ''}${hash}` as TLShapeId;
 };

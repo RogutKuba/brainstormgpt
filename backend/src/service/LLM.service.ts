@@ -74,14 +74,19 @@ export const LLMService = {
     const { prompt, chatHistory, env, structuredOutput, onNewContent } = params;
 
     // Initialize OpenAI client with API key from environment
-    const openai = new OpenAI({
+    const _openai = new OpenAI({
       apiKey: env.OPENROUTER_API_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
+    const openai = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+    });
+
     const stream = openai.beta.chat.completions
       .stream({
-        model: 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
+        model: 'gpt-4o-mini-2024-07-18',
+        // 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
         messages: [
           ...chatHistory.map((message) => ({
             role: message.sender,
