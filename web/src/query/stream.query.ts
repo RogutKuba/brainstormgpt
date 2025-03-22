@@ -16,6 +16,7 @@ import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { calculateNodeSize } from '@/components/chat/utils';
+import { PredictionShape } from '@/components/shape/prediction/PredictionShape';
 
 export type StreamedNode = {
   id: TLShapeId;
@@ -188,6 +189,10 @@ export const useStreamMessage = () => {
 
                   case 'node-chunk':
                     handleNodeChunk(data, params.editor);
+                    break;
+
+                  case 'prediction-chunk':
+                    handlePredictionChunk(data, params.editor);
                     break;
 
                   case 'nodes': {
@@ -392,12 +397,126 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
   }
 };
 
-// const handlePredictionChunk = (rawData: string) => {
-//   try {
-//     const parsedData = predictionMessageSchema.parse(JSON.parse(rawData));
+const handlePredictionChunk = (rawData: string, editor: Editor) => {
+  try {
+    const predictionChunk = predictionMessageSchema.parse(JSON.parse(rawData));
 
-//     console.log('parsedData', parsedData);
-//   } catch (error) {
-//     console.error('Error parsing prediction chunk:', error);
-//   }
-// };
+    console.log('received-prediction-chunk', predictionChunk);
+
+    // Get the parent node (which should be a RichTextShape)
+    const parentShape = predictionChunk.parentId
+      ? (editor.getShape(predictionChunk.parentId as TLShapeId) as
+          | RichTextShape
+          | undefined)
+      : undefined;
+
+    // Only proceed if parent exists or parentId is null/none/root
+    if (
+      !parentShape &&
+      predictionChunk.parentId &&
+      predictionChunk.parentId !== 'none' &&
+      predictionChunk.parentId !== 'null' &&
+      predictionChunk.parentId !== 'root'
+    ) {
+      console.warn('Parent shape not found for prediction', predictionChunk.id);
+      return;
+    }
+
+    // Check if the prediction already exists
+    const existingPrediction = editor.getShape(
+      predictionChunk.id as TLShapeId
+    ) as PredictionShape | undefined;
+
+    if (existingPrediction) {
+      // Update existing prediction
+      const newText = existingPrediction.props.text + predictionChunk.chunk;
+      const { width, height } = calculateNodeSize(newText);
+
+      editor.updateShape<PredictionShape>({
+        id: existingPrediction.id,
+        type: 'prediction',
+        props: {
+          h: height,
+          w: width,
+          text: newText,
+        },
+      });
+    } else {
+      // Create new prediction
+      const { width, height } = calculateNodeSize(predictionChunk.chunk);
+      const arrowId = createShapeId();
+
+      // Create the prediction shape
+      const newPredictionShape: Pick<PredictionShape, 'id' | 'type' | 'props'> =
+        {
+          id: predictionChunk.id as TLShapeId,
+          type: 'prediction',
+          props: {
+            h: height,
+            w: width,
+            text: predictionChunk.chunk,
+            parentId: predictionChunk.parentId as TLShapeId,
+            arrowId: arrowId,
+          },
+        };
+
+      if (parentShape) {
+        // Create arrow shape
+        const newArrowShape: Pick<TLArrowShape, 'id' | 'type' | 'index'> = {
+          id: arrowId,
+          type: 'arrow',
+          index: ZERO_INDEX_KEY,
+        };
+
+        // Create bindings between parent and prediction
+        const newBindings: [TLArrowBinding, TLArrowBinding] = [
+          {
+            id: createBindingId(),
+            type: 'arrow',
+            props: {
+              terminal: 'start',
+              normalizedAnchor: {
+                x: 0.5,
+                y: 0.5,
+              },
+              isExact: false,
+              isPrecise: false,
+            },
+            fromId: newArrowShape.id,
+            toId: parentShape.id,
+            meta: {},
+            typeName: 'binding',
+          },
+          {
+            id: createBindingId(),
+            type: 'arrow',
+            props: {
+              terminal: 'end',
+              normalizedAnchor: {
+                x: 0.5,
+                y: 0.5,
+              },
+              isExact: false,
+              isPrecise: false,
+            },
+            fromId: newArrowShape.id,
+            toId: predictionChunk.id as TLShapeId,
+            meta: {},
+            typeName: 'binding',
+          },
+        ];
+
+        // Create both the prediction shape and arrow shape
+        editor.createShapes([newPredictionShape, newArrowShape]);
+
+        // Create the bindings
+        editor.createBindings(newBindings);
+      } else {
+        // Create just the prediction shape without arrows if no parent
+        editor.createShapes([newPredictionShape]);
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing prediction chunk:', error, 'chunk: ', rawData);
+  }
+};

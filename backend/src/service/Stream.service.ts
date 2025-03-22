@@ -51,6 +51,12 @@ export class StreamService {
           length: number;
         }
       >;
+      // Queue of pending prediction chunks to send after node is established
+      pendingPredictions: Array<{
+        predIndex: number;
+        predId: string;
+        predChunk: string;
+      }>;
     }
   > = new Map();
 
@@ -99,38 +105,110 @@ export class StreamService {
           }
         >();
 
-      // node.predictions?.forEach((prediction, predIndex) => {
-      //   const prevPred = prevNodeInfo?.prevPredictions?.get(predIndex);
-
-      //   const predId = prevPred?.id ?? generateTlShapeId();
-      //   const predictionLength = prediction.length;
-      // });
+      // Initialize or get the pending predictions queue
+      const pendingPredictions = prevNodeInfo?.pendingPredictions ?? [];
 
       const prevTextLength = prevNodeInfo?.textLength ?? 0;
+      let nodeChunkSent = false;
 
       // decide to stream new text chunk for node content
       if (node.text?.length && node.text?.length > prevTextLength) {
         const chunk = node.text?.substring(prevTextLength) ?? '';
 
-        const toSend: z.infer<typeof this.nodeMessageSchema> = {
-          id,
-          chunk,
-          parentId: node.parentId ?? null,
-        };
+        if (chunk.length > 0) {
+          const toSend: z.infer<typeof this.nodeMessageSchema> = {
+            id,
+            chunk,
+            parentId: node.parentId ?? null,
+          };
 
-        console.log('sending-node-chunk', toSend);
+          this.streamController.enqueue(
+            this.encoder.encode(
+              `event: node-chunk\ndata: ${JSON.stringify(toSend)}\n\n`
+            )
+          );
 
-        this.streamController.enqueue(
-          this.encoder.encode(
-            `event: node-chunk\ndata: ${JSON.stringify(toSend)}\n\n`
-          )
-        );
+          nodeChunkSent = true;
+
+          // Process any pending predictions immediately after sending a node chunk
+          if (pendingPredictions.length > 0) {
+            console.log(
+              `Processing ${pendingPredictions.length} pending predictions for node ${id}`
+            );
+
+            pendingPredictions.forEach(({ predId, predChunk }) => {
+              const predChunkToSend: z.infer<
+                typeof this.predictionMessageSchema
+              > = {
+                id: predId,
+                chunk: predChunk,
+                parentId: id,
+              };
+
+              this.streamController.enqueue(
+                this.encoder.encode(
+                  `event: prediction-chunk\ndata: ${JSON.stringify(
+                    predChunkToSend
+                  )}\n\n`
+                )
+              );
+            });
+
+            // Clear the pending predictions after sending them
+            pendingPredictions.length = 0;
+          }
+        }
       }
+
+      // handle predictions in same way as nodes, but queue them if node is new
+      node.predictions?.forEach((prediction, predIndex) => {
+        const prevPred = prevNodeInfo?.prevPredictions?.get(predIndex);
+
+        const predId = prevPred?.id ?? generateTlShapeId();
+
+        const predChunk = prediction.substring(prevPred?.length ?? 0);
+
+        if (predChunk.length > 0) {
+          // Create prediction chunk to send
+          const predChunkToSend: z.infer<typeof this.predictionMessageSchema> =
+            {
+              id: predId,
+              chunk: predChunk,
+              parentId: id,
+            };
+
+          // If this is a new node (no previous text) or we just sent a node chunk,
+          // we can send the prediction chunk immediately
+          if (prevTextLength > 0 || nodeChunkSent) {
+            this.streamController.enqueue(
+              this.encoder.encode(
+                `event: prediction-chunk\ndata: ${JSON.stringify(
+                  predChunkToSend
+                )}\n\n`
+              )
+            );
+          } else {
+            // Otherwise, queue the prediction to be sent after the node is established
+            pendingPredictions.push({
+              predIndex,
+              predId,
+              predChunk,
+            });
+          }
+        }
+
+        // update prediction map
+        predictionMap.set(predIndex, {
+          id: predId,
+          length: prediction.length,
+        });
+      });
 
       this.prevNodeInfo.set(index, {
         id,
         textLength: node.text?.length ?? 0,
         prevPredictions: predictionMap,
+        pendingPredictions,
       });
     });
   };
