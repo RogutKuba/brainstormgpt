@@ -195,6 +195,10 @@ export const useStreamMessage = () => {
                     handlePredictionChunk(data, params.editor);
                     break;
 
+                  case 'delete-prediction':
+                    handleDeletePrediction(data, params.editor);
+                    break;
+
                   case 'nodes': {
                     const parsedData = JSON.parse(data);
                     if (parsedData.nodes && Array.isArray(parsedData.nodes)) {
@@ -284,6 +288,10 @@ const predictionMessageSchema = z.object({
   id: z.string(),
   chunk: z.string(),
   parentId: z.string().nullable(),
+});
+
+const deletePredictionMessageSchema = z.object({
+  id: z.string(),
 });
 
 const handleNodeChunk = (rawData: string, editor: Editor) => {
@@ -402,7 +410,6 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
     const predictionChunk = predictionMessageSchema.parse(JSON.parse(rawData));
 
     console.log('received-prediction-chunk', predictionChunk);
-
     // Get the parent node (which should be a RichTextShape)
     const parentShape = predictionChunk.parentId
       ? (editor.getShape(predictionChunk.parentId as TLShapeId) as
@@ -519,4 +526,23 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
   } catch (error) {
     console.error('Error parsing prediction chunk:', error, 'chunk: ', rawData);
   }
+};
+
+const handleDeletePrediction = (rawData: string, editor: Editor) => {
+  console.log('received-delete-prediction', rawData);
+
+  const { id } = deletePredictionMessageSchema.parse(JSON.parse(rawData));
+
+  const existingPrediction = editor.getShape(id as TLShapeId) as
+    | PredictionShape
+    | undefined;
+
+  if (!existingPrediction) return;
+
+  editor.deleteShapes([
+    existingPrediction.id,
+    ...(existingPrediction.props.arrowId
+      ? [existingPrediction.props.arrowId]
+      : []),
+  ]);
 };

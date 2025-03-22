@@ -95,6 +95,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           const brainstormResult = await BrainstormService.streamBrainstorm({
             prompt: message,
             chatHistory,
+            predictionId,
             tree,
             streamController: controller,
             ctx,

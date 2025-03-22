@@ -318,15 +318,13 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       sender: 'user' | 'system';
     }[];
     tree: TreeNode[];
+    predictionId: string | null;
     streamController: ReadableStreamController<any>;
     ctx: Context<AppContext>;
   }) => {
-    const { prompt, chatHistory, streamController, tree, ctx } = params;
+    const { prompt, chatHistory, predictionId, streamController, tree, ctx } =
+      params;
     const encoder = new TextEncoder();
-
-    // Track the accumulated explanation to avoid duplicating content
-    let accumulatedExplanation = '';
-    let lastSentExplanationLength = 0;
 
     // Track accumulated nodes to avoid duplicating
     let accumulatedNodes: {
@@ -391,7 +389,7 @@ ${formattedShapes}
 ${prompt}
 </user-prompt>
 
-First, provide a brief, professional explanation of your new content elements. Focus on explaning the content in the nodes rather than the relationships between them.
+First, provide a brief, professional explanation that summarizes the key insights and concepts you're adding. This should be conversational and helpful to the user, not a meta-description of the nodes themselves. Focus on the actual subject matter and insights rather than describing what you're doing.
 
 IMPORTANT: When you see link nodes in the existing content, understand that users CANNOT see the content of these links directly on their whiteboard. The link summaries and key points are only visible to you as context. If you want to reference information from links, you should include that information explicitly in your new nodes.
 
@@ -425,87 +423,11 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       },
       onNewContent: (parsedContent) =>
         BrainstormService.handleStreamContent({
+          predictionId,
           streamService,
           parsedContent,
         }),
     });
-    // const { data, error } = brainstormResultSchema
-    //   .partial()
-    //   .safeParse(parsedContent);
-
-    // if (error) {
-    //   console.error('Error parsing content:', parsedContent);
-    //   return;
-    // }
-
-    // if (data) {
-    //   // Handle explanation streaming
-    //   if (data.explanation) {
-    //     const newExplanation = data.explanation;
-
-    //     if (newExplanation.length > accumulatedExplanation.length) {
-    //       // Get only the new part of the explanation
-    //       const newChunk = newExplanation.substring(
-    //         lastSentExplanationLength
-    //       );
-
-    //       if (newChunk.trim()) {
-    //         // Send the new chunk to the client
-    //         streamController.enqueue(
-    //           encoder.encode(
-    //             `event: chunk\ndata: ${JSON.stringify({
-    //               chunk: newChunk,
-    //             })}\n\n`
-    //           )
-    //         );
-
-    //         // Update tracking variables
-    //         accumulatedExplanation = newExplanation;
-    //         lastSentExplanationLength = newExplanation.length;
-    //       }
-    //     }
-    //   }
-
-    //   // Handle nodes streaming
-    //   if (data.nodes && data.nodes.length > 0) {
-    //     // Process only new nodes that haven't been sent yet
-    //     const newNodes = data.nodes.slice(accumulatedNodes.length);
-
-    //     if (newNodes.length > 0) {
-    //       // Generate consistent IDs for new nodes
-    //       const nodesWithIds = newNodes.map((node, index) => {
-    //         // Create a deterministic ID based on the node's index in the overall array
-    //         const nodeId = `shape:${crypto.randomUUID()}` as TLShapeId;
-
-    //         // if parentId is 'none', set to undefined
-    //         const parentId =
-    //           node.parentId === 'none' ? undefined : node.parentId;
-
-    //         return {
-    //           id: nodeId,
-    //           type: node.type,
-    //           text: node.text,
-    //           parentId: parentId as TLShapeId | undefined,
-    //           predictions: node.predictions || [],
-    //         };
-    //       });
-
-    //       // Add to accumulated nodes
-    //       accumulatedNodes = [...accumulatedNodes, ...nodesWithIds];
-
-    //       // Send the new nodes to the client
-    //       streamController.enqueue(
-    //         encoder.encode(
-    //           `event: nodes\ndata: ${JSON.stringify({
-    //             nodes: nodesWithIds,
-    //           })}\n\n`
-    //         )
-    //       );
-    //     }
-    //   }
-    //     }
-    //   },
-    // });
 
     // Send complete message with the final result
     if (response.choices[0].message.content) {
@@ -559,10 +481,11 @@ Your goal is to create a cohesive knowledge structure where each node functions 
   },
 
   handleStreamContent: async (params: {
+    predictionId: string | null;
     streamService: StreamService;
     parsedContent: unknown;
   }) => {
-    const { streamService, parsedContent } = params;
+    const { predictionId, streamService, parsedContent } = params;
 
     const { data, error } = brainstormStreamSchema
       .partial()
@@ -581,7 +504,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       const { explanation, nodes } = data;
 
       streamService.handleExplanation(explanation);
-      streamService.handleNodes(nodes);
+      streamService.handleNodes(nodes, predictionId);
     }
   },
 };

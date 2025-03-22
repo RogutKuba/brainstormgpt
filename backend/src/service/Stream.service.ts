@@ -26,6 +26,10 @@ export class StreamService {
     parentId: z.string().nullable(),
   });
 
+  deletePredictionMessageSchema = z.object({
+    id: z.string(),
+  });
+
   // PRIVATE PROPERTIES
 
   private streamController: ReadableStreamController<any>;
@@ -60,6 +64,11 @@ export class StreamService {
     }
   > = new Map();
 
+  /**
+   * Tracks if we have deleted the existing prediction
+   */
+  private deletedPastPrediction: boolean = false;
+
   constructor(streamController: ReadableStreamController<any>) {
     this.streamController = streamController;
     this.encoder = new TextEncoder();
@@ -86,7 +95,8 @@ export class StreamService {
    * @param nodes - The nodes to be streamed
    */
   public handleNodes = async (
-    nodes: z.infer<typeof brainstormStreamSchema>['nodes'] | undefined
+    nodes: z.infer<typeof brainstormStreamSchema>['nodes'] | undefined,
+    existingPredictionId: string | null
   ) => {
     if (!nodes) return;
 
@@ -116,6 +126,8 @@ export class StreamService {
         const chunk = node.text?.substring(prevTextLength) ?? '';
 
         if (chunk.length > 0) {
+          this.handlePredictionDeletion(existingPredictionId);
+
           const toSend: z.infer<typeof this.nodeMessageSchema> = {
             id,
             chunk,
@@ -211,5 +223,24 @@ export class StreamService {
         pendingPredictions,
       });
     });
+  };
+
+  /**
+   * Handles the deletion of an existing prediction
+   */
+  private handlePredictionDeletion = (predictionId: string | null) => {
+    if (!predictionId || this.deletedPastPrediction) return;
+    // send event to delete prediction
+    const toSend: z.infer<typeof this.deletePredictionMessageSchema> = {
+      id: predictionId,
+    };
+
+    this.streamController.enqueue(
+      this.encoder.encode(
+        `event: delete-prediction\ndata: ${JSON.stringify(toSend)}\n\n`
+      )
+    );
+
+    this.deletedPastPrediction = true;
   };
 }
