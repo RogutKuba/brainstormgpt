@@ -6,6 +6,14 @@ import { takeUnique } from '../db/client';
 import { PageSummaryEntity, pageSummaryTable } from '../db/pageSummary.db';
 import { generateId } from '../lib/id';
 import { LLMService } from './LLM.service';
+import { z } from 'zod';
+
+const summaryResultSchema = z.object({
+  gist: z.string(),
+  keyPoints: z.string(),
+  detailedSummary: z.string(),
+  mentions: z.string(),
+});
 
 /**
  * Service to create summaries for pages
@@ -99,39 +107,23 @@ export const SummaryService = {
       prompt: summaryPrompt,
       chatHistory: [],
       env,
+      structuredOutput: {
+        name: 'summaryResult',
+        schema: summaryResultSchema,
+      },
     });
 
-    // Parse the response
-    const gistMatch = summaryResponse.match(/<gist>([\s\S]*?)<\/gist>/);
-    const keyPointsMatch = summaryResponse.match(
-      /<key-points>([\s\S]*?)<\/key-points>/
-    );
-    const detailedSummaryMatch = summaryResponse.match(
-      /<detailed-summary>([\s\S]*?)<\/detailed-summary>/
-    );
-    const mentionsMatch = summaryResponse.match(
-      /<mentions>([\s\S]*?)<\/mentions>/
-    );
-
-    // Extract the content
-    const gist = gistMatch ? gistMatch[1].trim() : 'No gist available';
-    const keyPoints = keyPointsMatch
-      ? keyPointsMatch[1].trim()
-      : 'No key points available';
-    const detailedSummary = detailedSummaryMatch
-      ? detailedSummaryMatch[1].trim()
-      : 'No detailed summary available';
-    const mentions = mentionsMatch ? mentionsMatch[1].trim() : '';
+    const typedResult = summaryResponse as z.infer<typeof summaryResultSchema>;
 
     // Insert the summary into the database
     const pageSummary: PageSummaryEntity = {
       id: generateId('pageSummary'),
       createdAt: new Date().toISOString(),
       url: crawledPage.url,
-      gist,
-      keyPoints,
-      detailedSummary,
-      mentions,
+      gist: typedResult.gist,
+      keyPoints: typedResult.keyPoints,
+      detailedSummary: typedResult.detailedSummary,
+      mentions: typedResult.mentions,
     };
 
     await db.insert(pageSummaryTable).values(pageSummary);

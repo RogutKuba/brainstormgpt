@@ -15,7 +15,10 @@ import {
 import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
-import { calculateNodeSize } from '@/components/chat/utils';
+import {
+  calculateNodeSize,
+  calculatePredictionSize,
+} from '@/components/chat/utils';
 import { PredictionShape } from '@/components/shape/prediction/PredictionShape';
 
 export type StreamedNode = {
@@ -109,10 +112,6 @@ export const useStreamMessage = () => {
           if (done) {
             // Process any remaining data in the buffer
             if (buffer.trim()) {
-              console.log(
-                'Processing remaining buffer after stream end:',
-                buffer
-              );
               processBuffer(buffer);
             }
             break;
@@ -121,9 +120,6 @@ export const useStreamMessage = () => {
           // Decode the chunk and add to buffer
           const chunk = decoder.decode(value, { stream: true });
           buffer += chunk;
-
-          console.log('########################');
-          console.log('received-raw-chunk', chunk);
 
           // Process complete events from the buffer
           processBuffer(buffer);
@@ -156,17 +152,10 @@ export const useStreamMessage = () => {
             for (const event of events) {
               const lines = event.split('\n');
 
-              console.log('event-lines', lines);
-
               if (lines.length < 2) continue;
 
               const eventType = lines[0].replace('event: ', '');
               const data = lines[1].replace('data: ', '');
-
-              console.log('received event', {
-                eventType,
-                data,
-              });
 
               try {
                 switch (eventType) {
@@ -203,7 +192,6 @@ export const useStreamMessage = () => {
                     const parsedData = JSON.parse(data);
                     if (parsedData.nodes && Array.isArray(parsedData.nodes)) {
                       const nodes = parsedData.nodes;
-                      console.log('nodes', parsedData.nodes);
 
                       if (parsedData.nodes.length > 0) {
                         // Create the new nodes
@@ -298,8 +286,6 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
   try {
     const nodeChunk = nodeMessageSchema.parse(JSON.parse(rawData));
 
-    console.log('nodeChunk.id', nodeChunk.id, Date.now());
-
     /*
     if we got a new node chunk, two main cases
     1. the node is a new node
@@ -310,8 +296,6 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
     const existingShape = editor.getShape(nodeChunk.id as TLShapeId) as
       | RichTextShape
       | undefined;
-
-    console.log('existingShape', existingShape);
 
     if (existingShape) {
       const newText = existingShape.props.text + nodeChunk.chunk;
@@ -409,7 +393,6 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
   try {
     const predictionChunk = predictionMessageSchema.parse(JSON.parse(rawData));
 
-    console.log('received-prediction-chunk', predictionChunk);
     // Get the parent node (which should be a RichTextShape)
     const parentShape = predictionChunk.parentId
       ? (editor.getShape(predictionChunk.parentId as TLShapeId) as
@@ -425,7 +408,6 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
       predictionChunk.parentId !== 'null' &&
       predictionChunk.parentId !== 'root'
     ) {
-      console.warn('Parent shape not found for prediction', predictionChunk.id);
       return;
     }
 
@@ -437,7 +419,7 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
     if (existingPrediction) {
       // Update existing prediction
       const newText = existingPrediction.props.text + predictionChunk.chunk;
-      const { width, height } = calculateNodeSize(newText);
+      const { width, height } = calculatePredictionSize(newText);
 
       editor.updateShape<PredictionShape>({
         id: existingPrediction.id,
@@ -529,8 +511,6 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
 };
 
 const handleDeletePrediction = (rawData: string, editor: Editor) => {
-  console.log('received-delete-prediction', rawData);
-
   const { id } = deletePredictionMessageSchema.parse(JSON.parse(rawData));
 
   const existingPrediction = editor.getShape(id as TLShapeId) as

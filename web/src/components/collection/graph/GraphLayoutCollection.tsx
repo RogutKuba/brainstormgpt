@@ -8,6 +8,7 @@ import {
   TLShape,
   TLShapeId,
 } from 'tldraw';
+import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 
 type ColaNode = {
   id: TLShapeId;
@@ -46,6 +47,8 @@ export class GraphLayoutCollection extends BaseCollection {
   iterationCount = 0;
   maxIterations = 300; // Limit iterations to prevent infinite loops
 
+  selectedShapes: Set<TLShapeId> = new Set();
+
   constructor(editor: Editor) {
     super(editor);
     this.graphSim = new Layout().avoidOverlaps(true).handleDisconnected(true);
@@ -83,7 +86,7 @@ export class GraphLayoutCollection extends BaseCollection {
   override onAdd(shapes: TLShape[]) {
     for (const shape of shapes) {
       if (shape.type !== 'arrow') {
-        this.addGeo(shape);
+        this.addGeo(shape as RichTextShape);
       } else {
         this.addArrow(shape as TLArrowShape);
       }
@@ -176,8 +179,8 @@ export class GraphLayoutCollection extends BaseCollection {
       .linkDistance((edge) => calcEdgeDistance(edge as ColaNodeLink))
       .avoidOverlaps(true)
       .handleDisconnected(true)
-      .jaccardLinkLengths(300, 0.7) // Increased from 150 to 300 for more spacing
-      .symmetricDiffLinkLengths(200) // Added to further increase spacing
+      .jaccardLinkLengths(350, 0.7) // Increased from 150 to 300 for more spacing
+      .symmetricDiffLinkLengths(300) // Added to further increase spacing
       .convergenceThreshold(0.001); // Set convergence threshold
 
     // Initialize the layout
@@ -192,7 +195,10 @@ export class GraphLayoutCollection extends BaseCollection {
 
     for (const node of this.graphSim.nodes() as ColaNode[]) {
       const shape = this.editor.getShape(node.id);
+
+      // check if props.isLocked is true
       if (!shape) continue;
+
       const { w, h } = this.editor.getShapeGeometry(node.id)?.bounds || {
         w: 0,
         h: 0,
@@ -211,6 +217,9 @@ export class GraphLayoutCollection extends BaseCollection {
         node.y = shape.y + y;
         Layout.dragStart(node); // Fix selected nodes
       } else {
+        // dont update position if locked
+        if ('isLocked' in shape.props && shape.props.isLocked) continue;
+
         // Allow non-selected nodes to move
         this.editor.updateShape({
           id: node.id,
@@ -254,7 +263,7 @@ export class GraphLayoutCollection extends BaseCollection {
     }
   };
 
-  addGeo = (shape: TLShape) => {
+  addGeo = (shape: TLShape & { props: { isLocked: boolean } }) => {
     const bounds = this.editor.getShapeGeometry(shape)?.bounds;
     if (!bounds) return;
 
@@ -326,7 +335,7 @@ function getCornerToCenterOffset(w: number, h: number, rotation: number) {
 }
 
 function calcEdgeDistance(edge: ColaNodeLink) {
-  const LINK_DISTANCE = 400; // Increased from 250 to 400
+  const LINK_DISTANCE = 500;
 
   // horizontal and vertical distances between centers
   const dx = edge.target.x - edge.source.x;

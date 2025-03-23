@@ -141,7 +141,7 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
           </svg>
 
           <div className='relative z-10 flex flex-col items-center justify-center h-full p-8'>
-            <div className='text-center text-xl font-medium text-primary'>
+            <div className='text-center text-2xl font-medium text-primary'>
               {text}
             </div>
 

@@ -144,10 +144,6 @@ export class StreamService {
 
           // Process any pending predictions immediately after sending a node chunk
           if (pendingPredictions.length > 0) {
-            console.log(
-              `Processing ${pendingPredictions.length} pending predictions for node ${id}`
-            );
-
             pendingPredictions.forEach(({ predId, predChunk }) => {
               const predChunkToSend: z.infer<
                 typeof this.predictionMessageSchema

@@ -1,11 +1,12 @@
 import { useEditor } from 'tldraw';
 import { useEffect, useRef } from 'react';
-import './dev-ui.css';
 import { useCollection } from '../base/useCollection';
+import { GraphLayoutCollection } from './GraphLayoutCollection';
+import './dev-ui.css';
 
 export const GraphLayout = () => {
   const editor = useEditor();
-  const { collection, size } = useCollection('graph');
+  const { collection, size } = useCollection<GraphLayoutCollection>('graph');
   const handlersRegistered = useRef(false);
 
   useEffect(() => {
