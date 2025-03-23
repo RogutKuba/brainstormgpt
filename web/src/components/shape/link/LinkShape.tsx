@@ -150,24 +150,28 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           pointerEvents: 'all', // Allow pointer events
         }}
       >
-        {/* Lock/Unlock button */}
-        {isSelected && (
+        {/* Lock/Unlock button in the top bar */}
+        <div className='absolute top-2 right-2 z-10 pointer-events-auto'>
           <div
-            className='pointer-events-auto absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm cursor-pointer hover:bg-gray-100'
+            className={`flex items-center justify-center ${
+              !isSelected && !isLocked && 'hidden'
+            } ${isSelected && 'cursor-pointer hover:bg-gray-100 rounded-full'}`}
             onClick={toggleLock}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <Tooltip
-              content={isLocked ? 'Position locked' : 'Position unlocked'}
-            >
-              {isLocked ? (
-                <RiLock2Line className='text-primary/80 h-8 w-8' />
-              ) : (
-                <RiLockUnlockLine className='text-primary/80 h-8 w-8' />
-              )}
-            </Tooltip>
+            {isLocked ? (
+              <Tooltip content='Position locked'>
+                <RiLock2Line className='text-primary/80 h-5 w-5' />
+              </Tooltip>
+            ) : (
+              isSelected && (
+                <Tooltip content='Position unlocked'>
+                  <RiLockUnlockLine className='text-primary/80 h-5 w-5' />
+                </Tooltip>
+              )
+            )}
           </div>
-        )}
+        </div>
 
         {/* Title section at the top */}
         <div className='flex items-center justify-center p-4 gap-4'>
