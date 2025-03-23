@@ -12,6 +12,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { Textarea } from '@/components/ui/textarea';
 import { RiLock2Line, RiLockUnlockLine } from '@remixicon/react';
+import { Tooltip } from '@/components/ui/tooltip';
 
 // Define the properties specific to our RichTextShape
 export type RichTextShapeProps = {
@@ -67,7 +68,13 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     };
 
     return (
-      <HTMLContainer className='w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 border-gray-200 pointer-events-all'>
+      <HTMLContainer
+        className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 ${
+          isLocked
+            ? 'border-primary/30 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]'
+            : 'border-gray-200'
+        } pointer-events-all`}
+      >
         {/* Lock/Unlock button */}
         {isSelected && (
           <div
@@ -75,11 +82,15 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             onClick={toggleLock}
             onPointerDown={stopEventPropagation}
           >
-            {isLocked ? (
-              <RiLock2Line className='text-primary/80 h-8 w-8' />
-            ) : (
-              <RiLockUnlockLine className='text-primary/80 h-8 w-8' />
-            )}
+            <Tooltip
+              content={isLocked ? 'Position locked' : 'Position unlocked'}
+            >
+              {isLocked ? (
+                <RiLock2Line className='text-primary/80 h-8 w-8' />
+              ) : (
+                <RiLockUnlockLine className='text-primary/80 h-8 w-8' />
+              )}
+            </Tooltip>
           </div>
         )}
 

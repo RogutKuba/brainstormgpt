@@ -11,18 +11,19 @@ import {
   TLShapeId,
 } from 'tldraw';
 import { useState, useRef } from 'react';
-import { debounce } from 'lodash';
 import {
-  RiCloseLine,
   RiEditLine,
   RiExternalLinkLine,
   RiLink,
   RiLoader2Line,
   RiSaveLine,
+  RiLock2Line,
+  RiLockUnlockLine,
 } from '@remixicon/react';
 import { Input } from '@/components/ui/input';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 
 // Define the properties specific to our LinkShape
 export type LinkShapeProps = {
@@ -35,6 +36,7 @@ export type LinkShapeProps = {
   status: 'success' | 'error' | 'scraping' | 'analyzing';
   error: string | null;
   previewImageUrl: string | null;
+  isLocked: boolean;
 };
 
 // Define the shape type by extending TLBaseShape with our props
@@ -58,6 +60,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       status: 'success',
       error: null,
       previewImageUrl: null,
+      isLocked: false,
     };
   }
 
@@ -78,11 +81,13 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       status,
       error,
       previewImageUrl,
+      isLocked,
     } = shape.props;
 
     const [editing, setEditing] = useState(false);
     const { updateLinkShape } = useUpdateLinkShape();
     const inputRef = useRef<HTMLInputElement>(null);
+    const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
 
     const domain = (() => {
       try {
@@ -125,13 +130,45 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
     const stopEventPropagation = (e: any) => e.stopPropagation();
 
+    const toggleLock = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      this.editor.updateShape<LinkShape>({
+        id: shape.id,
+        type: 'link',
+        props: { isLocked: !isLocked },
+      });
+    };
+
     return (
       <HTMLContainer
-        className='w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white border border-2 border-gray-200'
+        className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white border border-2 ${
+          isLocked
+            ? 'border-primary/30 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]'
+            : 'border-gray-200'
+        }`}
         style={{
           pointerEvents: 'all', // Allow pointer events
         }}
       >
+        {/* Lock/Unlock button */}
+        {isSelected && (
+          <div
+            className='pointer-events-auto absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm cursor-pointer hover:bg-gray-100'
+            onClick={toggleLock}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <Tooltip
+              content={isLocked ? 'Position locked' : 'Position unlocked'}
+            >
+              {isLocked ? (
+                <RiLock2Line className='text-primary/80 h-8 w-8' />
+              ) : (
+                <RiLockUnlockLine className='text-primary/80 h-8 w-8' />
+              )}
+            </Tooltip>
+          </div>
+        )}
+
         {/* Title section at the top */}
         <div className='flex items-center justify-center p-4 gap-4'>
           <img
@@ -366,6 +403,21 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     } else {
       this.editor.setEditingShape(shape.id);
     }
+  }
+
+  onTranslateStart(shape: LinkShape):
+    | void
+    | ({
+        id: TLShapeId;
+        meta?: Partial<JsonObject> | undefined;
+        props?: Partial<LinkShapeProps> | undefined;
+        type: 'link';
+      } & Partial<Omit<LinkShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    return {
+      id: shape.id,
+      type: 'link',
+      props: { isLocked: true },
+    };
   }
 
   override onResize(shape: LinkShape, info: TLResizeInfo<LinkShape>) {

@@ -10,6 +10,7 @@ type LinkShapeProps = {
   status: 'success' | 'error' | 'scraping' | 'analyzing';
   error: string | null;
   previewImageUrl: string | null;
+  isLocked: boolean;
 };
 
 export type LinkShape = TLBaseShape<'link', LinkShapeProps>;
