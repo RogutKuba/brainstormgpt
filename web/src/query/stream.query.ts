@@ -344,6 +344,19 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
         nodeChunk.parentId !== 'null' &&
         nodeChunk.parentId !== 'root'
       ) {
+        const parentShape = editor.getShape(nodeChunk.parentId as TLShapeId);
+
+        if (!parentShape) return;
+
+        // update parent shape to locked
+        editor.updateShape({
+          id: parentShape.id,
+          type: parentShape.type,
+          props: {
+            isLocked: true,
+          },
+        });
+
         const newArrowShape: Pick<TLArrowShape, 'id' | 'type' | 'index'> = {
           id: createShapeId(),
           type: 'arrow',

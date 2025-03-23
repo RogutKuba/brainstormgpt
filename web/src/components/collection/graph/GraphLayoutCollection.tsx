@@ -8,7 +8,6 @@ import {
   TLShape,
   TLShapeId,
 } from 'tldraw';
-import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 
 type ColaNode = {
   id: TLShapeId;
@@ -16,6 +15,7 @@ type ColaNode = {
   y: number;
   width: number;
   height: number;
+  rotation: number;
   fixed: number; // 1 means fixed, 0 means movable
 };
 type ColaIdLink = {
@@ -46,8 +46,6 @@ export class GraphLayoutCollection extends BaseCollection {
   iterationCount = 0;
   maxIterations = 300; // Limit iterations to prevent infinite loops
 
-  selectedShapes: Set<TLShapeId> = new Set();
-
   constructor(editor: Editor) {
     super(editor);
     this.graphSim = new Layout().avoidOverlaps(true).handleDisconnected(true);
@@ -61,12 +59,23 @@ export class GraphLayoutCollection extends BaseCollection {
       if (this.isRunning) {
         // Run a single iteration of the simulation if it's running
         if (this.graphSim && this.iterationCount < this.maxIterations) {
-          // Instead of calling tick directly, we'll restart with a single iteration
-          this.graphSim.start(1, 0, 0, 0, false);
-          this.updateShapePositions();
+          // Check if the simulation has converged
+          const alpha = this.graphSim.alpha();
+
+          if (alpha < 0.001) {
+            // Simulation has converged, stop running
+            this.isRunning = false;
+          } else {
+            // Run a single iteration instead of restarting
+            this.graphSim.start(1, 0, 0, 0, false);
+            this.updateShapePositions();
+          }
+        } else {
+          // Max iterations reached, stop running
+          this.isRunning = false;
         }
 
-        // Continue the animation loop
+        // Continue the animation loop even when not running to handle user interactions
         this.animFrame = requestAnimationFrame(animate);
       }
     };
@@ -83,10 +92,9 @@ export class GraphLayoutCollection extends BaseCollection {
   }
 
   override onAdd(shapes: TLShape[]) {
-    console.log('onAdd', shapes.length);
     for (const shape of shapes) {
       if (shape.type !== 'arrow') {
-        this.addGeo(shape as RichTextShape);
+        this.addGeo(shape);
       } else {
         this.addArrow(shape as TLArrowShape);
       }
@@ -142,7 +150,7 @@ export class GraphLayoutCollection extends BaseCollection {
     this.stopAnimationLoop();
 
     // TODO: remove this hardcoded behaviour
-    this.editor.selectNone();
+    // this.editor.selectNone(); // Removing this line as it's disruptive
 
     const nodes = [...this.colaNodes.values()];
     const nodeIdToIndex = new Map(nodes.map((n, i) => [n.id, i]));
@@ -172,6 +180,16 @@ export class GraphLayoutCollection extends BaseCollection {
       return;
     }
 
+    // Mark selected nodes as fixed
+    const selectedIds = new Set(this.editor.getSelectedShapeIds());
+    for (const node of nodes) {
+      if (selectedIds.has(node.id)) {
+        node.fixed = 1;
+      } else {
+        node.fixed = 0;
+      }
+    }
+
     // Configure force-directed layout
     this.graphSim = new Layout() // Create a new layout instance to avoid state issues
       .nodes(nodes)
@@ -179,12 +197,16 @@ export class GraphLayoutCollection extends BaseCollection {
       .linkDistance((edge) => calcEdgeDistance(edge as ColaNodeLink))
       .avoidOverlaps(true)
       .handleDisconnected(true)
-      .jaccardLinkLengths(350, 0.7) // Increased from 150 to 300 for more spacing
-      .symmetricDiffLinkLengths(250) // Added to further increase spacing
-      .convergenceThreshold(0.001); // Set convergence threshold
+      .jaccardLinkLengths(300, 0.7)
+      .symmetricDiffLinkLengths(200)
+      .convergenceThreshold(0.001)
+      .on(EventType.tick, () => {
+        // Update iteration count on each tick
+        this.iterationCount++;
+      });
 
     // Initialize the layout
-    this.graphSim.start(0, 0, 0, 0, false);
+    this.graphSim.start(30, 0, 50, 50, false); // Use more reasonable initial parameters
 
     // Start the animation loop
     this.startAnimationLoop();
@@ -195,21 +217,18 @@ export class GraphLayoutCollection extends BaseCollection {
 
     for (const node of this.graphSim.nodes() as ColaNode[]) {
       const shape = this.editor.getShape(node.id);
-
-      // check if props.isLocked is true
       if (!shape) continue;
-
       const { w, h } = this.editor.getShapeGeometry(node.id)?.bounds || {
         w: 0,
         h: 0,
       };
 
-      const x = w / 2;
-      const y = h / 2;
+      const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
 
       // Update shape props
       node.width = w;
       node.height = h;
+      node.rotation = shape.rotation;
       node.fixed = 'isLocked' in shape.props && shape.props.isLocked ? 1 : 0;
 
       // Fix positions if we're dragging them
@@ -219,15 +238,18 @@ export class GraphLayoutCollection extends BaseCollection {
         Layout.dragStart(node); // Fix selected nodes
       } else {
         // dont update position if locked
-        if ('isLocked' in shape.props && shape.props.isLocked) continue;
-
-        // Allow non-selected nodes to move
-        this.editor.updateShape({
-          id: node.id,
-          type: shape.type,
-          x: node.x - x,
-          y: node.y - y,
-        });
+        if ('isLocked' in shape.props && shape.props.isLocked) {
+          node.x = shape.x + x;
+          node.y = shape.y + y;
+        } else {
+          // Allow non-selected nodes to move
+          this.editor.updateShape({
+            id: node.id,
+            type: shape.type,
+            x: node.x - x,
+            y: node.y - y,
+          });
+        }
       }
     }
   }
@@ -264,23 +286,39 @@ export class GraphLayoutCollection extends BaseCollection {
     }
   };
 
-  addGeo = (shape: TLShape & { props: { isLocked: boolean } }) => {
+  addGeo = (shape: TLShape) => {
     const bounds = this.editor.getShapeGeometry(shape)?.bounds;
     if (!bounds) return;
 
     const { w, h } = bounds;
-    const x = w / 2;
-    const y = h / 2;
+    const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
     const node: ColaNode = {
       id: shape.id,
       x: shape.x + x,
       y: shape.y + y,
-      width: w + 50,
-      height: h + 50,
-      fixed: 'isLocked' in shape.props && shape.props.isLocked ? 1 : 0,
+      width: w,
+      height: h,
+      rotation: shape.rotation,
+      // default to movable
+      fixed: 0,
     };
     this.colaNodes.set(shape.id, node);
   };
+
+  refreshConstraints() {
+    const alignmentConstraintX: AlignmentConstraint = {
+      type: 'alignment',
+      axis: 'x',
+      offsets: [],
+    };
+    const alignmentConstraintY: AlignmentConstraint = {
+      type: 'alignment',
+      axis: 'y',
+      offsets: [],
+    };
+
+    this.colaConstraints = [];
+  }
 
   // Get all descendants (children, grandchildren, etc.) of a shape
   getDescendants(
@@ -306,22 +344,43 @@ export class GraphLayoutCollection extends BaseCollection {
 }
 
 function getCornerToCenterOffset(w: number, h: number, rotation: number) {
-  // Simply return the center coordinates without rotation
-  return { x: w / 2, y: h / 2 };
+  // Calculate the center coordinates relative to the top-left corner
+  const centerX = w / 2;
+  const centerY = h / 2;
+
+  // Apply rotation to the center coordinates
+  const rotatedCenterX =
+    centerX * Math.cos(rotation) - centerY * Math.sin(rotation);
+  const rotatedCenterY =
+    centerX * Math.sin(rotation) + centerY * Math.cos(rotation);
+
+  return { x: rotatedCenterX, y: rotatedCenterY };
 }
 
 function calcEdgeDistance(edge: ColaNodeLink) {
-  const LINK_DISTANCE = 500;
+  const LINK_DISTANCE = 400; // Increased from 250 to 400
 
   // horizontal and vertical distances between centers
   const dx = edge.target.x - edge.source.x;
   const dy = edge.target.y - edge.source.y;
 
-  // Calculate the dimensions of the nodes (no rotation)
-  const sourceWidth = edge.source.width;
-  const sourceHeight = edge.source.height;
-  const targetWidth = edge.target.width;
-  const targetHeight = edge.target.height;
+  // the angles of the nodes in radians
+  const sourceAngle = edge.source.rotation;
+  const targetAngle = edge.target.rotation;
+
+  // Calculate the rotated dimensions of the nodes
+  const sourceWidth =
+    Math.abs(edge.source.width * Math.cos(sourceAngle)) +
+    Math.abs(edge.source.height * Math.sin(sourceAngle));
+  const sourceHeight =
+    Math.abs(edge.source.width * Math.sin(sourceAngle)) +
+    Math.abs(edge.source.height * Math.cos(sourceAngle));
+  const targetWidth =
+    Math.abs(edge.target.width * Math.cos(targetAngle)) +
+    Math.abs(edge.target.height * Math.sin(targetAngle));
+  const targetHeight =
+    Math.abs(edge.target.width * Math.sin(targetAngle)) +
+    Math.abs(edge.target.height * Math.cos(targetAngle));
 
   // Calculate edge-to-edge distances
   const horizontalGap = Math.max(

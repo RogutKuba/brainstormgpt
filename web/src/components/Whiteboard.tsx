@@ -69,9 +69,11 @@ import { GraphLayoutCollection } from '@/components/collection/graph/GraphLayout
 import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
 import { PredictionTool } from '@/components/shape/prediction/PredictionTool';
 import { PredictionShapeUtil } from '@/components/shape/prediction/PredictionShape';
+import { ConstraintGraphLayoutCollection } from '@/components/collection/graph/constraintGraphLayoutCollection';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [GraphLayoutCollection];
+// const collections: Collection[] = [ConstraintGraphLayoutCollection];
 
 const customUiOverrides: TLUiOverrides = {
   tools: (editor, tools) => {

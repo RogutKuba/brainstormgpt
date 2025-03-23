@@ -95,13 +95,15 @@ const CollectionProvider: React.FC<CollectionProviderProps> = ({
         if (added.length > 0) {
           // console.log('added', entry.changes.added);
           for (const shape of added) {
-            // handleShapeChange(shape as TLShape);
+            // TODO: fix this
+            handleShapeChange(shape as any, shape as any);
           }
         }
         if (updated.length > 0) {
           // console.log('updated', entry.changes.updated);
           for (const shape of updated) {
-            // handleShapeChange(shape as TLShape);
+            // TODO: fix this
+            handleShapeChange(shape as any, shape as any);
           }
         }
       });
