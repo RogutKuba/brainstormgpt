@@ -180,7 +180,7 @@ export class GraphLayoutCollection extends BaseCollection {
       .avoidOverlaps(true)
       .handleDisconnected(true)
       .jaccardLinkLengths(350, 0.7) // Increased from 150 to 300 for more spacing
-      .symmetricDiffLinkLengths(300) // Added to further increase spacing
+      .symmetricDiffLinkLengths(250) // Added to further increase spacing
       .convergenceThreshold(0.001); // Set convergence threshold
 
     // Initialize the layout

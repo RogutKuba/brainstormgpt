@@ -169,7 +169,7 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
                 width='36'
                 height='36'
                 className='pointer-events-auto'
-                onClick={isSelected ? toggleLock : undefined}
+                onClick={toggleLock}
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 <div

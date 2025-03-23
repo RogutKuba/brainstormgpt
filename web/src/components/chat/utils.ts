@@ -37,7 +37,7 @@ export const calculatePredictionSize = (text: string) => {
   const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
   const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
-  const padding = 10;
+  const padding = 25;
 
   return {
     height: height + padding,

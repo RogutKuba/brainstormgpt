@@ -53,7 +53,9 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     const { text, isLocked } = shape.props;
 
     const isEditing = this.editor.getEditingShapeId() === shape.id;
-    const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
+    const selectedIds = this.editor.getSelectedShapeIds();
+    const isSelected =
+      selectedIds.includes(shape.id) && selectedIds.length === 1;
 
     const stopEventPropagation = (e: React.SyntheticEvent) =>
       e.stopPropagation();
@@ -75,31 +77,35 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             : 'border-gray-200'
         } pointer-events-all`}
       >
-        {/* Lock/Unlock button */}
-        {isSelected && (
+        {/* Lock/Unlock button - fixed positioning */}
+        <div className='absolute top-2 right-2 z-10 pointer-events-auto'>
           <div
-            className='pointer-events-auto absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow-sm cursor-pointer hover:bg-gray-100'
+            className={`flex items-center justify-center ${
+              !isSelected && !isLocked && 'hidden'
+            } ${isSelected && 'cursor-pointer hover:bg-gray-100 rounded-full'}`}
             onClick={toggleLock}
-            onPointerDown={stopEventPropagation}
+            onPointerDown={(e) => e.stopPropagation()}
           >
-            <Tooltip
-              content={isLocked ? 'Position locked' : 'Position unlocked'}
-            >
-              {isLocked ? (
-                <RiLock2Line className='text-primary/80 h-8 w-8' />
-              ) : (
-                <RiLockUnlockLine className='text-primary/80 h-8 w-8' />
-              )}
-            </Tooltip>
+            {isLocked ? (
+              <Tooltip content='Position locked'>
+                <RiLock2Line className='text-primary/80 h-5 w-5' />
+              </Tooltip>
+            ) : (
+              isSelected && (
+                <Tooltip content='Position unlocked'>
+                  <RiLockUnlockLine className='text-primary/80 h-5 w-5' />
+                </Tooltip>
+              )
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Content area */}
+        {/* Content area - increased padding */}
         <div
           style={{
             flexGrow: 1,
             overflow: 'auto',
-            padding: '16px',
+            padding: '24px', // Increased padding from 16px to 24px
             position: 'relative',
           }}
         >
