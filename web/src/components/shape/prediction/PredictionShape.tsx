@@ -16,13 +16,19 @@ import {
   SVGContainer,
   JsonObject,
 } from 'tldraw';
-import { RiCheckLine, RiCloseLine } from '@remixicon/react';
+import {
+  RiCheckLine,
+  RiCloseLine,
+  RiLock2Line,
+  RiLockUnlockLine,
+} from '@remixicon/react';
 import { useChat } from '@/components/chat/ChatContext';
 import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 import {
   cloudOutline,
   getCloudPath,
 } from '@/components/shape/prediction/prediction.utils';
+import { Tooltip } from '@/components/ui/tooltip';
 
 // Define the properties specific to our PredictionShape
 export type PredictionShapeProps = {
@@ -31,6 +37,7 @@ export type PredictionShapeProps = {
   text: string;
   parentId: TLShapeId | null;
   arrowId: TLShapeId | null;
+  isLocked: boolean;
 };
 
 // Define the shape type by extending TLBaseShape with our props
@@ -46,6 +53,7 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
       text: 'Prediction',
       parentId: null,
       arrowId: null,
+      isLocked: false,
     };
   }
 
@@ -75,7 +83,7 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
   }
 
   component(shape: PredictionShape) {
-    const { text, parentId } = shape.props;
+    const { text, parentId, isLocked } = shape.props;
     const { handleSendMessage } = useChat();
     const workspaceId = useCurrentWorkspaceId();
     const selectedIds = this.editor.getSelectedShapeIds();
@@ -106,6 +114,15 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
     const stopEventPropagation = (e: React.SyntheticEvent) =>
       e.stopPropagation();
 
+    const toggleLock = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      this.editor.updateShape<PredictionShape>({
+        id: shape.id,
+        type: 'prediction',
+        props: { isLocked: !isLocked },
+      });
+    };
+
     // Generate SVG path for cloud shape
     const cloudPoints = cloudOutline(
       shape.props.w,
@@ -121,7 +138,8 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
       <HTMLContainer
         className={cn(
           'relative flex flex-col items-center justify-center h-full',
-          shouldHighlight ? 'opacity-100' : 'opacity-70'
+          shouldHighlight ? 'opacity-100' : 'opacity-70',
+          isLocked ? 'prediction-locked' : ''
         )}
       >
         <div className='relative flex flex-col items-center justify-center h-full'>
@@ -133,11 +151,49 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
             <path
               d={pathData}
               stroke='currentColor'
-              className='text-primary/70'
-              strokeWidth={STROKE_SIZES.m}
+              className={cn('text-primary/70', isLocked && 'stroke-[3px]')}
+              strokeWidth={isLocked ? STROKE_SIZES.l : STROKE_SIZES.m}
               fill='rgb(41 126 255)'
               fillOpacity={0.2}
             />
+            {/* Lock icon in SVG - always in the same position */}
+            <g transform={`translate(${shape.props.w - 24}, 16)`}>
+              <circle
+                r='10'
+                fill='white'
+                className={cn(!isSelected && !isLocked && 'hidden')}
+              />
+              <foreignObject
+                x='-12'
+                y='-12'
+                width='36'
+                height='36'
+                className='pointer-events-auto'
+                onClick={isSelected ? toggleLock : undefined}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div
+                  className={cn(
+                    'flex items-center justify-center',
+                    !isSelected && !isLocked && 'hidden',
+                    isSelected &&
+                      'cursor-pointer hover:bg-gray-100 rounded-full'
+                  )}
+                >
+                  {isLocked ? (
+                    <Tooltip content='Position locked'>
+                      <RiLock2Line className='text-primary/80 h-5 w-5' />
+                    </Tooltip>
+                  ) : (
+                    isSelected && (
+                      <Tooltip content='Position unlocked'>
+                        <RiLockUnlockLine className='text-primary/80 h-5 w-5' />
+                      </Tooltip>
+                    )
+                  )}
+                </div>
+              </foreignObject>
+            </g>
           </svg>
 
           <div className='relative z-10 flex flex-col items-center justify-center h-full p-8'>
@@ -210,5 +266,20 @@ export class PredictionShapeUtil extends BaseBoxShapeUtil<PredictionShape> {
     info: TLResizeInfo<PredictionShape>
   ) {
     return resizeBox(shape, info);
+  }
+
+  onTranslateStart(shape: PredictionShape):
+    | void
+    | ({
+        id: TLShapeId;
+        meta?: Partial<JsonObject> | undefined;
+        props?: Partial<PredictionShapeProps> | undefined;
+        type: 'prediction';
+      } & Partial<Omit<PredictionShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    return {
+      id: shape.id,
+      type: 'prediction',
+      props: { isLocked: true },
+    };
   }
 }
