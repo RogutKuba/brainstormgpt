@@ -409,15 +409,15 @@ PRIORITIZE extending the DEEPEST level of thinking in the existing nodes (level 
 However, if you identify a significant gap in the knowledge structure that requires a new top-level or mid-level concept, you may suggest such additions when clearly justified.
 
 IMPORTANT FORMATTING GUIDELINES:
-1. Create each node as a self-contained, wiki-like knowledge unit focused on ONE specific concept
-2. Format each node with a clear, descriptive title followed by comprehensive content
-3. Use proper markdown formatting with headings (##) for titles
-4. Write in a professional, objective tone appropriate for knowledge documentation
-5. Ensure each node can stand alone while also connecting to the broader knowledge structure
-6. Break content into SHORT PARAGRAPHS of 2-3 sentences each for easy readability
-7. Use bullet points only when presenting lists of specific items
-8. Maintain consistent terminology and reference style across all nodes
-9. Avoid large blocks of text - aim for visual clarity with frequent paragraph breaks
+1. Create CONCISE nodes that spark curiosity rather than exhaustive explanations
+2. Each node should be a brief introduction to a concept (like a Wikipedia preview, not the full article)
+3. Format each node with a clear, descriptive title followed by 1-2 SHORT paragraphs
+4. Use proper markdown formatting with headings (##) for titles
+5. Write in a professional, objective tone appropriate for knowledge documentation
+6. Aim for 2-4 sentences per node - be concise and thought-provoking
+7. Focus on introducing key ideas that encourage further exploration
+8. Avoid lengthy explanations - the goal is to spark curiosity, not provide comprehensive coverage
+9. Use bullet points sparingly and only for very brief lists
 
 For each node, also include 2-3 predictions of follow-up questions the user might ask about this specific node. These should be natural extensions of the node's content.
 
@@ -425,7 +425,7 @@ For extending existing ideas, use parent IDs from this list of deepest shapes: $
         ', '
       )}
 
-Your goal is to create a cohesive knowledge structure where each node functions as its own mini-wiki article - self-contained yet connected to the broader context. Prioritize clarity, precision, and professional tone throughout. Remember to keep paragraphs SHORT (2-3 sentences) for optimal readability on a whiteboard.`,
+Your goal is to create a network of concise, intriguing knowledge nodes that prompt further thinking and exploration. Think of each node as a conversation starter rather than a complete explanation.`,
       chatHistory,
       env: ctx.env,
       structuredOutput: {

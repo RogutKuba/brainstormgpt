@@ -451,7 +451,7 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
       });
     } else {
       // Create new prediction
-      const { width, height } = calculateNodeSize(predictionChunk.chunk);
+      const { width, height } = calculatePredictionSize(predictionChunk.chunk);
       const arrowId = createShapeId();
 
       // Create the prediction shape

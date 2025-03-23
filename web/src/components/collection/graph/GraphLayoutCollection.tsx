@@ -16,7 +16,6 @@ type ColaNode = {
   y: number;
   width: number;
   height: number;
-  rotation: number;
   fixed: number; // 1 means fixed, 0 means movable
 };
 type ColaIdLink = {
@@ -84,6 +83,7 @@ export class GraphLayoutCollection extends BaseCollection {
   }
 
   override onAdd(shapes: TLShape[]) {
+    console.log('onAdd', shapes.length);
     for (const shape of shapes) {
       if (shape.type !== 'arrow') {
         this.addGeo(shape as RichTextShape);
@@ -204,12 +204,13 @@ export class GraphLayoutCollection extends BaseCollection {
         h: 0,
       };
 
-      const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
+      const x = w / 2;
+      const y = h / 2;
 
       // Update shape props
       node.width = w;
       node.height = h;
-      node.rotation = shape.rotation;
+      node.fixed = 'isLocked' in shape.props && shape.props.isLocked ? 1 : 0;
 
       // Fix positions if we're dragging them
       if (selectedIds.includes(node.id)) {
@@ -268,34 +269,18 @@ export class GraphLayoutCollection extends BaseCollection {
     if (!bounds) return;
 
     const { w, h } = bounds;
-    const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
+    const x = w / 2;
+    const y = h / 2;
     const node: ColaNode = {
       id: shape.id,
       x: shape.x + x,
       y: shape.y + y,
-      width: w,
-      height: h,
-      rotation: shape.rotation,
-      // default to movable
-      fixed: 0,
+      width: w + 50,
+      height: h + 50,
+      fixed: 'isLocked' in shape.props && shape.props.isLocked ? 1 : 0,
     };
     this.colaNodes.set(shape.id, node);
   };
-
-  refreshConstraints() {
-    const alignmentConstraintX: AlignmentConstraint = {
-      type: 'alignment',
-      axis: 'x',
-      offsets: [],
-    };
-    const alignmentConstraintY: AlignmentConstraint = {
-      type: 'alignment',
-      axis: 'y',
-      offsets: [],
-    };
-
-    this.colaConstraints = [];
-  }
 
   // Get all descendants (children, grandchildren, etc.) of a shape
   getDescendants(
@@ -321,17 +306,8 @@ export class GraphLayoutCollection extends BaseCollection {
 }
 
 function getCornerToCenterOffset(w: number, h: number, rotation: number) {
-  // Calculate the center coordinates relative to the top-left corner
-  const centerX = w / 2;
-  const centerY = h / 2;
-
-  // Apply rotation to the center coordinates
-  const rotatedCenterX =
-    centerX * Math.cos(rotation) - centerY * Math.sin(rotation);
-  const rotatedCenterY =
-    centerX * Math.sin(rotation) + centerY * Math.cos(rotation);
-
-  return { x: rotatedCenterX, y: rotatedCenterY };
+  // Simply return the center coordinates without rotation
+  return { x: w / 2, y: h / 2 };
 }
 
 function calcEdgeDistance(edge: ColaNodeLink) {
@@ -341,23 +317,11 @@ function calcEdgeDistance(edge: ColaNodeLink) {
   const dx = edge.target.x - edge.source.x;
   const dy = edge.target.y - edge.source.y;
 
-  // the angles of the nodes in radians
-  const sourceAngle = edge.source.rotation;
-  const targetAngle = edge.target.rotation;
-
-  // Calculate the rotated dimensions of the nodes
-  const sourceWidth =
-    Math.abs(edge.source.width * Math.cos(sourceAngle)) +
-    Math.abs(edge.source.height * Math.sin(sourceAngle));
-  const sourceHeight =
-    Math.abs(edge.source.width * Math.sin(sourceAngle)) +
-    Math.abs(edge.source.height * Math.cos(sourceAngle));
-  const targetWidth =
-    Math.abs(edge.target.width * Math.cos(targetAngle)) +
-    Math.abs(edge.target.height * Math.sin(targetAngle));
-  const targetHeight =
-    Math.abs(edge.target.width * Math.sin(targetAngle)) +
-    Math.abs(edge.target.height * Math.cos(targetAngle));
+  // Calculate the dimensions of the nodes (no rotation)
+  const sourceWidth = edge.source.width;
+  const sourceHeight = edge.source.height;
+  const targetWidth = edge.target.width;
+  const targetHeight = edge.target.height;
 
   // Calculate edge-to-edge distances
   const horizontalGap = Math.max(

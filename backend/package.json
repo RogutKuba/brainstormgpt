@@ -10,6 +10,7 @@
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
+		"build": "tsc --noEmit",
 		"dev": "wrangler dev",
 		"cf-types": "wrangler types",
 		"cf-deploy": "wrangler deploy",
