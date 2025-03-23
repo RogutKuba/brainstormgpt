@@ -51,6 +51,10 @@ export const useStreamMessage = () => {
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
       predictionId: string | null;
+      predictionPosition: {
+        x: number;
+        y: number;
+      } | null;
       editor: Editor;
       onChunk?: (chunk: string) => void;
       onStatus?: (status: string) => void;
@@ -83,6 +87,7 @@ export const useStreamMessage = () => {
               chatHistory: params.chatHistory,
               selectedItems: params.selectedItems,
               predictionId: params.predictionId,
+              predictionPosition: params.predictionPosition,
             }),
           }
         );
@@ -99,9 +104,6 @@ export const useStreamMessage = () => {
 
         // Create a text decoder to convert Uint8Array to string
         const decoder = new TextDecoder();
-
-        // Track nodes that have already been created
-        const createdNodeIds = new Set<TLShapeId>();
 
         // Buffer for incomplete chunks
         let buffer = '';
@@ -270,6 +272,12 @@ const nodeMessageSchema = z.object({
   id: z.string(),
   chunk: z.string(),
   parentId: z.string().nullable(),
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .nullable(),
 });
 
 const predictionMessageSchema = z.object({
@@ -322,7 +330,12 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
           h: height,
           w: width,
           text: nodeChunk.chunk,
+          isLocked: false,
         },
+        ...(nodeChunk.position && {
+          x: nodeChunk.position.x,
+          y: nodeChunk.position.y,
+        }),
       };
 
       if (
@@ -400,13 +413,19 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
           | undefined)
       : undefined;
 
+    console.log(
+      'handling-prediction',
+      predictionChunk,
+      'parentShape:',
+      !!parentShape
+    );
+
     // Only proceed if parent exists or parentId is null/none/root
     if (
-      !parentShape &&
-      predictionChunk.parentId &&
-      predictionChunk.parentId !== 'none' &&
-      predictionChunk.parentId !== 'null' &&
-      predictionChunk.parentId !== 'root'
+      !parentShape ||
+      predictionChunk.parentId === 'none' ||
+      predictionChunk.parentId === 'null' ||
+      predictionChunk.parentId === 'root'
     ) {
       return;
     }
@@ -436,8 +455,11 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
       const arrowId = createShapeId();
 
       // Create the prediction shape
-      const newPredictionShape: Pick<PredictionShape, 'id' | 'type' | 'props'> =
-        {
+      if (parentShape) {
+        const newPredictionShape: Pick<
+          PredictionShape,
+          'id' | 'type' | 'props' | 'x' | 'y'
+        > = {
           id: predictionChunk.id as TLShapeId,
           type: 'prediction',
           props: {
@@ -446,10 +468,12 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
             text: predictionChunk.chunk,
             parentId: predictionChunk.parentId as TLShapeId,
             arrowId: arrowId,
+            isLocked: false,
           },
+          x: parentShape.x + Math.random() * 100,
+          y: parentShape.y + Math.random() * 100,
         };
 
-      if (parentShape) {
         // Create arrow shape
         const newArrowShape: Pick<TLArrowShape, 'id' | 'type' | 'index'> = {
           id: arrowId,
@@ -500,9 +524,6 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
 
         // Create the bindings
         editor.createBindings(newBindings);
-      } else {
-        // Create just the prediction shape without arrows if no parent
-        editor.createShapes([newPredictionShape]);
       }
     }
   } catch (error) {

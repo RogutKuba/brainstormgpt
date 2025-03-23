@@ -42,6 +42,13 @@ const sendMessageRoute = createRoute({
             predictionId: z.string().nullable().openapi({
               description: 'Prediction id to use for context',
             }),
+            predictionPosition: z
+              .object({
+                x: z.number(),
+                y: z.number(),
+              })
+              .nullable()
+              .openapi({ description: 'Position to spawn new nodes' }),
           }),
         },
       },
@@ -68,8 +75,13 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
     const { workspaceId } = ctx.req.valid('param');
-    const { message, chatHistory, selectedItems, predictionId } =
-      ctx.req.valid('json');
+    const {
+      message,
+      chatHistory,
+      selectedItems,
+      predictionId,
+      predictionPosition,
+    } = ctx.req.valid('json');
 
     // Create a readable stream for the response
     const stream = new ReadableStream({
@@ -96,6 +108,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
             prompt: message,
             chatHistory,
             predictionId,
+            predictionPosition,
             tree,
             streamController: controller,
             ctx,

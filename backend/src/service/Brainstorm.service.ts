@@ -319,11 +319,22 @@ Your goal is to create a cohesive knowledge structure where each node functions 
     }[];
     tree: TreeNode[];
     predictionId: string | null;
+    predictionPosition: {
+      x: number;
+      y: number;
+    } | null;
     streamController: ReadableStreamController<any>;
     ctx: Context<AppContext>;
   }) => {
-    const { prompt, chatHistory, predictionId, streamController, tree, ctx } =
-      params;
+    const {
+      prompt,
+      chatHistory,
+      predictionId,
+      predictionPosition,
+      streamController,
+      tree,
+      ctx,
+    } = params;
     const encoder = new TextEncoder();
 
     // Track accumulated nodes to avoid duplicating
@@ -424,6 +435,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       onNewContent: (parsedContent) =>
         BrainstormService.handleStreamContent({
           predictionId,
+          predictionPosition,
           streamService,
           parsedContent,
         }),
@@ -484,8 +496,13 @@ Your goal is to create a cohesive knowledge structure where each node functions 
     predictionId: string | null;
     streamService: StreamService;
     parsedContent: unknown;
+    predictionPosition: {
+      x: number;
+      y: number;
+    } | null;
   }) => {
-    const { predictionId, streamService, parsedContent } = params;
+    const { predictionId, predictionPosition, streamService, parsedContent } =
+      params;
 
     const { data, error } = brainstormStreamSchema
       .partial()
@@ -504,7 +521,7 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       const { explanation, nodes } = data;
 
       streamService.handleExplanation(explanation);
-      streamService.handleNodes(nodes, predictionId);
+      streamService.handleNodes(nodes, predictionId, predictionPosition);
     }
   },
 };

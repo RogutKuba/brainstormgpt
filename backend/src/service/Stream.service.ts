@@ -18,6 +18,12 @@ export class StreamService {
     id: z.string(),
     chunk: z.string(),
     parentId: z.string().nullable(),
+    position: z
+      .object({
+        x: z.number(),
+        y: z.number(),
+      })
+      .nullable(),
   });
 
   predictionMessageSchema = z.object({
@@ -96,7 +102,11 @@ export class StreamService {
    */
   public handleNodes = async (
     nodes: z.infer<typeof brainstormStreamSchema>['nodes'] | undefined,
-    existingPredictionId: string | null
+    existingPredictionId: string | null,
+    predictionPosition: {
+      x: number;
+      y: number;
+    } | null
   ) => {
     if (!nodes) return;
 
@@ -132,6 +142,7 @@ export class StreamService {
             id,
             chunk,
             parentId: node.parentId ?? null,
+            position: predictionPosition,
           };
 
           this.streamController.enqueue(

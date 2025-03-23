@@ -182,6 +182,7 @@ export const ChatWindow: React.FC = () => {
         selectedItemIds: selectedItems.map((item) => item.id),
         workspaceId,
         predictionId: null,
+        predictionPosition: null,
         editor,
       });
     }
