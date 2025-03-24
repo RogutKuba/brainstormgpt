@@ -71,6 +71,7 @@ import { PredictionTool } from '@/components/shape/prediction/PredictionTool';
 import { PredictionShapeUtil } from '@/components/shape/prediction/PredictionShape';
 import { ConstraintGraphLayoutCollection } from '@/components/collection/graph/constraintGraphLayoutCollection';
 import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3ForceGraphLayoutCollection';
+import { toast } from 'sonner';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [D3ForceGraphLayoutCollection];
@@ -171,7 +172,7 @@ const CustomMainMenu = () => {
 
   return (
     <DefaultMainMenu>
-      <TldrawUiMenuGroup id='example'>
+      {/* <TldrawUiMenuGroup id='example'>
         <TldrawUiMenuItem
           id='system-goal'
           label='Edit Workspace Goal'
@@ -186,7 +187,7 @@ const CustomMainMenu = () => {
             });
           }}
         />
-      </TldrawUiMenuGroup>
+      </TldrawUiMenuGroup> */}
       <EditSubmenu />
       <ViewSubmenu />
       <ExportFileContentSubMenu />
@@ -262,14 +263,7 @@ const CustomMenuPanel = memo(function MenuPanel() {
 
   const { MainMenu, QuickActions, ActionsMenu, PageMenu } =
     useTldrawUiComponents();
-  const { addToast } = useToasts();
-
   const editor = useEditor();
-  const isSinglePageMode = useValue(
-    'isSinglePageMode',
-    () => editor.options.maxPages <= 1,
-    [editor]
-  );
 
   const showQuickActions =
     editor.options.actionShortcutsLocation === 'menu'
@@ -284,7 +278,6 @@ const CustomMenuPanel = memo(function MenuPanel() {
     <div ref={ref} className='tlui-menu-zone'>
       <div className='tlui-buttons__horizontal'>
         {MainMenu && <MainMenu />}
-        {PageMenu && !isSinglePageMode && <PageMenu />}
         {showQuickActions ? (
           <>
             {QuickActions && <QuickActions />}
@@ -299,14 +292,10 @@ const CustomMenuPanel = memo(function MenuPanel() {
             const url = window.location.href;
             navigator.clipboard.writeText(url);
 
-            addToast({
-              title: 'Copied to clipboard',
-              description: 'Share this link with your team',
-              severity: 'success',
-            });
+            toast.success('Link copied to clipboard. Share it with your team!');
           }}
         >
-          <RiShare2Line className='w-5 h-5' />
+          <RiShare2Line className='w-[15px] h-[15px]' />
         </TldrawUiButton>
       </div>
     </div>

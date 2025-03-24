@@ -60,6 +60,11 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
   hierarchyLevelDistance = 120; // Vertical distance between hierarchy levels
   siblingDistance = 80; // Horizontal distance between siblings
 
+  // Radial layout specific options
+  radialRadius = 200; // Base radius for the first level
+  radiusIncrement = 150; // How much to increase radius per level
+  angularSpread = 0.8; // How much of the circle to use (0.8 = 80% of the circle)
+
   constructor(editor: Editor) {
     super(editor);
 
@@ -854,6 +859,36 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
           node.y = viewportCenter.y + Math.sin(angle) * distance;
         }
       }
+    }
+  }
+
+  // Add this method to allow configuring the radial layout
+  setRadialLayoutParams(params: {
+    radialRadius?: number;
+    radiusIncrement?: number;
+    angularSpread?: number;
+  }) {
+    const { radialRadius, radiusIncrement, angularSpread } = params;
+
+    if (radialRadius !== undefined) this.radialRadius = radialRadius;
+    if (radiusIncrement !== undefined) this.radiusIncrement = radiusIncrement;
+    if (angularSpread !== undefined) this.angularSpread = angularSpread;
+
+    // Update the radial force with new parameters
+    const radialForce = this.simulation.force(
+      'radial'
+    ) as d3.ForceRadial<ForceNode>;
+    if (radialForce) {
+      radialForce.radius(
+        (d) =>
+          this.getHierarchyLevel(d.id) * this.radiusIncrement +
+          this.radialRadius
+      );
+    }
+
+    // Restart the simulation to apply changes
+    if (this.isRunning) {
+      this.simulation.alpha(1).restart();
     }
   }
 }

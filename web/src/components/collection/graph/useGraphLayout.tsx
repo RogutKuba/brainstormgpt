@@ -18,6 +18,14 @@ export const GraphLayout = () => {
         collection.add([shape]);
       });
 
+      // register event handler for updated shape
+      editor.store.sideEffects.registerAfterChangeHandler(
+        'shape',
+        (prev, next) => {
+          collection._onShapeChange(prev, next);
+        }
+      );
+
       // register event handlers for shapes removed from the page
       editor.store.sideEffects.registerAfterDeleteHandler('shape', (shape) => {
         collection.remove([shape]);
