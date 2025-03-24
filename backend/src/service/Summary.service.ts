@@ -155,7 +155,30 @@ export const SummaryService = {
 
     // generate branch predictions
     const branchPredictions = await LLMService.generateMessage({
-      prompt: `Generate branch predictions for the page ${crawledPageUrl}`,
+      prompt: `You are an expert at generating thought-provoking follow-up questions and exploration paths based on content summaries.
+
+Based on the following page summary:
+
+<page-summary>
+URL: ${crawledPageUrl}
+Gist: ${pageSummary.gist}
+Key Points: ${pageSummary.keyPoints}
+Detailed Summary: ${pageSummary.detailedSummary}
+Mentioned Entities/Concepts: ${pageSummary.mentions}
+</page-summary>
+
+Generate 3-5 branch predictions that represent natural next questions or exploration paths a user might want to follow after reading this content.
+
+GUIDELINES FOR GOOD BRANCH PREDICTIONS:
+1. Each prediction should be a concise, specific question or exploration prompt (1-2 sentences)
+2. Focus on extending the most interesting or complex ideas from the content
+3. Include a mix of clarifying questions and expansions into related topics
+4. Ensure predictions are directly relevant to the content but explore new angles
+5. Phrase predictions as questions or "How to..." statements that invite further exploration
+6. Avoid overly general or obvious predictions
+7. Each prediction should stand alone as a clear, self-contained prompt
+
+Format your response as an array of strings, with each prediction as a separate string element.`,
       chatHistory: [],
       env,
       structuredOutput: {
