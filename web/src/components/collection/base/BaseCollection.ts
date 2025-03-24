@@ -1,4 +1,4 @@
-import { Editor, TLShape, TLShapeId } from 'tldraw';
+import { Editor, TLArrowBinding, TLShape, TLShapeId } from 'tldraw';
 
 /**
  * A PoC abstract collections class for @tldraw.
@@ -12,6 +12,8 @@ export abstract class BaseCollection {
   protected editor: Editor;
   /** A set of listeners to be notified when the collection changes. */
   private listeners = new Set<() => void>();
+  /** A map of binding functions keyed by a string identifier */
+  private bindings: Map<string, TLArrowBinding> = new Map();
 
   // TODO: Maybe pass callback to replace updateShape so only CollectionProvider can call it
   public constructor(editor: Editor) {
@@ -41,6 +43,16 @@ export abstract class BaseCollection {
    * @param next The updated version of the shape after the change.
    */
   protected onShapeChange(_prev: TLShape, _next: TLShape) {}
+
+  /**
+   * Called when the binding is added
+   */
+  protected onBindingAdd(_bindings: TLArrowBinding[]) {}
+
+  /**
+   * Called when the binding is removed
+   */
+  protected onBindingRemove(_bindings: TLArrowBinding[]) {}
 
   /**
    * Adds the specified shapes to the collection.
@@ -90,6 +102,33 @@ export abstract class BaseCollection {
   public _onShapeChange(prev: TLShape, next: TLShape) {
     this.shapes.set(next.id, next);
     this.onShapeChange(prev, next);
+    this.notifyListeners();
+  }
+
+  /**
+   * Adds a binding function that will be called with the collection's shapes
+   * @param id A unique identifier for this binding
+   * @param bindingFn The function to call with the collection's shapes
+   * @returns A function to remove this binding
+   */
+  public addBinding(bindings: TLArrowBinding[]) {
+    for (const binding of bindings) {
+      this.bindings.set(binding.id, binding);
+    }
+    this.onBindingAdd(bindings);
+    this.notifyListeners();
+  }
+
+  /**
+   * Removes a binding function by its identifier
+   * @param id The identifier of the binding to remove
+   * @returns Whether the binding was successfully removed
+   */
+  public removeBinding(bindings: TLArrowBinding[]) {
+    for (const binding of bindings) {
+      this.bindings.delete(binding.id);
+    }
+    this.onBindingRemove(bindings);
     this.notifyListeners();
   }
 

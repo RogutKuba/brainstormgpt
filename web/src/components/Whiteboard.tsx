@@ -70,9 +70,10 @@ import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
 import { PredictionTool } from '@/components/shape/prediction/PredictionTool';
 import { PredictionShapeUtil } from '@/components/shape/prediction/PredictionShape';
 import { ConstraintGraphLayoutCollection } from '@/components/collection/graph/constraintGraphLayoutCollection';
+import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3ForceGraphLayoutCollection';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
-const collections: Collection[] = [GraphLayoutCollection];
+const collections: Collection[] = [D3ForceGraphLayoutCollection];
 // const collections: Collection[] = [ConstraintGraphLayoutCollection];
 
 const customUiOverrides: TLUiOverrides = {
