@@ -7,7 +7,7 @@ export const calculateNodeSize = (text: string) => {
   const MIN_HEIGHT = 200;
   const MIN_WIDTH = 300;
   const CHARS_PER_LINE = 75;
-  const HEIGHT_PER_LINE = 85;
+  const HEIGHT_PER_LINE = 90;
 
   // Scale width based on text length with a reasonable cap
   const textLength = text.length;

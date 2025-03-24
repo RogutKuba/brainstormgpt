@@ -483,8 +483,8 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
             arrowId: arrowId,
             isLocked: false,
           },
-          x: parentShape.x + Math.random() * 100,
-          y: parentShape.y + Math.random() * 100,
+          x: parentShape.x + Math.random() * 250,
+          y: parentShape.y + Math.random() * 250,
         };
 
         // Create arrow shape

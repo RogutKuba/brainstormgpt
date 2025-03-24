@@ -21,10 +21,10 @@ const summaryResultSchema = z.object({
 export const SummaryService = {
   // create a summary for a page
   async createPageSummary(params: {
-    crawledPageId: string;
+    crawledPageUrl: string;
     env: AppContext['Bindings'];
   }): Promise<void> {
-    const { crawledPageId, env } = params;
+    const { crawledPageUrl, env } = params;
 
     const db = getDbConnectionFromEnv(env);
 
@@ -32,7 +32,7 @@ export const SummaryService = {
     const existingPageSummary = await db
       .select()
       .from(pageSummaryTable)
-      .where(eq(pageSummaryTable.url, crawledPageId))
+      .where(eq(pageSummaryTable.url, crawledPageUrl))
       .then(takeUnique);
 
     if (existingPageSummary) {
@@ -52,7 +52,7 @@ export const SummaryService = {
       .from(crawledPageTable)
       .where(
         and(
-          eq(crawledPageTable.id, crawledPageId),
+          eq(crawledPageTable.url, crawledPageUrl),
           eq(crawledPageTable.status, 'success')
         )
       )
@@ -60,7 +60,7 @@ export const SummaryService = {
 
     if (!crawledPage) {
       throw new Error(
-        `Crawled page ${crawledPageId} not found or was not successful`
+        `Crawled page ${crawledPageUrl} not found or was not successful`
       );
     }
 
@@ -127,5 +127,47 @@ export const SummaryService = {
     };
 
     await db.insert(pageSummaryTable).values(pageSummary);
+  },
+
+  branchPredictionsSchema: z.object({
+    predictions: z.array(z.string()),
+  }),
+
+  // generate branch predictions for the page
+  async generateBranchPredictions(params: {
+    crawledPageUrl: string;
+    env: AppContext['Bindings'];
+  }): Promise<string[]> {
+    const { crawledPageUrl, env } = params;
+
+    const db = getDbConnectionFromEnv(env);
+
+    // get the page summary
+    const pageSummary = await db
+      .select()
+      .from(pageSummaryTable)
+      .where(eq(pageSummaryTable.url, crawledPageUrl))
+      .then(takeUnique);
+
+    if (!pageSummary) {
+      throw new Error(`Page summary for url: ${crawledPageUrl} not found`);
+    }
+
+    // generate branch predictions
+    const branchPredictions = await LLMService.generateMessage({
+      prompt: `Generate branch predictions for the page ${crawledPageUrl}`,
+      chatHistory: [],
+      env,
+      structuredOutput: {
+        name: 'branchPredictions',
+        schema: this.branchPredictionsSchema,
+      },
+    });
+
+    const typedResult = branchPredictions as z.infer<
+      typeof this.branchPredictionsSchema
+    >;
+
+    return typedResult.predictions;
   },
 };

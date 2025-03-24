@@ -4,14 +4,20 @@ import {
   WorkflowStep,
 } from 'cloudflare:workers';
 import { AppContext } from '..';
-import { getDbConnectionFromEnv, takeUnique } from '../db/client';
+import {
+  getDbConnectionFromEnv,
+  takeUnique,
+  takeUniqueOrThrow,
+} from '../db/client';
 import { crawledPageTable } from '../db/crawledPage.db';
 import { and, count, eq } from 'drizzle-orm';
 import { NonRetryableError } from 'cloudflare:workflows';
 import { PageChunkEntity, pageChunkTable } from '../db/pageChunk.db';
-import { generateId } from '../lib/id';
+import { generateId, generateTlBindingId, generateTlShapeId } from '../lib/id';
 import { SummaryService } from '../service/Summary.service';
 import { LinkShape } from '../shapes/Link.shape';
+import { PredictionShape } from '../shapes/Prediction.shape';
+import { IndexKey, TLArrowBinding, TLArrowShape } from 'tldraw';
 
 export type ChunkWorkflowParams = {
   crawledPageId: string;
@@ -39,14 +45,41 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
     const { crawledPageId, shapeId, workspaceId } = event.payload;
 
     try {
-      const crawledPage = await step.do('get-crawled-page', async () => {
+      const existingCrawledPage = await step.do(
+        'get-crawled-page',
+        async () => {
+          const db = getDbConnectionFromEnv(this.env);
+          const crawledPage = await db
+            .select({
+              id: crawledPageTable.id,
+              url: crawledPageTable.url,
+              title: crawledPageTable.title,
+              description: crawledPageTable.description,
+            })
+            .from(crawledPageTable)
+            .where(
+              and(
+                eq(crawledPageTable.id, crawledPageId),
+                eq(crawledPageTable.status, 'success')
+              )
+            )
+            .then(takeUnique);
+          return crawledPage;
+        }
+      );
+
+      if (!existingCrawledPage) {
+        throw new NonRetryableError(
+          `Crawled page ${crawledPageId} not found or was not successful`
+        );
+      }
+
+      await step.do('convert-content-to-chunks', async () => {
         const db = getDbConnectionFromEnv(this.env);
+
         const crawledPage = await db
           .select({
-            id: crawledPageTable.id,
             url: crawledPageTable.url,
-            title: crawledPageTable.title,
-            description: crawledPageTable.description,
             markdown: crawledPageTable.markdown,
             html: crawledPageTable.html,
           })
@@ -57,18 +90,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
               eq(crawledPageTable.status, 'success')
             )
           )
-          .then(takeUnique);
-        return crawledPage;
-      });
-
-      if (!crawledPage) {
-        throw new NonRetryableError(
-          `Crawled page ${crawledPageId} not found or was not successful`
-        );
-      }
-
-      await step.do('convert-content-to-chunks', async () => {
-        const db = getDbConnectionFromEnv(this.env);
+          .then(takeUniqueOrThrow);
 
         // if url already exists for the url, we can skip the chunking
         const existingPageChunk = await db
@@ -103,9 +125,55 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
       // create the page summary
       await step.do('create-page-summary', async () => {
         await SummaryService.createPageSummary({
-          crawledPageId: crawledPage.id,
+          crawledPageUrl: existingCrawledPage.url,
           env: this.env,
         });
+      });
+
+      // Generate branch predictions and add them to the workspace
+      const predictions = await step.do(
+        'generate-branch-predictions',
+        async () => {
+          // Generate branch predictions
+          const _predictions = await SummaryService.generateBranchPredictions({
+            crawledPageUrl: existingCrawledPage.url,
+            env: this.env,
+          });
+          return _predictions;
+        }
+      );
+
+      // Add the predictions to the workspace
+      await step.do('add-predictions-to-workspace', async () => {
+        // Get the durable object for this workspace
+        const workspaceDoId =
+          this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+        const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
+
+        // Get the original shape to position predictions around it
+        // @ts-ignore
+        const shape = (await workspaceDo.getShape(shapeId)) as LinkShape;
+        if (shape.type !== 'link') return;
+
+        if (shape && predictions.length > 0) {
+          const { shapes: predictionShapes, bindings: predictionBindings } =
+            getPredictionShapes(predictions, shape);
+
+          console.log(
+            'adding-arrows',
+            JSON.stringify(
+              predictionShapes.filter((s) => s.type === 'arrow').slice(0, 1),
+              null,
+              2
+            )
+          );
+
+          // Add the prediction shapes to the workspace
+          await workspaceDo.addRecords([
+            ...predictionShapes,
+            ...predictionBindings,
+          ]);
+        }
       });
 
       // Update the shape to indicate processing is complete
@@ -314,4 +382,141 @@ const processRawBlocks = (rawBlocks: string[]): Chunk[] => {
         type: 'paragraph',
       };
     });
+};
+
+/**
+ * This function should take a list of predictions and a shape
+ * and output a list of shapes and bindings to create.
+ */
+const getPredictionShapes = (predictions: string[], shape: LinkShape) => {
+  const predictionShapes: (PredictionShape | TLArrowShape)[] = [];
+  const predictionBindings: TLArrowBinding[] = [];
+
+  const parentX = shape.x;
+  const parentY = shape.y;
+  const parentHeight = shape.props.h;
+  const parentWidth = shape.props.w;
+
+  for (const prediction of predictions) {
+    const { height: predictionHeight, width: predictionWidth } =
+      calculatePredictionSize(prediction);
+
+    const childX = parentX + predictionWidth / 2 + Math.random() * 100 - 50;
+    const childY = parentY + predictionHeight / 2 + Math.random() * 100 - 50;
+
+    const arrowX = (parentX + childX) / 2;
+    const arrowY = (parentY + childY) / 2;
+
+    const predictionId = generateTlShapeId('prediction');
+    const arrowId = generateTlShapeId('arrow');
+
+    const predArrow: TLArrowShape = {
+      id: arrowId,
+      type: 'arrow',
+      x: arrowX,
+      y: arrowY,
+      props: {
+        dash: 'draw',
+        size: 'm',
+        fill: 'none',
+        color: 'black',
+        labelColor: 'black',
+        bend: 0,
+        start: { x: parentX - arrowX, y: parentY - arrowY },
+        end: { x: childX - arrowX, y: childY - arrowY },
+        arrowheadStart: 'none',
+        arrowheadEnd: 'arrow',
+        text: '',
+        labelPosition: 0.5,
+        font: 'draw',
+        scale: 1,
+      },
+      parentId: shape.parentId,
+      index: 'a0' as IndexKey,
+      typeName: 'shape',
+      rotation: 0,
+      isLocked: false,
+      opacity: 1,
+      meta: {},
+    };
+
+    // add the two bindings
+    const binding1: TLArrowBinding = {
+      id: generateTlBindingId(),
+      typeName: 'binding',
+      type: 'arrow',
+      fromId: arrowId,
+      toId: shape.id,
+      props: {
+        isPrecise: false,
+        isExact: false,
+        normalizedAnchor: { x: 0.5, y: 0.5 },
+        terminal: 'start',
+      },
+      meta: {},
+    };
+
+    const binding2: TLArrowBinding = {
+      id: generateTlBindingId(),
+      type: 'arrow',
+      fromId: arrowId,
+      toId: predictionId,
+      props: {
+        isPrecise: false,
+        isExact: false,
+        normalizedAnchor: { x: 0.5, y: 0.5 },
+        terminal: 'end',
+      },
+      meta: {},
+      typeName: 'binding',
+    };
+
+    const predictionShape: PredictionShape = {
+      id: predictionId,
+      type: 'prediction',
+      x: childX,
+      y: childY,
+      props: {
+        h: parentHeight,
+        w: parentWidth,
+        text: prediction,
+        parentId: shape.id,
+        arrowId: arrowId,
+      },
+      parentId: shape.parentId,
+      index: 'a0' as IndexKey,
+      typeName: 'shape',
+      rotation: 0,
+      isLocked: false,
+      opacity: 1,
+      meta: {},
+    };
+
+    predictionShapes.push(predictionShape, predArrow);
+    predictionBindings.push(binding1, binding2);
+  }
+
+  return { shapes: predictionShapes, bindings: predictionBindings };
+};
+
+const calculatePredictionSize = (text: string) => {
+  const MIN_HEIGHT = 200;
+  const MIN_WIDTH = 300;
+  const CHARS_PER_LINE = 50;
+  const HEIGHT_PER_LINE = 75;
+
+  const textLength = text.length;
+  const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
+  const width = Math.ceil(MIN_WIDTH * widthScale);
+
+  const charsPerWidthAdjustedLine = CHARS_PER_LINE * (width / MIN_WIDTH);
+  const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
+  const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
+
+  const padding = 25;
+
+  return {
+    height: height + padding,
+    width: width + padding,
+  };
 };

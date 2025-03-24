@@ -1,4 +1,4 @@
-import { EventType, Layout } from 'webcola';
+import { EventType, InputNode, Layout } from 'webcola';
 import { BaseCollection } from '../base/BaseCollection';
 import {
   Editor,
@@ -48,7 +48,10 @@ export class GraphLayoutCollection extends BaseCollection {
 
   constructor(editor: Editor) {
     super(editor);
-    this.graphSim = new Layout().avoidOverlaps(true).handleDisconnected(true);
+    this.graphSim = new Layout()
+      .avoidOverlaps(true)
+      .handleDisconnected(true)
+      .flowLayout('x', 150);
 
     // Start animation loop
     this.startAnimationLoop();
@@ -190,8 +193,11 @@ export class GraphLayoutCollection extends BaseCollection {
       }
     }
 
+    const x: InputNode = {};
+
     // Configure force-directed layout
     this.graphSim = new Layout() // Create a new layout instance to avoid state issues
+      .flowLayout('x', 150)
       .nodes(nodes)
       .links(links)
       .linkDistance((edge) => calcEdgeDistance(edge as ColaNodeLink))
@@ -205,8 +211,8 @@ export class GraphLayoutCollection extends BaseCollection {
         this.iterationCount++;
       });
 
-    // Initialize the layout
-    this.graphSim.start(30, 0, 50, 50, false); // Use more reasonable initial parameters
+    // Initialize the layout with faster convergence parameters
+    this.graphSim.start(1, 0, 10, 10, false); // Higher alpha, smaller grid size for faster layout
 
     // Start the animation loop
     this.startAnimationLoop();

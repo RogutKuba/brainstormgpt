@@ -5,6 +5,7 @@ import {
   JsonObject,
   Rectangle2d,
   resizeBox,
+  TLArrowShape,
   TLBaseShape,
   TLParentId,
   TLResizeInfo,
@@ -33,7 +34,12 @@ export type LinkShapeProps = {
   title: string;
   description: string;
   isLoading: boolean;
-  status: 'success' | 'error' | 'scraping' | 'analyzing';
+  status:
+    | 'success'
+    | 'error'
+    | 'scraping'
+    | 'analyzing'
+    | 'generating-predictions';
   error: string | null;
   previewImageUrl: string | null;
   isLocked: boolean;
@@ -60,7 +66,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       status: 'success',
       error: null,
       previewImageUrl: null,
-      isLocked: false,
+      isLocked: true,
     };
   }
 
@@ -324,7 +330,8 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               </>
             )}
 
-            {status === 'analyzing' && (
+            {(status === 'analyzing' ||
+              status === 'generating-predictions') && (
               <>
                 <div className='flex items-center justify-center'>
                   <div

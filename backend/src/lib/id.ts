@@ -1,4 +1,4 @@
-import { TLShapeId } from 'tldraw';
+import { TLBindingId, TLShapeId } from 'tldraw';
 
 const Entities = {
   user: 'u_',
@@ -35,4 +35,12 @@ export const generateTlShapeId = (prefix?: string): TLShapeId => {
     .map((byte) => byte.toString(16))
     .join('');
   return `shape:${prefix ? `${prefix}:` : ''}${hash}` as TLShapeId;
+};
+
+export const generateTlBindingId = (prefix?: string): TLBindingId => {
+  const values = crypto.getRandomValues(new Uint8Array(8));
+  const hash = Array.from(values)
+    .map((byte) => byte.toString(16))
+    .join('');
+  return `binding:${prefix ? `${prefix}:` : ''}${hash}` as TLBindingId;
 };
