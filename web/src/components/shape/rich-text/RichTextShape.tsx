@@ -16,10 +16,11 @@ import {
   RiImageLine,
   RiLock2Line,
   RiLockUnlockLine,
+  RiQuestionLine,
   RiTextBlock,
 } from '@remixicon/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import React from 'react';
+import { SyntheticEvent, useEffect } from 'react';
 
 // Define the properties specific to our RichTextShape
 export type RichTextShapeProps = {
@@ -28,8 +29,7 @@ export type RichTextShapeProps = {
   text: string;
   isLocked: boolean;
   isExpanded: boolean;
-  checklistItems: Array<{
-    id: string;
+  predictions: Array<{
     text: string;
     type: 'text' | 'image' | 'web';
   }>;
@@ -56,17 +56,34 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   getDefaultProps(): RichTextShape['props'] {
     return {
       w: 300,
-      h: 200,
-      text: '# Hello World\n\nThis is a markdown text. You can use **bold**, *italic*, and more.',
+      h: 250,
+      text: '# JavaScript Promises\n\nPromises are objects representing the eventual completion or failure of an asynchronous operation.',
       isLocked: true,
       isExpanded: false,
-      checklistItems: [
-        { id: '1', text: 'Lorem ipsum dolor sit amet', type: 'text' },
-        { id: '2', text: 'Consectetur adipiscing elit', type: 'image' },
-        { id: '3', text: 'Sed do eiusmod tempor incididunt', type: 'web' },
+      predictions: [
+        {
+          text: 'How do Promises compare to async/await syntax?',
+          type: 'text',
+        },
+        {
+          text: 'Can you show a flowchart of Promise resolution states?',
+          type: 'image',
+        },
+        {
+          text: 'What are the latest Promise features in modern browsers?',
+          type: 'web',
+        },
+        {
+          text: 'How can Promises be used for better error handling?',
+          type: 'text',
+        },
+        {
+          text: 'What performance considerations exist when using Promises?',
+          type: 'web',
+        },
       ],
-      minCollapsedHeight: 200,
-      prevCollapsedHeight: 200,
+      minCollapsedHeight: 250,
+      prevCollapsedHeight: 250,
     };
   }
 
@@ -79,18 +96,34 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   }
 
   component(shape: RichTextShape) {
-    const { text, isLocked, checklistItems } = shape.props;
+    const { text, isLocked, predictions, isExpanded } = shape.props;
 
     const isEditing = this.editor.getEditingShapeId() === shape.id;
     const selectedIds = this.editor.getSelectedShapeIds();
     const isSelected =
       selectedIds.includes(shape.id) && selectedIds.length === 1;
 
-    // Fixed expansion/collapse logic
-    React.useEffect(() => {
-      // Only trigger animation when selection state changes
-      if (isSelected && !shape.props.isExpanded && checklistItems.length > 0) {
-        // Expand when selected
+    // make useEffect to react to selection state
+    useEffect(() => {
+      if (isSelected && selectedIds.length === 1) {
+        this.editor.updateShape<RichTextShape>({
+          id: shape.id,
+          type: 'rich-text',
+          props: { isExpanded: true },
+        });
+      } else if (!isSelected) {
+        this.editor.updateShape<RichTextShape>({
+          id: shape.id,
+          type: 'rich-text',
+          props: { isExpanded: false },
+        });
+      }
+    }, [isSelected, selectedIds]);
+
+    // Expansion/collapse logic based on isExpanded state
+    useEffect(() => {
+      if (isExpanded && predictions.length > 0) {
+        // Expand the shape
         this.editor.animateShape(
           {
             id: shape.id,
@@ -98,31 +131,28 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             props: {
               h: this.calculateExpandedHeight(shape),
               prevCollapsedHeight: shape.props.h,
-              isExpanded: true,
             },
           },
           RichTextShapeUtil.ANIMATION_DURATION
         );
-      } else if (!isSelected && shape.props.isExpanded) {
-        // Collapse when deselected
+      } else if (!isExpanded) {
+        // Collapse the shape
         this.editor.animateShape(
           {
             id: shape.id,
             type: 'rich-text',
             props: {
               h: shape.props.prevCollapsedHeight,
-              isExpanded: false,
             },
           },
           RichTextShapeUtil.ANIMATION_DURATION
         );
       }
-    }, [isSelected]);
+    }, [isExpanded, predictions.length]);
 
-    const stopEventPropagation = (e: React.SyntheticEvent) =>
-      e.stopPropagation();
+    const stopEventPropagation = (e: SyntheticEvent) => e.stopPropagation();
 
-    const toggleLock = (e: React.MouseEvent) => {
+    const toggleLock = (e: SyntheticEvent) => {
       e.stopPropagation();
       this.editor.updateShape<RichTextShape>({
         id: shape.id,
@@ -144,7 +174,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
           <div
             className={`flex items-center justify-center ${
               !isSelected && !isLocked && 'hidden'
-            } ${isSelected && 'cursor-pointer hover:bg-gray-100 rounded-full'}`}
+            } ${isSelected && 'cursor-pointer hover:bg-gray-200 rounded-full'}`}
             onClick={toggleLock}
             onPointerDown={(e) => e.stopPropagation()}
           >
@@ -194,8 +224,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
                 <ReactMarkdown>{text}</ReactMarkdown>
               </div>
 
-              {/* Checklist section with animation */}
-              {checklistItems.length > 0 && (
+              {predictions.length > 0 && (
                 <div
                   className={`mt-4 border-t pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out ${
                     isSelected
@@ -204,21 +233,21 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
                   }`}
                 >
                   <ul className={`space-y-2 ${!isSelected && 'hidden'}`}>
-                    {checklistItems.map((item) => (
+                    {predictions.map((item) => (
                       <li
-                        key={item.id}
+                        key={item.text}
                         className='flex items-start gap-2 hover:bg-gray-50 p-1 rounded cursor-pointer transition-colors'
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
                       >
-                        <div className='flex items-center h-5 mt-0.5'>
+                        <div className='flex items-center h-5'>
                           {item.type === 'image' ? (
-                            <RiImageLine className='text-gray-500 h-4 w-4' />
+                            <RiImageLine className='text-pink-500 h-4 w-4' />
                           ) : item.type === 'web' ? (
-                            <RiGlobalLine className='text-gray-500 h-4 w-4' />
+                            <RiGlobalLine className='text-yellow-500 h-4 w-4' />
                           ) : (
-                            <RiTextBlock className='text-gray-500 h-4 w-4' />
+                            <RiQuestionLine className='text-green-500 h-4 w-4' />
                           )}
                         </div>
                         <span className={`text-sm text-gray-700`}>
@@ -248,21 +277,20 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         props?: Partial<RichTextShapeProps> | undefined;
         type: 'rich-text';
       } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    // Only lock the shape and set isExpanded to false
+    // Don't modify the height directly to avoid interrupting animations
     return {
       id: shape.id,
       type: 'rich-text',
-      props: { isLocked: true },
+      props: {
+        isLocked: true,
+        isExpanded: true,
+        h: this.calculateExpandedHeight(shape),
+      },
     };
   }
 
-  onDoubleClick(shape: RichTextShape) {
-    this.editor.setEditingShape(shape.id);
-  }
-
-  override onHandleDrag(
-    shape: RichTextShape,
-    info: TLHandleDragInfo<RichTextShape>
-  ):
+  onTranslateEnd(shape: RichTextShape):
     | void
     | ({
         id: TLShapeId;
@@ -270,14 +298,51 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         props?: Partial<RichTextShapeProps> | undefined;
         type: 'rich-text';
       } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    // animate shape open
+    this.editor.animateShape(
+      {
+        id: shape.id,
+        type: 'rich-text',
+        props: {
+          h: this.calculateExpandedHeight(shape),
+        },
+      },
+      RichTextShapeUtil.ANIMATION_DURATION
+    );
     return {
       id: shape.id,
       type: 'rich-text',
       props: {
-        isLocked: true,
+        // prevCollapsedHeight: shape.props.h,
+        isExpanded: true,
+        // Don't set isExpanded: true here to avoid immediate re-expansion
       },
     };
   }
+
+  onDoubleClick(shape: RichTextShape) {
+    this.editor.setEditingShape(shape.id);
+  }
+
+  // override onHandleDrag(
+  //   shape: RichTextShape,
+  //   info: TLHandleDragInfo<RichTextShape>
+  // ):
+  //   | void
+  //   | ({
+  //       id: TLShapeId;
+  //       meta?: Partial<JsonObject> | undefined;
+  //       props?: Partial<RichTextShapeProps> | undefined;
+  //       type: 'rich-text';
+  //     } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+  //   return {
+  //     id: shape.id,
+  //     type: 'rich-text',
+  //     props: {
+  //       isLocked: true,
+  //     },
+  //   };
+  // }
 
   override onResize(shape: RichTextShape, info: TLResizeInfo<RichTextShape>) {
     const resized = resizeBox(shape, info);
@@ -297,18 +362,19 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   }
 
   private calculateExpandedHeight(shape: RichTextShape): number {
-    const { minCollapsedHeight, checklistItems } = shape.props;
+    const { minCollapsedHeight, predictions } = shape.props;
 
     // Adjusted constants for better spacing
     const Y_PADDING = 48; // Increased padding to account for borders and margins
     const ROW_HEIGHT = 32; // Adjusted for more accurate row height
 
     // Calculate expanded height based on number of checklist items
-    const checklistHeight = checklistItems.length * ROW_HEIGHT + Y_PADDING;
+    const predictionsHeight = predictions.length * ROW_HEIGHT + Y_PADDING;
 
-    return Math.max(
-      minCollapsedHeight + checklistHeight,
-      shape.props.prevCollapsedHeight
-    );
+    // we want the height to only ever be as tall as it needs to be.
+    // if prev collapsed is greater than min collapsed, then use prev collapsed.
+    const minHeight = minCollapsedHeight + predictionsHeight;
+
+    return Math.max(minHeight, shape.props.prevCollapsedHeight);
   }
 }
