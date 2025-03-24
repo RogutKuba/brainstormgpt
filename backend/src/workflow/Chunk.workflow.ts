@@ -477,8 +477,8 @@ const getPredictionShapes = (predictions: string[], shape: LinkShape) => {
       x: childX,
       y: childY,
       props: {
-        h: parentHeight,
-        w: parentWidth,
+        h: predictionHeight,
+        w: predictionWidth,
         text: prediction,
         parentId: shape.id,
         arrowId: arrowId,
