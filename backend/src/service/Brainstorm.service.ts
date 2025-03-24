@@ -166,7 +166,12 @@ export const brainstormStreamSchema = z
           type: z.string(),
           text: z.string(),
           parentId: z.string().or(z.literal('none')).nullable(),
-          predictions: z.array(z.string()),
+          predictions: z.array(
+            z.object({
+              text: z.string(),
+              type: z.enum(['text', 'image', 'web']),
+            })
+          ),
         })
         .partial()
     ),

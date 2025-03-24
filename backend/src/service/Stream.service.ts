@@ -24,6 +24,12 @@ export class StreamService {
         y: z.number(),
       })
       .nullable(),
+    predictions: z.array(
+      z.object({
+        text: z.string(),
+        type: z.enum(['text', 'image', 'web']),
+      })
+    ),
   });
 
   predictionMessageSchema = z.object({
@@ -143,6 +149,7 @@ export class StreamService {
             chunk,
             parentId: node.parentId ?? null,
             position: predictionPosition,
+            predictions: node.predictions ?? [],
           };
 
           this.streamController.enqueue(
@@ -179,49 +186,49 @@ export class StreamService {
         }
       }
 
-      // handle predictions in same way as nodes, but queue them if node is new
-      node.predictions?.forEach((prediction, predIndex) => {
-        const prevPred = prevNodeInfo?.prevPredictions?.get(predIndex);
+      // // handle predictions in same way as nodes, but queue them if node is new
+      // node.predictions?.forEach((prediction, predIndex) => {
+      //   const prevPred = prevNodeInfo?.prevPredictions?.get(predIndex);
 
-        const predId = prevPred?.id ?? generateTlShapeId();
+      //   const predId = prevPred?.id ?? generateTlShapeId();
 
-        const predChunk = prediction.substring(prevPred?.length ?? 0);
+      //   const predChunk = prediction.substring(prevPred?.length ?? 0);
 
-        if (predChunk.length > 0) {
-          // Create prediction chunk to send
-          const predChunkToSend: z.infer<typeof this.predictionMessageSchema> =
-            {
-              id: predId,
-              chunk: predChunk,
-              parentId: id,
-            };
+      //   if (predChunk.length > 0) {
+      //     // Create prediction chunk to send
+      //     const predChunkToSend: z.infer<typeof this.predictionMessageSchema> =
+      //       {
+      //         id: predId,
+      //         chunk: predChunk,
+      //         parentId: id,
+      //       };
 
-          // If this is a new node (no previous text) or we just sent a node chunk,
-          // we can send the prediction chunk immediately
-          if (prevTextLength > 0 || nodeChunkSent) {
-            this.streamController.enqueue(
-              this.encoder.encode(
-                `event: prediction-chunk\ndata: ${JSON.stringify(
-                  predChunkToSend
-                )}\n\n`
-              )
-            );
-          } else {
-            // Otherwise, queue the prediction to be sent after the node is established
-            pendingPredictions.push({
-              predIndex,
-              predId,
-              predChunk,
-            });
-          }
-        }
+      //     // If this is a new node (no previous text) or we just sent a node chunk,
+      //     // we can send the prediction chunk immediately
+      //     if (prevTextLength > 0 || nodeChunkSent) {
+      //       this.streamController.enqueue(
+      //         this.encoder.encode(
+      //           `event: prediction-chunk\ndata: ${JSON.stringify(
+      //             predChunkToSend
+      //           )}\n\n`
+      //         )
+      //       );
+      //     } else {
+      //       // Otherwise, queue the prediction to be sent after the node is established
+      //       pendingPredictions.push({
+      //         predIndex,
+      //         predId,
+      //         predChunk,
+      //       });
+      //     }
+      //   }
 
-        // update prediction map
-        predictionMap.set(predIndex, {
-          id: predId,
-          length: prediction.length,
-        });
-      });
+      //   // update prediction map
+      //   predictionMap.set(predIndex, {
+      //     id: predId,
+      //     length: prediction.length,
+      //   });
+      // });
 
       this.prevNodeInfo.set(index, {
         id,

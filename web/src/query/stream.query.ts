@@ -278,6 +278,12 @@ const nodeMessageSchema = z.object({
       y: z.number(),
     })
     .nullable(),
+  predictions: z.array(
+    z.object({
+      text: z.string(),
+      type: z.enum(['text', 'image', 'web']),
+    })
+  ),
 });
 
 const predictionMessageSchema = z.object({
@@ -331,6 +337,10 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
           w: width,
           text: nodeChunk.chunk,
           isLocked: false,
+          isExpanded: true,
+          predictions: nodeChunk.predictions,
+          minCollapsedHeight: height,
+          prevCollapsedHeight: height,
         },
         ...(nodeChunk.position && {
           x: nodeChunk.position.x,

@@ -21,6 +21,7 @@ import {
 } from '@remixicon/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { SyntheticEvent, useEffect } from 'react';
+import { cx } from '@/components/ui/lib/utils';
 
 // Define the properties specific to our RichTextShape
 export type RichTextShapeProps = {
@@ -172,9 +173,11 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         {/* Lock/Unlock button - fixed positioning */}
         <div className='absolute top-2 right-2 z-10 pointer-events-auto'>
           <div
-            className={`flex items-center justify-center ${
-              !isSelected && !isLocked && 'hidden'
-            } ${isSelected && 'cursor-pointer hover:bg-gray-200 rounded-full'}`}
+            className={cx(
+              'flex items-center justify-center transition-colors duration-200',
+              !isSelected && !isLocked && 'hidden',
+              isSelected && 'cursor-pointer hover:bg-gray-300 rounded-full'
+            )}
             onClick={toggleLock}
             onPointerDown={(e) => e.stopPropagation()}
           >
@@ -196,7 +199,6 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         <div
           style={{
             flexGrow: 1,
-            overflow: 'auto',
             padding: '24px', // Increased padding from 16px to 24px
             position: 'relative',
           }}
@@ -226,31 +228,32 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
               {predictions.length > 0 && (
                 <div
-                  className={`mt-4 border-t pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out ${
+                  className={cx(
+                    'mt-4 border-t pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out',
                     isSelected
                       ? 'max-h-[500px] opacity-100'
                       : 'max-h-0 opacity-0 border-t-0 pt-0'
-                  }`}
+                  )}
                 >
-                  <ul className={`space-y-2 ${!isSelected && 'hidden'}`}>
+                  <ul className={cx('space-y-2', !isSelected && 'hidden')}>
                     {predictions.map((item) => (
                       <li
                         key={item.text}
-                        className='flex items-start gap-2 hover:bg-gray-50 p-1 rounded cursor-pointer transition-colors'
+                        className='flex items-center gap-2 hover:bg-gray-50 p-1 rounded cursor-pointer transition-colors'
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
                       >
                         <div className='flex items-center h-5'>
                           {item.type === 'image' ? (
-                            <RiImageLine className='text-pink-500 h-4 w-4' />
+                            <RiImageLine className='text-pink-500 h-5 w-5' />
                           ) : item.type === 'web' ? (
-                            <RiGlobalLine className='text-yellow-500 h-4 w-4' />
+                            <RiGlobalLine className='text-yellow-500 h-5 w-5' />
                           ) : (
-                            <RiQuestionLine className='text-green-500 h-4 w-4' />
+                            <RiQuestionLine className='text-green-500 h-5 w-5' />
                           )}
                         </div>
-                        <span className={`text-sm text-gray-700`}>
+                        <span className={`text-lg text-gray-700`}>
                           {item.text}
                         </span>
                       </li>
@@ -366,7 +369,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
     // Adjusted constants for better spacing
     const Y_PADDING = 48; // Increased padding to account for borders and margins
-    const ROW_HEIGHT = 32; // Adjusted for more accurate row height
+    const ROW_HEIGHT = 40; // Adjusted for more accurate row height
 
     // Calculate expanded height based on number of checklist items
     const predictionsHeight = predictions.length * ROW_HEIGHT + Y_PADDING;
