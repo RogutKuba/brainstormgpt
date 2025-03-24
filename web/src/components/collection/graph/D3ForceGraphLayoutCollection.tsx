@@ -7,6 +7,7 @@ import {
   TLShapeId,
 } from 'tldraw';
 import * as d3 from 'd3';
+import { debounce } from 'lodash';
 
 type ForceNode = {
   id: TLShapeId;
@@ -33,6 +34,15 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
   forceNodes: Map<TLShapeId, ForceNode> = new Map();
   forceLinks: Map<TLShapeId, ForceLink> = new Map();
   isRunning = true;
+
+  // Track pending operations to batch updates
+  private pendingOperations = {
+    additions: new Set<TLShape>(),
+    removals: new Set<TLShape>(),
+  };
+
+  // Track if a refresh is already scheduled
+  private refreshScheduled = false;
 
   // Track hierarchical relationships
   nodeParents: Map<TLShapeId, TLShapeId> = new Map();
@@ -102,16 +112,19 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
 
     // Start animation loop
     this.startAnimationLoop();
+
+    // Create debounced refresh method
+    this.debouncedRefreshGraph = debounce(this.refreshGraph, 100);
   }
+
+  // Debounced version of refreshGraph to prevent too many updates
+  private debouncedRefreshGraph = () => this.refreshGraph();
 
   startAnimationLoop() {
     const animate = () => {
       if (this.isRunning) {
         // Run a single iteration of the simulation if it's running
         if (this.simulation) {
-          // Check if the simulation has converged
-          const alpha = this.simulation.alpha();
-
           // Tick the simulation
           this.simulation.tick();
           this.updateShapePositions();
@@ -133,47 +146,138 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     }
   }
 
-  override onAdd(shapes: TLShape[]) {
-    for (const shape of shapes) {
-      if (shape.type !== 'arrow') {
-        this.addGeo(shape);
-      } else {
-        this.addArrow(shape as TLArrowShape);
+  // Process any pending operations and then refresh the graph
+  private processPendingOperations() {
+    // Process additions
+    if (this.pendingOperations.additions.size > 0) {
+      const shapesToAdd = Array.from(this.pendingOperations.additions);
+      this.pendingOperations.additions.clear();
+
+      for (const shape of shapesToAdd) {
+        if (shape.type !== 'arrow') {
+          this.addGeo(shape);
+        } else {
+          this.addArrow(shape as TLArrowShape);
+        }
       }
     }
+
+    // Process removals
+    if (this.pendingOperations.removals.size > 0) {
+      const shapesToRemove = Array.from(this.pendingOperations.removals);
+      this.pendingOperations.removals.clear();
+
+      const removedShapeIds = new Set(shapesToRemove.map((shape) => shape.id));
+
+      // Important: Preserve current positions of remaining nodes before deletion
+      const positionSnapshot = new Map<TLShapeId, { x: number; y: number }>();
+      for (const [id, node] of this.forceNodes.entries()) {
+        if (!removedShapeIds.has(id)) {
+          positionSnapshot.set(id, { x: node.x, y: node.y });
+        }
+      }
+
+      for (const shape of shapesToRemove) {
+        this.forceNodes.delete(shape.id);
+        this.forceLinks.delete(shape.id);
+
+        // Clean up hierarchical relationships
+        this.rootNodes.delete(shape.id);
+        this.nodeParents.delete(shape.id);
+
+        // Remove from children lists
+        if (this.nodeChildren.has(shape.id)) {
+          this.nodeChildren.delete(shape.id);
+        }
+      }
+
+      // Filter out links where either source or target has been removed
+      for (const [key, link] of this.forceLinks) {
+        if (
+          removedShapeIds.has(link.source) ||
+          removedShapeIds.has(link.target)
+        ) {
+          this.forceLinks.delete(key);
+        }
+      }
+
+      // Restore positions after deletion
+      for (const [id, pos] of positionSnapshot.entries()) {
+        const node = this.forceNodes.get(id);
+        if (node) {
+          node.x = pos.x;
+          node.y = pos.y;
+          // If the node is fixed, also update fx and fy
+          if (node.fixed) {
+            node.fx = pos.x;
+            node.fy = pos.y;
+          }
+        }
+      }
+    }
+
+    // Update hierarchical relationships and refresh the graph
     this.updateHierarchicalRelationships();
     this.refreshGraph();
+
+    // Reset the scheduled flag
+    this.refreshScheduled = false;
+  }
+
+  // Schedule a refresh if one isn't already scheduled
+  private scheduleRefresh() {
+    if (!this.refreshScheduled) {
+      this.refreshScheduled = true;
+      setTimeout(() => this.processPendingOperations(), 0);
+    }
+  }
+
+  override onAdd(shapes: TLShape[]) {
+    // Add shapes to pending operations
+    for (const shape of shapes) {
+      this.pendingOperations.additions.add(shape);
+    }
+
+    // Schedule a refresh
+    this.scheduleRefresh();
   }
 
   override onRemove(shapes: TLShape[]) {
-    const removedShapeIds = new Set(shapes.map((shape) => shape.id));
-
+    // Add shapes to pending operations
     for (const shape of shapes) {
-      this.forceNodes.delete(shape.id);
-      this.forceLinks.delete(shape.id);
-
-      // Clean up hierarchical relationships
-      this.rootNodes.delete(shape.id);
-      this.nodeParents.delete(shape.id);
-
-      // Remove from children lists
-      if (this.nodeChildren.has(shape.id)) {
-        this.nodeChildren.delete(shape.id);
-      }
+      this.pendingOperations.additions.delete(shape); // Remove from additions if pending
+      this.pendingOperations.removals.add(shape);
     }
 
-    // Filter out links where either source or target has been removed
-    for (const [key, link] of this.forceLinks) {
-      if (
-        removedShapeIds.has(link.source) ||
-        removedShapeIds.has(link.target)
-      ) {
-        this.forceLinks.delete(key);
+    // Schedule a refresh
+    this.scheduleRefresh();
+  }
+
+  // Override onShapeChange to handle property changes efficiently
+  override onShapeChange(prev: TLShape, next: TLShape) {
+    // Only update the specific node properties that changed
+    const node = this.forceNodes.get(next.id);
+    if (node) {
+      // Update locked status if it changed
+      if ('isLocked' in next.props) {
+        const isLocked = !!next.props.isLocked;
+        if (node.fixed !== isLocked) {
+          node.fixed = isLocked;
+          if (isLocked) {
+            node.fx = node.x;
+            node.fy = node.y;
+          } else {
+            node.fx = undefined;
+            node.fy = undefined;
+          }
+        }
+      }
+
+      // If position changed significantly, use debounced refresh
+      if (Math.abs(prev.x - next.x) > 1 || Math.abs(prev.y - next.y) > 1) {
+        this.debouncedRefreshGraph();
       }
     }
-
-    this.updateHierarchicalRelationships();
-    this.refreshGraph();
   }
 
   refreshGraph() {
@@ -190,7 +294,27 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
 
     // Mark selected nodes as fixed
     const selectedIds = new Set(this.editor.getSelectedShapeIds());
+
+    // Keep track of new nodes that need special positioning
+    const newNodes: ForceNode[] = [];
+
+    // Preserve existing positions before updating the simulation
+    const positionSnapshot = new Map<TLShapeId, { x: number; y: number }>();
     for (const node of nodes) {
+      positionSnapshot.set(node.id, { x: node.x, y: node.y });
+
+      // Get the actual shape to ensure we have the latest position
+      const shape = this.editor.getShape(node.id);
+      if (!shape) continue;
+
+      // Check if this is a node that was just added (no fx/fy and not selected)
+      const isNewNode =
+        !node.fx && !node.fy && !selectedIds.has(node.id) && !node.fixed;
+
+      if (isNewNode) {
+        newNodes.push(node);
+      }
+
       if (selectedIds.has(node.id) || node.fixed) {
         // Set fixed position for d3
         node.fx = node.x;
@@ -202,7 +326,11 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
       }
     }
 
+    // Position new nodes intelligently
+    this.positionNewNodes(newNodes);
+
     // Configure and restart the simulation
+    this.simulation.stop(); // Stop the simulation first
     this.simulation.nodes(nodes);
 
     // Update the link force with new links
@@ -224,6 +352,19 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     const xForce = this.simulation.force('x') as d3.ForceX<ForceNode>;
     if (xForce) {
       xForce.x((d) => this.getSiblingPosition(d.id));
+    }
+
+    // Restore positions after updating the simulation
+    for (const node of nodes) {
+      const savedPos = positionSnapshot.get(node.id);
+      if (savedPos) {
+        node.x = savedPos.x;
+        node.y = savedPos.y;
+        if (node.fixed) {
+          node.fx = savedPos.x;
+          node.fy = savedPos.y;
+        }
+      }
     }
 
     // Heat the simulation temporarily when graph is refreshed
@@ -378,6 +519,8 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
 
     const { w, h } = bounds;
     const { x, y } = getCornerToCenterOffset(w, h, shape.rotation);
+
+    // Use the shape's actual position instead of defaulting to (0,0)
     const node: ForceNode = {
       id: shape.id,
       x: shape.x + x,
@@ -532,6 +675,12 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
 
   // Update the hierarchical relationships based on current links
   updateHierarchicalRelationships() {
+    // Save current positions
+    const positionSnapshot = new Map<TLShapeId, { x: number; y: number }>();
+    for (const [id, node] of this.forceNodes.entries()) {
+      positionSnapshot.set(id, { x: node.x, y: node.y });
+    }
+
     // Clear existing relationships
     this.nodeParents.clear();
     this.nodeChildren.clear();
@@ -559,12 +708,14 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
       }
     }
 
-    // Apply initial positioning based on hierarchy
-    this.applyHierarchicalPositioning();
+    // Apply initial positioning based on hierarchy, but preserve existing positions
+    this.applyHierarchicalPositioning(positionSnapshot);
   }
 
   // Apply initial positions based on hierarchy
-  applyHierarchicalPositioning() {
+  applyHierarchicalPositioning(
+    positionSnapshot?: Map<TLShapeId, { x: number; y: number }>
+  ) {
     // First position root nodes
     let rootIndex = 0;
     const rootSpacing = 300; // Space between root nodes
@@ -572,18 +723,29 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     for (const rootId of this.rootNodes) {
       const rootNode = this.forceNodes.get(rootId);
       if (rootNode) {
-        rootNode.x = rootIndex * rootSpacing;
-        rootNode.y = 0;
+        // Only set position if we don't have a saved position
+        if (!positionSnapshot || !positionSnapshot.has(rootId)) {
+          rootNode.x = rootIndex * rootSpacing;
+          rootNode.y = 0;
+        } else {
+          const savedPos = positionSnapshot.get(rootId)!;
+          rootNode.x = savedPos.x;
+          rootNode.y = savedPos.y;
+        }
         rootIndex++;
 
         // Then position all descendants
-        this.positionDescendants(rootId, 1);
+        this.positionDescendants(rootId, 1, positionSnapshot);
       }
     }
   }
 
   // Recursively position descendants of a node
-  positionDescendants(nodeId: TLShapeId, level: number) {
+  positionDescendants(
+    nodeId: TLShapeId,
+    level: number,
+    positionSnapshot?: Map<TLShapeId, { x: number; y: number }>
+  ) {
     const children = this.nodeChildren.get(nodeId);
     if (!children || children.size === 0) return;
 
@@ -597,13 +759,102 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     childArray.forEach((childId, index) => {
       const childNode = this.forceNodes.get(childId);
       if (childNode) {
-        childNode.x = startX + index * this.siblingDistance;
-        childNode.y = level * this.hierarchyLevelDistance;
+        // Only set position if we don't have a saved position
+        if (!positionSnapshot || !positionSnapshot.has(childId)) {
+          childNode.x = startX + index * this.siblingDistance;
+          childNode.y = level * this.hierarchyLevelDistance;
+        } else {
+          const savedPos = positionSnapshot.get(childId)!;
+          childNode.x = savedPos.x;
+          childNode.y = savedPos.y;
+        }
 
         // Recursively position this node's children
-        this.positionDescendants(childId, level + 1);
+        this.positionDescendants(childId, level + 1, positionSnapshot);
       }
     });
+  }
+
+  // Add a new method to position new nodes intelligently
+  positionNewNodes(newNodes: ForceNode[]) {
+    if (newNodes.length === 0) return;
+
+    // Get the viewport center as a fallback position
+    const viewport = this.editor.getViewportPageBounds();
+    const viewportCenter = { x: viewport.center.x, y: viewport.center.y };
+
+    for (const node of newNodes) {
+      // Try to position based on connected nodes
+      let positioned = false;
+
+      // Check if this node has a parent in the hierarchy
+      const parentId = this.nodeParents.get(node.id);
+      if (parentId) {
+        const parentNode = this.forceNodes.get(parentId);
+        if (parentNode) {
+          // Position below parent with a slight offset
+          node.x = parentNode.x + (Math.random() - 0.5) * 50;
+          node.y = parentNode.y + this.hierarchyLevelDistance;
+          positioned = true;
+        }
+      }
+
+      // Check if this node has children
+      if (!positioned && this.nodeChildren.has(node.id)) {
+        const childrenIds = this.nodeChildren.get(node.id)!;
+        if (childrenIds.size > 0) {
+          // Calculate average position of children
+          let sumX = 0,
+            sumY = 0,
+            count = 0;
+          for (const childId of childrenIds) {
+            const childNode = this.forceNodes.get(childId);
+            if (childNode) {
+              sumX += childNode.x;
+              sumY += childNode.y;
+              count++;
+            }
+          }
+
+          if (count > 0) {
+            // Position above the average of children
+            node.x = sumX / count;
+            node.y = sumY / count - this.hierarchyLevelDistance;
+            positioned = true;
+          }
+        }
+      }
+
+      // If still not positioned, use viewport center with random offset
+      if (!positioned) {
+        // Get existing nodes to avoid overlap
+        const existingNodes = Array.from(this.forceNodes.values()).filter(
+          (n) => n.id !== node.id
+        );
+
+        if (existingNodes.length > 0) {
+          // Calculate average position of all existing nodes
+          const avgX =
+            existingNodes.reduce((sum, n) => sum + n.x, 0) /
+            existingNodes.length;
+          const avgY =
+            existingNodes.reduce((sum, n) => sum + n.y, 0) /
+            existingNodes.length;
+
+          // Position with a random offset from the average
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 150 + Math.random() * 100;
+          node.x = avgX + Math.cos(angle) * distance;
+          node.y = avgY + Math.sin(angle) * distance;
+        } else {
+          // If no existing nodes, use viewport center with random offset
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 100 + Math.random() * 50;
+          node.x = viewportCenter.x + Math.cos(angle) * distance;
+          node.y = viewportCenter.y + Math.sin(angle) * distance;
+        }
+      }
+    }
   }
 }
 
