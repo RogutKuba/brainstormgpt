@@ -424,7 +424,7 @@ IMPORTANT FORMATTING GUIDELINES:
 8. Avoid lengthy explanations - the goal is to spark curiosity, not provide comprehensive coverage
 9. Use bullet points sparingly and only for very brief lists
 
-For each node, also include 2-3 predictions of follow-up questions the user might ask about this specific node. These should be natural extensions of the node's content.
+For each node, also include 3-5 predictions of follow-up questions the user might ask about this specific node. These should be natural extensions of the node's content.
 
 For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
         ', '

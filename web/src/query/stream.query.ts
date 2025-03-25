@@ -20,6 +20,7 @@ import {
   calculatePredictionSize,
 } from '@/components/chat/utils';
 import { PredictionShape } from '@/components/shape/prediction/PredictionShape';
+import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 
 export type StreamedNode = {
   id: TLShapeId;
@@ -30,6 +31,8 @@ export type StreamedNode = {
 };
 
 export const useStreamMessage = () => {
+  const workspaceId = useCurrentWorkspaceId();
+
   const [streamingState, setStreamingState] = useState<{
     isStreaming: boolean;
     chunks: string;
@@ -46,7 +49,6 @@ export const useStreamMessage = () => {
 
   const streamMessage = useCallback(
     async (params: {
-      workspaceId: string;
       message: string;
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
@@ -72,7 +74,7 @@ export const useStreamMessage = () => {
         });
 
         // Create the request URL
-        const url = `/workspace/${params.workspaceId}/stream`;
+        const url = `/workspace/${workspaceId}/stream`;
 
         // Prepare the request
         const response = await fetch(
@@ -288,6 +290,8 @@ const nodeMessageSchema = z.object({
 
 const predictionMessageSchema = z.object({
   id: z.string(),
+  index: z.number().optional(),
+  type: z.enum(['text', 'image', 'web']),
   chunk: z.string(),
   parentId: z.string().nullable(),
 });
@@ -322,6 +326,8 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
         type: 'rich-text',
         props: {
           h: height,
+          minCollapsedHeight: height,
+          prevCollapsedHeight: height,
           w: width,
           text: existingShape.props.text + nodeChunk.chunk,
         },
@@ -436,14 +442,7 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
           | undefined)
       : undefined;
 
-    console.log(
-      'handling-prediction',
-      predictionChunk,
-      'parentShape:',
-      !!parentShape
-    );
-
-    // Only proceed if parent exists or parentId is null/none/root
+    // Only proceed if parent exists
     if (
       !parentShape ||
       predictionChunk.parentId === 'none' ||
@@ -453,102 +452,35 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
       return;
     }
 
-    // Check if the prediction already exists
-    const existingPrediction = editor.getShape(
-      predictionChunk.id as TLShapeId
-    ) as PredictionShape | undefined;
+    // Check if this prediction already exists in the parent's predictions array
+    const existingPredictionIndex = parentShape.props.predictions.findIndex(
+      (pred) => pred.text.includes(predictionChunk.chunk)
+    );
 
-    if (existingPrediction) {
-      // Update existing prediction
-      const newText = existingPrediction.props.text + predictionChunk.chunk;
-      const { width, height } = calculatePredictionSize(newText);
-
-      editor.updateShape<PredictionShape>({
-        id: existingPrediction.id,
-        type: 'prediction',
-        props: {
-          h: height,
-          w: width,
-          text: newText,
-        },
-      });
-    } else {
-      // Create new prediction
-      const { width, height } = calculatePredictionSize(predictionChunk.chunk);
-      const arrowId = createShapeId();
-
-      // Create the prediction shape
-      if (parentShape) {
-        const newPredictionShape: Pick<
-          PredictionShape,
-          'id' | 'type' | 'props' | 'x' | 'y'
-        > = {
-          id: predictionChunk.id as TLShapeId,
-          type: 'prediction',
-          props: {
-            h: height,
-            w: width,
-            text: predictionChunk.chunk,
-            parentId: predictionChunk.parentId as TLShapeId,
-            arrowId: arrowId,
-            isLocked: false,
-          },
-          x: parentShape.x + Math.random() * 250,
-          y: parentShape.y + Math.random() * 250,
-        };
-
-        // Create arrow shape
-        const newArrowShape: Pick<TLArrowShape, 'id' | 'type' | 'index'> = {
-          id: arrowId,
-          type: 'arrow',
-          index: ZERO_INDEX_KEY,
-        };
-
-        // Create bindings between parent and prediction
-        const newBindings: [TLArrowBinding, TLArrowBinding] = [
-          {
-            id: createBindingId(),
-            type: 'arrow',
-            props: {
-              terminal: 'start',
-              normalizedAnchor: {
-                x: 0.5,
-                y: 0.5,
-              },
-              isExact: false,
-              isPrecise: false,
-            },
-            fromId: newArrowShape.id,
-            toId: parentShape.id,
-            meta: {},
-            typeName: 'binding',
-          },
-          {
-            id: createBindingId(),
-            type: 'arrow',
-            props: {
-              terminal: 'end',
-              normalizedAnchor: {
-                x: 0.5,
-                y: 0.5,
-              },
-              isExact: false,
-              isPrecise: false,
-            },
-            fromId: newArrowShape.id,
-            toId: predictionChunk.id as TLShapeId,
-            meta: {},
-            typeName: 'binding',
-          },
-        ];
-
-        // Create both the prediction shape and arrow shape
-        editor.createShapes([newPredictionShape, newArrowShape]);
-
-        // Create the bindings
-        editor.createBindings(newBindings);
-      }
+    if (existingPredictionIndex !== -1) {
+      // If prediction already exists, no need to add it again
+      return;
     }
+
+    // Add the new prediction to the parent shape
+    const updatedPredictions: RichTextShape['props']['predictions'] = [
+      ...parentShape.props.predictions,
+      {
+        text: predictionChunk.chunk,
+        type: 'text', // Default to text type, can be adjusted based on content analysis
+      },
+    ];
+
+    // Update the parent shape with the new prediction
+    editor.updateShape<RichTextShape>({
+      id: parentShape.id,
+      type: 'rich-text',
+      props: {
+        predictions: updatedPredictions,
+        // If the shape is currently selected, it will automatically expand to show the new prediction
+        // due to the useEffect in the RichTextShape component
+      },
+    });
   } catch (error) {
     console.error('Error parsing prediction chunk:', error, 'chunk: ', rawData);
   }

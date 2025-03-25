@@ -39,6 +39,7 @@ export const ChatWindow: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Use the chat context instead of local state
   const { messages, isLoading, handleSendMessage, clearMessages } = useChat();
@@ -114,6 +115,11 @@ export const ChatWindow: React.FC = () => {
     [editor, position]
   );
 
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -180,7 +186,6 @@ export const ChatWindow: React.FC = () => {
       await handleSendMessage({
         message,
         selectedItemIds: selectedItems.map((item) => item.id),
-        workspaceId,
         predictionId: null,
         predictionPosition: null,
         editor,
@@ -333,6 +338,9 @@ export const ChatWindow: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Invisible div at the end to scroll to */}
+                <div ref={messagesEndRef} />
               </div>
             ) : null}
           </CardContent>

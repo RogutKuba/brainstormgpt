@@ -23,7 +23,6 @@ interface ChatContextValue {
   handleSendMessage: (params: {
     message: string;
     selectedItemIds: string[];
-    workspaceId: string;
     predictionId: string | null;
     predictionPosition: {
       x: number;
@@ -50,7 +49,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const handleSendMessage = async (params: {
-    workspaceId: string;
     message: string;
     selectedItemIds: string[];
     predictionId: string | null;
@@ -98,7 +96,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           message: userMessage.content,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
-          workspaceId: params.workspaceId,
           predictionId: params.predictionId,
           predictionPosition: params.predictionPosition,
           onChunk: (chunk) => {
