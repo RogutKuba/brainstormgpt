@@ -1,12 +1,10 @@
 import {
   BaseBoxShapeUtil,
-  BoundsSnapGeometry,
   HTMLContainer,
   JsonObject,
   Rectangle2d,
   resizeBox,
   TLBaseShape,
-  TLHandleDragInfo,
   TLResizeInfo,
   TLShapeId,
 } from 'tldraw';
@@ -18,27 +16,22 @@ import {
   RiLock2Line,
   RiLockUnlockLine,
   RiQuestionLine,
-  RiTextBlock,
 } from '@remixicon/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { SyntheticEvent, useEffect } from 'react';
-import { cx } from '@/components/ui/lib/utils';
-import { useStreamMessage } from '@/query/stream.query';
+import { useEffect } from 'react';
 import { useChat } from '@/components/chat/ChatContext';
+import {
+  useContentShape,
+  ContentShapeProps,
+  calculateExpandedHeight,
+  handleResizeEnd,
+  handleTranslateStart,
+} from '@/components/shape/BaseContentShape';
+import { cx } from '@/components/ui/lib/utils';
 
 // Define the properties specific to our RichTextShape
-export type RichTextShapeProps = {
-  h: number;
-  w: number;
+export type RichTextShapeProps = ContentShapeProps & {
   text: string;
-  isLocked: boolean;
-  isExpanded: boolean;
-  predictions: Array<{
-    text: string;
-    type: 'text' | 'image' | 'web';
-  }>;
-  minCollapsedHeight: number;
-  prevCollapsedHeight: number;
 };
 
 // Define the shape type by extending TLBaseShape with our props
@@ -46,12 +39,6 @@ export type RichTextShape = TLBaseShape<'rich-text', RichTextShapeProps>;
 
 export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   static override type = 'rich-text' as const;
-
-  static readonly ANIMATION_DURATION = {
-    animation: {
-      duration: 200,
-    },
-  };
 
   override canEdit() {
     return true;
@@ -101,8 +88,17 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
   component(shape: RichTextShape) {
     const { text, isLocked, predictions, isExpanded } = shape.props;
-
     const { handleSendMessage } = useChat();
+
+    // Get the content shape utilities
+    const {
+      stopEventPropagation,
+      toggleLock,
+      handleSelectionState,
+      handleExpansionAnimation,
+      handlePredictionClick,
+      renderPredictionsList,
+    } = useContentShape<RichTextShape>();
 
     const isEditing = this.editor.getEditingShapeId() === shape.id;
     const selectedIds = this.editor.getSelectedShapeIds();
@@ -111,120 +107,36 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
     // React to selection state
     useEffect(() => {
-      if (isSelected && !isExpanded && predictions.length > 0) {
-        // Only expand if there are predictions to show
-        this.editor.updateShape<RichTextShape>({
-          id: shape.id,
-          type: 'rich-text',
-          props: {
-            isExpanded: true,
-            isLocked: true,
-            prevCollapsedHeight: shape.props.h, // Store current height before expanding
-          },
-        });
-      } else if (!isSelected && isExpanded) {
-        this.editor.updateShape<RichTextShape>({
-          id: shape.id,
-          type: 'rich-text',
-          props: { isExpanded: false },
-        });
-      }
+      handleSelectionState(shape, isSelected);
     }, [isSelected, selectedIds, isExpanded, predictions.length]);
 
     // Expansion/collapse animation logic
     useEffect(() => {
-      if (isExpanded && predictions.length > 0) {
-        // Expand the shape
-        this.editor.animateShape(
-          {
-            id: shape.id,
-            type: 'rich-text',
-            props: {
-              h: this.calculateExpandedHeight(shape),
-            },
-          },
-          RichTextShapeUtil.ANIMATION_DURATION
-        );
-      } else if (!isExpanded) {
-        // Collapse the shape back to previous height
-        this.editor.animateShape(
-          {
-            id: shape.id,
-            type: 'rich-text',
-            props: {
-              h: shape.props.prevCollapsedHeight,
-            },
-          },
-          RichTextShapeUtil.ANIMATION_DURATION
-        );
-      }
+      handleExpansionAnimation(
+        shape,
+        isExpanded,
+        predictions.length,
+        this.calculateShapeHeight
+      );
     }, [isExpanded, predictions.length]);
 
-    const stopEventPropagation = (e: SyntheticEvent) => e.stopPropagation();
-
-    const toggleLock = (e: SyntheticEvent) => {
-      e.stopPropagation();
-      this.editor.updateShape<RichTextShape>({
-        id: shape.id,
-        type: 'rich-text',
-        props: { isLocked: !isLocked },
-      });
-    };
-
+    // Handle prediction click
     const onPredictionClick = async (prediction: {
       text: string;
       type: 'text' | 'image' | 'web';
     }) => {
-      // Get updated predictions array by filtering out the clicked prediction
-      const updatedPredictions = predictions.filter(
-        (p) => p.text !== prediction.text
-      );
-
-      // Create a temporary shape with updated predictions to calculate the new height
-      const tempShape = {
-        ...shape,
-        props: {
-          ...shape.props,
-          predictions: updatedPredictions,
-        },
-      };
-
-      // Calculate new height based on remaining predictions
-      const newHeight = this.calculateExpandedHeight(tempShape);
-
-      // Update the shape with both the new predictions array and the new height
-      this.editor.updateShape<RichTextShape>({
-        id: shape.id,
-        type: 'rich-text',
-        props: {
-          predictions: updatedPredictions,
-        },
-      });
-
-      // Animate to the new height
-      this.editor.animateShape(
+      await handlePredictionClick(
+        shape,
+        prediction,
+        this.calculateShapeHeight,
+        handleSendMessage,
         {
-          id: shape.id,
-          type: 'rich-text',
-          props: {
-            h:
-              updatedPredictions.length > 0
-                ? newHeight
-                : shape.props.prevCollapsedHeight,
-            isExpanded: updatedPredictions.length > 0, // Auto-collapse if no predictions left
-          },
-        },
-        RichTextShapeUtil.ANIMATION_DURATION
+          selectedItemIds: [shape.id],
+          predictionId: null,
+          predictionPosition: null,
+          editor: this.editor,
+        }
       );
-
-      // Handle sending the message (commented out in original code)
-      await handleSendMessage({
-        message: prediction.text,
-        selectedItemIds: [shape.id],
-        predictionId: null,
-        predictionPosition: null,
-        editor: this.editor,
-      });
     };
 
     return (
@@ -243,8 +155,8 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
               !isSelected && !isLocked && 'hidden',
               isSelected && 'cursor-pointer hover:bg-gray-300 rounded-full'
             )}
-            onClick={toggleLock}
-            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => toggleLock(shape, e)}
+            onPointerDown={stopEventPropagation}
           >
             {isLocked ? (
               <Tooltip content='Position locked'>
@@ -259,16 +171,6 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             )}
           </div>
         </div>
-
-        {/* <div className='text-sm text-gray-500'>
-          Current height: {shape.props.h}
-          <br />
-          Collapsed height: {shape.props.prevCollapsedHeight}
-          <br />
-          Min collapsed height: {shape.props.minCollapsedHeight}
-          <br />
-          Expanded height: {this.calculateExpandedHeight(shape)}
-        </div> */}
 
         {/* Content area - increased padding */}
         <div
@@ -301,48 +203,12 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
                 <ReactMarkdown>{text}</ReactMarkdown>
               </div>
 
-              {predictions.length > 0 && (
-                <div
-                  className={cx(
-                    'mt-4 border-t pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out',
-                    isSelected
-                      ? 'max-h-[500px] opacity-100'
-                      : 'max-h-0 opacity-0 border-t-0 pt-0'
-                  )}
-                >
-                  <ul className={cx('space-y-2', !isSelected && 'hidden')}>
-                    {predictions.map((item) => (
-                      <li
-                        key={item.text}
-                        className='flex items-center gap-2 hover:bg-gray-50 p-1 rounded cursor-pointer transition-colors pointer-events-auto'
-                        onClick={(e) => {
-                          console.log('item', item);
-                          e.stopPropagation();
-                          onPredictionClick(item);
-                        }}
-                        onPointerDown={stopEventPropagation}
-                        onTouchStart={stopEventPropagation}
-                        onTouchEnd={stopEventPropagation}
-                      >
-                        <div className='flex items-center h-5'>
-                          {item.type === 'image' ? (
-                            <RiImageLine className='text-pink-500 h-5 w-5' />
-                          ) : item.type === 'web' ? (
-                            <RiGlobalLine className='text-yellow-500 h-5 w-5' />
-                          ) : (
-                            <RiQuestionLine className='text-green-500 h-5 w-5' />
-                          )}
-                        </div>
-                        <span
-                          className={`text-lg text-gray-700 pointer-events-auto`}
-                        >
-                          {item.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {predictions.length > 0 &&
+                renderPredictionsList(
+                  predictions,
+                  isSelected,
+                  onPredictionClick
+                )}
             </>
           )}
         </div>
@@ -362,26 +228,15 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         props?: Partial<RichTextShapeProps> | undefined;
         type: 'rich-text';
       } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
-    // Lock the shape during translation but maintain current expansion state
-    return {
-      id: shape.id,
-      type: 'rich-text',
-      props: {
-        isLocked: true,
-        h: this.calculateExpandedHeight(shape),
-      },
-    };
-  }
-
-  onTranslateEnd(shape: RichTextShape):
-    | void
-    | ({
-        id: TLShapeId;
-        meta?: Partial<JsonObject> | undefined;
-        props?: Partial<RichTextShapeProps> | undefined;
-        type: 'rich-text';
-      } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
-    // No need to change anything after translation ends
+    // Use the standalone function instead of the hook
+    const result = handleTranslateStart(shape);
+    if (result) {
+      return {
+        id: shape.id,
+        type: 'rich-text',
+        props: result.props,
+      };
+    }
     return;
   }
 
@@ -417,83 +272,23 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         props?: Partial<RichTextShapeProps> | undefined;
         type: 'rich-text';
       } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
-    // If the shape is expanded and was resized
-    if (current.props.isExpanded) {
-      // Calculate what the collapsed height should be based on the current expanded height
-      // We need to subtract the height needed for predictions
-      const tempShape = { ...current };
-      const predictionsHeight =
-        this.calculateExpandedHeight(tempShape) -
-        current.props.prevCollapsedHeight;
+    // Use the standalone function instead of the hook
+    const result = handleResizeEnd(current, this.calculateShapeHeight);
 
+    if (result) {
       return {
         id: current.id,
         type: 'rich-text',
-        props: {
-          prevCollapsedHeight: current.props.h - predictionsHeight,
-        },
-      };
-    }
-
-    // Update prevCollapsedHeight when not expanded
-    if (!current.props.isExpanded) {
-      return {
-        id: current.id,
-        type: 'rich-text',
-        props: {
-          prevCollapsedHeight: current.props.h,
-        },
+        props: result.props,
       };
     }
 
     return;
   }
 
-  private calculateExpandedHeight(shape: RichTextShape): number {
-    const { minCollapsedHeight, predictions, w, prevCollapsedHeight } =
-      shape.props;
-
-    // Base padding constants
-    const Y_PADDING = 24; // Padding for borders and margins
-    const BASE_ROW_HEIGHT = 30; // Base height for a single line
-    const FONT_SIZE = 12; // Font size in pixels
-    const PREDICTION_PADDING = 8; // Padding between prediction items
-    const PREDICTION_HEADER_HEIGHT = 24; // Height for the predictions section header
-
-    // Calculate expanded height based on predictions content
-    let predictionsHeight = 0;
-
-    if (predictions.length > 0) {
-      // Calculate characters per line based on width and font size
-      const charsPerLine = Math.floor((w - 48) / (FONT_SIZE * 0.6)); // Account for padding and character width
-
-      // Calculate height for each prediction based on its text length
-      for (const prediction of predictions) {
-        const textLength = prediction.text.length;
-        const estimatedLines = Math.max(
-          1,
-          Math.ceil(textLength / charsPerLine)
-        );
-        const itemHeight = BASE_ROW_HEIGHT * estimatedLines;
-        predictionsHeight += itemHeight;
-      }
-
-      // Add padding between items
-      predictionsHeight += (predictions.length - 1) * PREDICTION_PADDING;
-
-      // Add header space for predictions section
-      predictionsHeight += PREDICTION_HEADER_HEIGHT;
-
-      // Add overall padding
-      predictionsHeight += Y_PADDING;
-
-      // Use the larger of calculated height or previous collapsed height
-      return Math.max(
-        prevCollapsedHeight + predictionsHeight,
-        minCollapsedHeight
-      );
-    } else {
-      return prevCollapsedHeight;
-    }
-  }
+  // Static method to calculate height that doesn't depend on the editor
+  calculateShapeHeight = (shape: RichTextShape): number => {
+    // Use the extracted utility function
+    return calculateExpandedHeight(shape);
+  };
 }
