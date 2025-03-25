@@ -18,12 +18,6 @@ export class StreamService {
     id: z.string(),
     chunk: z.string(),
     parentId: z.string().nullable(),
-    position: z
-      .object({
-        x: z.number(),
-        y: z.number(),
-      })
-      .nullable(),
     predictions: z.array(
       z.object({
         text: z.string(),
@@ -36,10 +30,6 @@ export class StreamService {
     id: z.string(),
     chunk: z.string(),
     parentId: z.string().nullable(),
-  });
-
-  deletePredictionMessageSchema = z.object({
-    id: z.string(),
   });
 
   // PRIVATE PROPERTIES
@@ -107,12 +97,7 @@ export class StreamService {
    * @param nodes - The nodes to be streamed
    */
   public handleNodes = async (
-    nodes: z.infer<typeof brainstormStreamSchema>['nodes'] | undefined,
-    existingPredictionId: string | null,
-    predictionPosition: {
-      x: number;
-      y: number;
-    } | null
+    nodes: z.infer<typeof brainstormStreamSchema>['nodes'] | undefined
   ) => {
     if (!nodes) return;
 
@@ -142,13 +127,10 @@ export class StreamService {
         const chunk = node.text?.substring(prevTextLength) ?? '';
 
         if (chunk.length > 0) {
-          this.handlePredictionDeletion(existingPredictionId);
-
           const toSend: z.infer<typeof this.nodeMessageSchema> = {
             id,
             chunk,
             parentId: node.parentId ?? null,
-            position: predictionPosition,
             predictions: node.predictions ?? [],
           };
 
@@ -237,24 +219,5 @@ export class StreamService {
         pendingPredictions,
       });
     });
-  };
-
-  /**
-   * Handles the deletion of an existing prediction
-   */
-  private handlePredictionDeletion = (predictionId: string | null) => {
-    if (!predictionId || this.deletedPastPrediction) return;
-    // send event to delete prediction
-    const toSend: z.infer<typeof this.deletePredictionMessageSchema> = {
-      id: predictionId,
-    };
-
-    this.streamController.enqueue(
-      this.encoder.encode(
-        `event: delete-prediction\ndata: ${JSON.stringify(toSend)}\n\n`
-      )
-    );
-
-    this.deletedPastPrediction = true;
   };
 }

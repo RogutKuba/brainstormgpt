@@ -1,24 +1,18 @@
 import { useState } from 'react';
 import { useCallback } from 'react';
 import {
-  ArrowShapeUtil,
   createBindingId,
   createShapeId,
   Editor,
-  IndexKey,
   TLArrowBinding,
   TLArrowShape,
-  TLBindingId,
   TLShapeId,
   ZERO_INDEX_KEY,
 } from 'tldraw';
 import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
-import {
-  calculateNodeSize,
-  calculatePredictionSize,
-} from '@/components/chat/utils';
+import { calculateNodeSize } from '@/components/chat/utils';
 import { PredictionShape } from '@/components/shape/prediction/PredictionShape';
 import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 
@@ -52,11 +46,6 @@ export const useStreamMessage = () => {
       message: string;
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
-      predictionId: string | null;
-      predictionPosition: {
-        x: number;
-        y: number;
-      } | null;
       editor: Editor;
       onChunk?: (chunk: string) => void;
       onStatus?: (status: string) => void;
@@ -88,8 +77,6 @@ export const useStreamMessage = () => {
               message: params.message,
               chatHistory: params.chatHistory,
               selectedItems: params.selectedItems,
-              predictionId: params.predictionId,
-              predictionPosition: params.predictionPosition,
             }),
           }
         );
@@ -274,12 +261,6 @@ const nodeMessageSchema = z.object({
   id: z.string(),
   chunk: z.string(),
   parentId: z.string().nullable(),
-  position: z
-    .object({
-      x: z.number(),
-      y: z.number(),
-    })
-    .nullable(),
   predictions: z.array(
     z.object({
       text: z.string(),
@@ -348,10 +329,6 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
           minCollapsedHeight: height,
           prevCollapsedHeight: height,
         },
-        ...(nodeChunk.position && {
-          x: nodeChunk.position.x,
-          y: nodeChunk.position.y,
-        }),
       };
 
       if (
