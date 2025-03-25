@@ -316,7 +316,8 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
     } else {
       const { width, height } = calculateNodeSize(nodeChunk.chunk);
 
-      const newTextShape: Pick<RichTextShape, 'id' | 'type' | 'props'> = {
+      const newTextShape: Partial<RichTextShape> &
+        Pick<RichTextShape, 'id' | 'type' | 'props'> = {
         id: nodeChunk.id as TLShapeId,
         type: 'rich-text',
         props: {
@@ -341,14 +342,13 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
 
         if (!parentShape) return;
 
-        // update parent shape to locked
-        editor.updateShape({
-          id: parentShape.id,
-          type: parentShape.type,
-          props: {
-            isLocked: true,
-          },
-        });
+        // Position the new text shape with consistent offset in random directions
+        // Use a fixed distance with random direction (positive or negative)
+        const offsetDistance = 150 + Math.random() * 50; // 150-200px distance
+        const offsetX = offsetDistance * (Math.random() > 0.5 ? 1 : -1); // Random positive or negative
+        const offsetY = offsetDistance * (Math.random() > 0.5 ? 1 : -1); // Random positive or negative
+        newTextShape.x = parentShape.x + offsetX;
+        newTextShape.y = parentShape.y + offsetY;
 
         const newArrowShape: Pick<TLArrowShape, 'id' | 'type' | 'index'> = {
           id: createShapeId(),

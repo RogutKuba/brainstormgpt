@@ -338,12 +338,20 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     this.simulation.stop(); // Stop the simulation first
     this.simulation.nodes(nodes);
 
-    // Update the link force with new links
+    // Create a set of valid node IDs for validation
+    const validNodeIds = new Set(nodes.map((node) => node.id));
+
+    // Filter links to ensure both source and target exist in nodes
+    const validLinks = links.filter(
+      (link) => validNodeIds.has(link.source) && validNodeIds.has(link.target)
+    );
+
+    // Update the link force with valid links
     const linkForce = this.simulation.force('link') as d3.ForceLink<
       ForceNode,
       ForceLink
     >;
-    linkForce.links(links);
+    linkForce.links(validLinks);
 
     // Update y-force to reflect hierarchy levels
     const yForce = this.simulation.force('y') as d3.ForceY<ForceNode>;

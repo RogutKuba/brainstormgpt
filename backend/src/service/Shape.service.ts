@@ -206,8 +206,23 @@ export class ShapeService {
     childToParentMap: Map<string, string>,
     parentToChildrenMap: Map<string, string[]>,
     shapeMap: Map<string, TLShape>,
-    expandedSelectionSet: Set<string>
+    expandedSelectionSet: Set<string>,
+    visitedNodes: Set<string> = new Set()
   ): TreeNode {
+    // Check for cycles
+    if (visitedNodes.has(shapeId)) {
+      // Return a minimal node to break the cycle
+      return {
+        id: shapeId,
+        type: 'text',
+        text: '[Circular Reference]',
+        children: [],
+      };
+    }
+
+    // Mark this node as visited
+    visitedNodes.add(shapeId);
+
     // Get the shape from the map
     const shape = shapeMap.get(shapeId);
 
@@ -238,7 +253,8 @@ export class ShapeService {
             childToParentMap,
             parentToChildrenMap,
             shapeMap,
-            expandedSelectionSet
+            expandedSelectionSet,
+            new Set(visitedNodes) // Create a new copy of the visited set for each branch
           )
         );
       }
