@@ -1,8 +1,12 @@
 import { ReadableStreamController } from 'stream/web';
-import { TLShapeId } from 'tldraw';
+import { TLArrowBinding, TLArrowShape, TLShapeId } from 'tldraw';
 import { z } from 'zod';
 import { generateTlShapeId } from '../lib/id';
 import { brainstormStreamSchema } from './Brainstorm.service';
+import { Context } from 'hono';
+import { AppContext } from '..';
+import { LinkShape } from '../shapes/Link.shape';
+import { RichTextShape } from '../shapes/RichText.shape';
 
 export class StreamService {
   // SCHEMAS
@@ -34,7 +38,7 @@ export class StreamService {
 
   // PRIVATE PROPERTIES
 
-  private streamController: ReadableStreamController<any>;
+  public streamController: ReadableStreamController<any>;
   private encoder: TextEncoder;
 
   /**
@@ -168,50 +172,6 @@ export class StreamService {
         }
       }
 
-      // // handle predictions in same way as nodes, but queue them if node is new
-      // node.predictions?.forEach((prediction, predIndex) => {
-      //   const prevPred = prevNodeInfo?.prevPredictions?.get(predIndex);
-
-      //   const predId = prevPred?.id ?? generateTlShapeId();
-
-      //   const predChunk = prediction.substring(prevPred?.length ?? 0);
-
-      //   if (predChunk.length > 0) {
-      //     // Create prediction chunk to send
-      //     const predChunkToSend: z.infer<typeof this.predictionMessageSchema> =
-      //       {
-      //         id: predId,
-      //         chunk: predChunk,
-      //         parentId: id,
-      //       };
-
-      //     // If this is a new node (no previous text) or we just sent a node chunk,
-      //     // we can send the prediction chunk immediately
-      //     if (prevTextLength > 0 || nodeChunkSent) {
-      //       this.streamController.enqueue(
-      //         this.encoder.encode(
-      //           `event: prediction-chunk\ndata: ${JSON.stringify(
-      //             predChunkToSend
-      //           )}\n\n`
-      //         )
-      //       );
-      //     } else {
-      //       // Otherwise, queue the prediction to be sent after the node is established
-      //       pendingPredictions.push({
-      //         predIndex,
-      //         predId,
-      //         predChunk,
-      //       });
-      //     }
-      //   }
-
-      //   // update prediction map
-      //   predictionMap.set(predIndex, {
-      //     id: predId,
-      //     length: prediction.length,
-      //   });
-      // });
-
       this.prevNodeInfo.set(index, {
         id,
         textLength: node.text?.length ?? 0,
@@ -220,4 +180,37 @@ export class StreamService {
       });
     });
   };
+
+  /**
+   * Handle completed node shapes
+   * @param shapes - The shapes to be handled
+   */
+  public handleCompletedNodeShapes = async (params: {
+    shapes: (LinkShape | RichTextShape | TLArrowShape)[];
+    bindings: TLArrowBinding[];
+    workspaceId: string;
+    ctx: Context<AppContext>;
+  }) => {
+    const { shapes, bindings, workspaceId, ctx } = params;
+
+    // in this case, we add the nodes to the editor if they dont already exist, to make sure the writes are durable in
+    // case client disconnects before the nodes are fully streamed.
+
+    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
+
+    await workspace.updateShapes(shapes, {
+      // TODO: fix this so that we actually create the shapes if they don't exist
+      // createIfMissing: true,
+      additionalRecords: bindings,
+      keysToMerge: {
+        shape: [''],
+        props: ['text', 'predictions'],
+      },
+    });
+  };
+
+  public getPrevNodeInfo(index: number) {
+    return this.prevNodeInfo.get(index);
+  }
 }

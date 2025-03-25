@@ -9,6 +9,7 @@ import { getDbConnection } from '../db/client';
 import { z } from 'zod';
 import { ReadableStreamController } from 'stream/web';
 import { StreamService } from './Stream.service';
+import { generateTlShapeId } from '../lib/id';
 
 export type BrainStormResult = {
   text: string;
@@ -178,6 +179,24 @@ export const brainstormStreamSchema = z
   })
   .partial();
 
+export const brainstormStreamResultSchema = z.object({
+  explanation: z.string(),
+  nodes: z.array(
+    z.object({
+      id: z.string(),
+      type: z.string(),
+      text: z.string(),
+      parentId: z.string().or(z.literal('none')).nullable(),
+      predictions: z.array(
+        z.object({
+          text: z.string(),
+          type: z.enum(['text', 'image', 'web']),
+        })
+      ),
+    })
+  ),
+});
+
 export const BrainstormService = {
   generateBrainstorm: async (params: {
     prompt: string;
@@ -323,20 +342,11 @@ Your goal is to create a cohesive knowledge structure where each node functions 
       sender: 'user' | 'system';
     }[];
     tree: TreeNode[];
-    streamController: ReadableStreamController<any>;
+    streamService: StreamService;
     ctx: Context<AppContext>;
-  }) => {
-    const { prompt, chatHistory, streamController, tree, ctx } = params;
+  }): Promise<z.infer<typeof brainstormStreamResultSchema>> => {
+    const { prompt, chatHistory, streamService, tree, ctx } = params;
     const encoder = new TextEncoder();
-
-    // Track accumulated nodes to avoid duplicating
-    let accumulatedNodes: {
-      id: string;
-      type: string;
-      text: string;
-      parentId?: string;
-      predictions?: string[];
-    }[] = [];
 
     const formattedShapes = await extractShapesWithText({ tree, ctx });
 
@@ -370,10 +380,8 @@ Your goal is to create a cohesive knowledge structure where each node functions 
 
     const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
 
-    const streamService = new StreamService(streamController);
-
     // Send processing status
-    streamController.enqueue(
+    streamService.streamController.enqueue(
       encoder.encode(
         'event: processing\ndata: {"status":"Generating ideas..."}\n\n'
       )
@@ -432,54 +440,29 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
     });
 
     // Send complete message with the final result
-    if (response.choices[0].message.content) {
-      try {
-        const finalContent = JSON.parse(response.choices[0].message.content);
-        const validatedResult = brainstormResultSchema.parse(finalContent);
+    if (response.choices.length > 0 && response.choices[0].message.content) {
+      const finalContent = JSON.parse(response.choices[0].message.content);
+      const rawStreamResult = brainstormStreamSchema.parse(finalContent);
 
-        // Generate final IDs for any nodes that weren't streamed yet
-        const finalNodes = validatedResult.nodes.map((node, index) => {
-          // If we already have this node in accumulated nodes, use that ID
-          if (index < accumulatedNodes.length) {
-            return accumulatedNodes[index];
-          }
-
-          // Otherwise generate a new ID
-          const nodeId = `shape:${crypto.randomUUID()}` as TLShapeId;
+      const formattedStreamResult = {
+        explanation: rawStreamResult.explanation ?? '',
+        nodes: (rawStreamResult.nodes ?? []).map((node, index) => {
+          const prevNodeInfo = streamService.getPrevNodeInfo(index);
+          const nodeId = prevNodeInfo?.id ?? generateTlShapeId();
           return {
             id: nodeId,
-            type: node.type,
-            text: node.text,
-            parentId: node.parentId as TLShapeId | undefined,
-            predictions: [],
+            type: node.type ?? 'text',
+            text: node.text ?? '',
+            parentId: node.parentId ?? null,
+            predictions: node.predictions ?? [],
           };
-        });
+        }),
+      };
 
-        // // Send the complete message
-        // streamController.enqueue(
-        //   encoder.encode(
-        //     `event: complete\ndata: ${JSON.stringify({
-        //       message: validatedResult.explanation,
-        //       nodes: finalNodes,
-        //     })}\n\n`
-        //   )
-        // );
-      } catch (error) {
-        console.error(
-          'Error parsing final content:',
-          response.choices[0].message.content
-        );
-        streamController.enqueue(
-          encoder.encode(
-            `event: error\ndata: ${JSON.stringify({
-              error: 'Failed to parse final content',
-            })}\n\n`
-          )
-        );
-      }
+      return formattedStreamResult;
+    } else {
+      throw new Error('No final response from LLM');
     }
-
-    return response;
   },
 
   handleStreamContent: async (params: {

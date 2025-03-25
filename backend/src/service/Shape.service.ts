@@ -3,6 +3,7 @@ import {
   IndexKey,
   TLArrowBinding,
   TLArrowShape,
+  TLBaseBoxShape,
   TLBindingId,
   TLDocument,
   TLGeoShape,
@@ -12,8 +13,10 @@ import {
 } from 'tldraw';
 import { LinkShape } from '../shapes/Link.shape';
 import { RichTextShape } from '../shapes/RichText.shape';
-import { BrainStormResult } from './Brainstorm.service';
+import { BrainStormResult, brainstormStreamSchema } from './Brainstorm.service';
 import { PredictionShape } from '../shapes/Prediction.shape';
+import { z } from 'zod';
+import { generateTlBindingId, generateTlShapeId } from '../lib/id';
 
 export type TreeNode = {
   id: string;
@@ -285,11 +288,20 @@ export class ShapeService {
     }
   }
 
-  getTlShapesAndBindings(shapesToCreate: BrainStormResult[]): {
-    shapes: TLShape[];
+  public getTlShapesAndBindings(
+    shapesToCreate: z.infer<typeof brainstormStreamSchema>['nodes']
+  ): {
+    shapes: (LinkShape | RichTextShape | TLArrowShape)[];
     bindings: TLArrowBinding[];
   } {
-    const shapes: TLShape[] = [];
+    if (!shapesToCreate) {
+      return {
+        shapes: [],
+        bindings: [],
+      };
+    }
+
+    const shapes: (LinkShape | RichTextShape | TLArrowShape)[] = [];
     const bindings: TLArrowBinding[] = [];
 
     for (const shapeToCreate of shapesToCreate) {
@@ -300,7 +312,7 @@ export class ShapeService {
       const HEIGHT_PER_LINE = 75;
 
       // Scale width based on text length
-      const textLength = shapeToCreate.text.length;
+      const textLength = shapeToCreate.text?.length ?? 0;
       const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
       const width = Math.ceil(MIN_WIDTH * widthScale);
 
@@ -309,267 +321,93 @@ export class ShapeService {
       const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
       const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
-      const newShapeId = this.generateShapeId();
-      const newShape: TLShape = {
-        id: newShapeId,
-        x: 0,
-        y: 0,
-        rotation: 0,
+      const newShapeId = generateTlShapeId();
+
+      // Determine if this should be a link shape or rich text shape
+      const isLink =
+        shapeToCreate.text?.startsWith('http://') ||
+        shapeToCreate.text?.startsWith('https://');
+
+      // Create base shape properties
+      const baseProps = {
+        w: width,
+        h: height,
         isLocked: false,
-        opacity: 1,
-        meta: {},
-        type: 'rich-text',
-        props: {
-          w: width,
-          h: height,
-          geo: 'rectangle',
-          color: 'black',
-          labelColor: 'black',
-          fill: 'none',
-          dash: 'dashed',
-          size: 'm',
-          font: 'dashed',
-          text: shapeToCreate.text,
-          align: 'middle',
-          verticalAlign: 'middle',
-          growY: 0,
-          url: '',
-          scale: 1,
-        },
-        parentId: this.page.id,
-        index: 'a2' as IndexKey,
-        typeName: 'shape',
+        isExpanded: false,
+        minCollapsedHeight: height,
+        prevCollapsedHeight: height,
+        predictions:
+          shapeToCreate.predictions?.map((pred) => ({
+            text: pred.text,
+            type: pred.type,
+          })) ?? [],
       };
+
+      const newShape: LinkShape | RichTextShape = isLink
+        ? {
+            id: newShapeId,
+            type: 'link',
+            props: {
+              ...baseProps,
+              url: shapeToCreate.text ?? '',
+              title: '',
+              description: '',
+              isLoading: true,
+              status: 'scraping',
+              error: null,
+              previewImageUrl: null,
+              isDefault: false,
+            },
+            x: 0,
+            y: 0,
+            rotation: 0,
+            isLocked: false,
+            opacity: 1,
+            meta: {},
+            parentId: this.page.id,
+            index: 'a2' as IndexKey,
+            typeName: 'shape',
+          }
+        : {
+            id: newShapeId,
+            type: 'rich-text',
+            props: {
+              ...baseProps,
+              text: shapeToCreate.text ?? '',
+            },
+            x: 0,
+            y: 0,
+            rotation: 0,
+            isLocked: false,
+            opacity: 1,
+            meta: {},
+            parentId: this.page.id,
+            index: 'a2' as IndexKey,
+            typeName: 'shape',
+          };
 
       shapes.push(newShape);
 
-      // Only create arrow if there's a parent and it's a geo, link, or rich-text shape
+      // Handle parent relationship with arrow and bindings
       if (shapeToCreate.parentId) {
         const parentShape = this.shapes.find(
           (s) =>
             s.id === shapeToCreate.parentId &&
             (s.type === 'geo' || s.type === 'link' || s.type === 'rich-text')
-        ) as (TLGeoShape | LinkShape | RichTextShape) | undefined;
+        ) as (LinkShape | RichTextShape) | undefined;
 
         if (parentShape) {
-          // Calculate center points of parent and child shapes
-          const parentCenterX = parentShape.x + (parentShape.props.w ?? 0) / 2;
-          const parentCenterY = parentShape.y + (parentShape.props.h ?? 0) / 2;
-          const childCenterX = 0 + width / 2;
-          const childCenterY = 0 + height / 2;
-
-          // Calculate midpoint for arrow placement
-          const arrowX = (parentCenterX + childCenterX) / 2;
-          const arrowY = (parentCenterY + childCenterY) / 2;
-
-          const arrowId = this.generateShapeId('arr');
-
-          // // Calculate bend based on Y-position difference
-          // const yDifference = childCenterY - parentCenterY;
-          // const xDifference = childCenterX - parentCenterX;
-
-          // // Calculate bend value - more bend for larger Y differences
-          // // The sign determines the direction of the bend
-          // let bendValue = 0;
-
-          // // Only apply bend if there's a significant Y difference
-          // if (Math.abs(yDifference) > 50) {
-          //   // Calculate bend based on the ratio of Y difference to X difference
-          //   // This creates more natural-looking arrows
-          //   const ratio = Math.abs(yDifference / (xDifference || 1));
-
-          //   // Scale the bend based on the ratio, with a maximum value
-          //   bendValue = Math.min(Math.max(ratio * 20, 0), 80);
-
-          //   // Make the bend negative if the child is below the parent
-          //   // This creates a more natural flow direction
-          //   if (yDifference > 0) {
-          //     bendValue *= -1;
-          //   }
-          // }
-
-          const arrow: TLArrowShape = {
-            id: arrowId,
-            type: 'arrow',
-            props: {
-              dash: 'draw',
-              size: 'm',
-              fill: 'none',
-              color: 'black',
-              labelColor: 'black',
-              bend: 0,
-              start: { x: parentCenterX - arrowX, y: parentCenterY - arrowY },
-              end: { x: childCenterX - arrowX, y: childCenterY - arrowY },
-              arrowheadStart: 'none',
-              arrowheadEnd: 'arrow',
-              text: '',
-              labelPosition: 0.5,
-              font: 'draw',
-              scale: 1,
-            },
-            parentId: this.page.id,
-            index: 'a1' as IndexKey,
-            typeName: 'shape',
-            x: arrowX,
-            y: arrowY,
-            rotation: 0,
-            isLocked: false,
-            opacity: 1,
-            meta: {},
-          };
-
-          // add the two bindings
-          const binding1: TLArrowBinding = {
-            id: this.generateBindingId(),
-            typeName: 'binding',
-            type: 'arrow',
-            fromId: arrow.id,
-            toId: parentShape.id,
-            props: {
-              isPrecise: false,
-              isExact: false,
-              normalizedAnchor: { x: 0.5, y: 0.5 },
-              terminal: 'start',
-            },
-            meta: {},
-          };
-
-          const binding2: TLArrowBinding = {
-            id: this.generateBindingId(),
-            type: 'arrow',
-            fromId: arrow.id,
-            toId: newShapeId,
-            props: {
-              isPrecise: false,
-              isExact: false,
-              normalizedAnchor: { x: 0.5, y: 0.5 },
-              terminal: 'end',
-            },
-            meta: {},
-            typeName: 'binding',
-          };
+          const arrowId = generateTlShapeId('arr');
+          const arrow = this.createArrowShape(arrowId, parentShape, newShape);
+          const [binding1, binding2] = this.createArrowBindings(
+            arrowId,
+            parentShape.id,
+            newShapeId
+          );
 
           shapes.push(arrow);
           bindings.push(binding1, binding2);
         }
-      }
-
-      // if there is predictions, add prediciton shape + arrow + bindings
-      for (const prediction of shapeToCreate.predictions ?? []) {
-        const predictionShapeId = this.generateShapeId('pr_t');
-        const predictionArrowId = this.generateShapeId('pr_a');
-
-        // Calculate width and height based on prediction text length
-        const PREDICTION_MIN_HEIGHT = 200;
-        const PREDICTION_MIN_WIDTH = 350;
-        const PREDICTION_CHARS_PER_LINE = 35;
-        const PREDICTION_HEIGHT_PER_LINE = 60;
-
-        // Scale width based on text length - prioritize width over height
-        const predictionTextLength = prediction.length;
-        const predictionWidthScale = Math.min(
-          2.2,
-          1 + predictionTextLength / 350
-        ); // Cap at 2.2x original width
-        const predictionWidth = Math.ceil(
-          PREDICTION_MIN_WIDTH * predictionWidthScale
-        );
-
-        // Calculate height based on text length and adjusted width
-        const predictionCharsPerWidthAdjustedLine =
-          PREDICTION_CHARS_PER_LINE * (predictionWidth / PREDICTION_MIN_WIDTH);
-        const predictionNumLines = Math.ceil(
-          predictionTextLength / predictionCharsPerWidthAdjustedLine
-        );
-        const predictionHeight = Math.max(
-          predictionNumLines * PREDICTION_HEIGHT_PER_LINE,
-          PREDICTION_MIN_HEIGHT
-        );
-
-        const predictionShape: PredictionShape = {
-          id: predictionShapeId,
-          type: 'prediction',
-          x: 0 + Math.random() * 100,
-          y: 0 + Math.random() * 100,
-          rotation: 0,
-          isLocked: false,
-          opacity: 1,
-          meta: {},
-          props: {
-            w: predictionWidth,
-            h: predictionHeight,
-            text: prediction,
-            parentId: newShapeId,
-            arrowId: predictionArrowId,
-          },
-          parentId: this.page.id,
-          index: 'a2' as IndexKey,
-          typeName: 'shape',
-        };
-
-        const predictionArrow: TLArrowShape = {
-          id: predictionArrowId,
-          type: 'arrow',
-          props: {
-            bend: 0,
-            text: '',
-            labelPosition: 0.5,
-            dash: 'draw',
-            size: 'm',
-            fill: 'none',
-            color: 'blue',
-            labelColor: 'blue',
-            arrowheadStart: 'none',
-            arrowheadEnd: 'arrow',
-            font: 'draw',
-            scale: 1,
-            start: { x: 0, y: 0 },
-            end: { x: 0, y: 0 },
-          },
-          parentId: this.page.id,
-          index: 'a1' as IndexKey,
-          x: 0,
-          y: 0,
-          rotation: 0,
-          isLocked: false,
-          opacity: 1,
-          meta: {},
-          typeName: 'shape',
-        };
-
-        const predictionBindings: [TLArrowBinding, TLArrowBinding] = [
-          {
-            id: this.generateBindingId(),
-            type: 'arrow',
-            fromId: predictionArrowId,
-            toId: newShapeId,
-            props: {
-              isPrecise: false,
-              isExact: false,
-              normalizedAnchor: { x: 0.5, y: 0.5 },
-              terminal: 'start',
-            },
-            meta: {},
-            typeName: 'binding',
-          },
-          {
-            id: this.generateBindingId(),
-            type: 'arrow',
-            fromId: predictionArrowId,
-            toId: predictionShapeId,
-            props: {
-              isPrecise: false,
-              isExact: false,
-              normalizedAnchor: { x: 0.5, y: 0.5 },
-              terminal: 'end',
-            },
-            meta: {},
-            typeName: 'binding',
-          },
-        ];
-
-        shapes.push(predictionShape, predictionArrow);
-        bindings.push(...predictionBindings);
       }
     }
 
@@ -674,7 +512,7 @@ export class ShapeService {
       const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
       const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
-      const newShapeId = this.generateShapeId('rt');
+      const newShapeId = generateTlShapeId('rt');
       const newShape: TLShape = {
         id: newShapeId,
         x,
@@ -725,7 +563,7 @@ export class ShapeService {
           const arrowX = (parentCenterX + childCenterX) / 2;
           const arrowY = (parentCenterY + childCenterY) / 2;
 
-          const arrowId = this.generateShapeId('arr');
+          const arrowId = generateTlShapeId('arr');
 
           // // Calculate bend based on Y-position difference
           // const yDifference = childCenterY - parentCenterY;
@@ -783,7 +621,7 @@ export class ShapeService {
 
           // add the two bindings
           const binding1: TLArrowBinding = {
-            id: this.generateBindingId(),
+            id: generateTlBindingId(),
             typeName: 'binding',
             type: 'arrow',
             fromId: arrow.id,
@@ -798,7 +636,7 @@ export class ShapeService {
           };
 
           const binding2: TLArrowBinding = {
-            id: this.generateBindingId(),
+            id: generateTlBindingId(),
             type: 'arrow',
             fromId: arrow.id,
             toId: newShapeId,
@@ -1153,14 +991,6 @@ export class ShapeService {
     return minDistance;
   }
 
-  private generateShapeId(prefix?: string): TLShapeId {
-    return ('shape:' + prefix + ':' + crypto.randomUUID()) as TLShapeId;
-  }
-
-  private generateBindingId(): TLBindingId {
-    return ('binding:' + crypto.randomUUID()) as TLBindingId;
-  }
-
   // make the grid extremely readable
   private prettyPrintGrid(gridInfo: {
     grid: boolean[][];
@@ -1175,5 +1005,85 @@ export class ShapeService {
       }
       console.log(toPrint);
     }
+  }
+
+  private createArrowShape(
+    arrowId: TLShapeId,
+    parentShape: TLBaseBoxShape,
+    childShape: TLBaseBoxShape
+  ): TLArrowShape {
+    const parentCenterX = parentShape.x + (parentShape.props.w ?? 0) / 2;
+    const parentCenterY = parentShape.y + (parentShape.props.h ?? 0) / 2;
+    const childCenterX = childShape.x + (childShape.props.w ?? 0) / 2;
+    const childCenterY = childShape.y + (childShape.props.h ?? 0) / 2;
+    const arrowX = (parentCenterX + childCenterX) / 2;
+    const arrowY = (parentCenterY + childCenterY) / 2;
+
+    return {
+      id: arrowId,
+      type: 'arrow',
+      props: {
+        dash: 'draw',
+        size: 'm',
+        fill: 'none',
+        color: 'black',
+        labelColor: 'black',
+        bend: 0,
+        start: { x: parentCenterX - arrowX, y: parentCenterY - arrowY },
+        end: { x: childCenterX - arrowX, y: childCenterY - arrowY },
+        arrowheadStart: 'none',
+        arrowheadEnd: 'arrow',
+        text: '',
+        labelPosition: 0.5,
+        font: 'draw',
+        scale: 1,
+      },
+      parentId: this.page.id,
+      index: 'a1' as IndexKey,
+      typeName: 'shape',
+      x: arrowX,
+      y: arrowY,
+      rotation: 0,
+      isLocked: false,
+      opacity: 1,
+      meta: {},
+    };
+  }
+
+  private createArrowBindings(
+    arrowId: TLShapeId,
+    fromId: TLShapeId,
+    toId: TLShapeId
+  ): [TLArrowBinding, TLArrowBinding] {
+    return [
+      {
+        id: generateTlBindingId(),
+        typeName: 'binding',
+        type: 'arrow',
+        fromId: arrowId,
+        toId: fromId,
+        props: {
+          isPrecise: false,
+          isExact: false,
+          normalizedAnchor: { x: 0.5, y: 0.5 },
+          terminal: 'start',
+        },
+        meta: {},
+      },
+      {
+        id: generateTlBindingId(),
+        type: 'arrow',
+        fromId: arrowId,
+        toId: toId,
+        props: {
+          isPrecise: false,
+          isExact: false,
+          normalizedAnchor: { x: 0.5, y: 0.5 },
+          terminal: 'end',
+        },
+        meta: {},
+        typeName: 'binding',
+      },
+    ];
   }
 }

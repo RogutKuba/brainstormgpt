@@ -8,6 +8,7 @@ import {
 } from '../service/Brainstorm.service';
 import { ShapeService } from '../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
+import { StreamService } from '../service/Stream.service';
 
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
@@ -87,12 +88,27 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           const shapeService = new ShapeService(snapshot);
           const tree = shapeService.getSelectedTree(selectedItems);
 
+          // create stream service
+          const streamService = new StreamService(controller);
+
           // Use LLMService to stream the response
-          await BrainstormService.streamBrainstorm({
+          const finalResult = await BrainstormService.streamBrainstorm({
             prompt: message,
             chatHistory,
             tree,
-            streamController: controller,
+            streamService,
+            ctx,
+          });
+
+          // Handle final result by parsing into shapes and bindings and adding to workspace iff doesnt exist
+          const { shapes, bindings } = shapeService.getTlShapesAndBindings(
+            finalResult?.nodes ?? []
+          );
+
+          await streamService.handleCompletedNodeShapes({
+            shapes,
+            bindings,
+            workspaceId,
             ctx,
           });
 

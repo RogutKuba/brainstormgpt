@@ -159,7 +159,12 @@ export class TldrawDurableObject extends DurableObject<Environment> {
   async updateShapes(
     shapes: (Pick<TLShape, 'id'> & Partial<TLShape>)[],
     options?: {
+      additionalRecords?: TLRecord[];
       createIfMissing?: boolean;
+      keysToMerge?: {
+        shape: string[];
+        props: string[];
+      };
     }
   ) {
     const room = await this.getRoom();
@@ -167,20 +172,63 @@ export class TldrawDurableObject extends DurableObject<Environment> {
       shapes.forEach((shape) => {
         const existingShape = store.get(shape.id) as TLShape;
         if (existingShape) {
-          // merge the existing shape with the new shape
-          store.put({
-            ...existingShape,
-            ...shape,
-            props: {
-              ...existingShape.props,
-              ...(shape.props ?? {}),
-            },
-          });
+          // if keysToMerge is provided, only select the keys that are in the array in the shape
+          if (options?.keysToMerge) {
+            const shapeValuesToMerge = options.keysToMerge.shape.reduce(
+              (acc, key) => {
+                if (key in shape && key !== 'props') {
+                  // TODO: fix this
+                  // @ts-ignore
+                  acc[key] = shape[key];
+                }
+                return acc;
+              },
+              {} as Partial<Omit<TLShape, 'props'>>
+            );
+
+            const propValuesToMerge = options.keysToMerge.props.reduce(
+              (acc, key) => {
+                if (shape.props && key in shape.props) {
+                  // TODO: fix this
+                  // @ts-ignore
+                  acc[key] = shape.props[key];
+                }
+                return acc;
+              },
+              {}
+            );
+
+            // merge the existing shape with the new shape
+            store.put({
+              ...existingShape,
+              ...shapeValuesToMerge,
+              props: {
+                ...existingShape.props,
+                ...propValuesToMerge,
+              },
+            });
+          } else {
+            // otherwise merge the whole existing shape with the new shape
+            store.put({
+              ...existingShape,
+              ...shape,
+              props: {
+                ...existingShape.props,
+                ...(shape.props ?? {}),
+              },
+            });
+          }
         } else if (options?.createIfMissing && shape.type) {
           // TODO: add actual validation to ensure the type has all the required fields
           store.put(shape as TLRecord);
         }
       });
+
+      if (options?.additionalRecords) {
+        options.additionalRecords.forEach((record) => {
+          store.put(record);
+        });
+      }
     });
   }
 
