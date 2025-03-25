@@ -218,7 +218,13 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       );
 
       // Handle sending the message (commented out in original code)
-      // await handleSendMessage({...});
+      await handleSendMessage({
+        message: prediction.text,
+        selectedItemIds: [shape.id],
+        predictionId: null,
+        predictionPosition: null,
+        editor: this.editor,
+      });
     };
 
     return (
@@ -362,6 +368,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       type: 'rich-text',
       props: {
         isLocked: true,
+        h: this.calculateExpandedHeight(shape),
       },
     };
   }
@@ -392,18 +399,6 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         props: {
           ...resized.props,
           minCollapsedHeight: resized.props.h,
-          prevCollapsedHeight: resized.props.h,
-        },
-      };
-    }
-
-    // Update prevCollapsedHeight when not expanded
-    if (!shape.props.isExpanded) {
-      return {
-        ...resized,
-        props: {
-          ...resized.props,
-          prevCollapsedHeight: resized.props.h,
         },
       };
     }
@@ -422,6 +417,24 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         props?: Partial<RichTextShapeProps> | undefined;
         type: 'rich-text';
       } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    // If the shape is expanded and was resized
+    if (current.props.isExpanded) {
+      // Calculate what the collapsed height should be based on the current expanded height
+      // We need to subtract the height needed for predictions
+      const tempShape = { ...current };
+      const predictionsHeight =
+        this.calculateExpandedHeight(tempShape) -
+        current.props.prevCollapsedHeight;
+
+      return {
+        id: current.id,
+        type: 'rich-text',
+        props: {
+          prevCollapsedHeight: current.props.h - predictionsHeight,
+        },
+      };
+    }
+
     // Update prevCollapsedHeight when not expanded
     if (!current.props.isExpanded) {
       return {
@@ -432,6 +445,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         },
       };
     }
+
     return;
   }
 
