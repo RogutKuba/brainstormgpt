@@ -39,7 +39,7 @@ import { LinkTool } from '@/components/shape/link/LinkTool';
 import { memo, useMemo, useRef, useState } from 'react';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
-import { RiShare2Line } from '@remixicon/react';
+import { RiShare2Line, RiLockLine, RiLockUnlockLine } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
 import { Collection } from '@/components/collection/base/CollectionProvider';
@@ -158,6 +158,7 @@ const customUiOverrides: TLUiOverrides = {
 };
 
 function CustomToolbar() {
+  const editor = useEditor();
   const tools = useTools();
   // const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
   const isLinkSelected = useIsToolSelected(tools['link']);
@@ -183,10 +184,10 @@ function CustomToolbar() {
       />
       <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
       <ArrowToolbarItem />
-      <Tooltip content='Lock selected shapes' asChild>
+      <Tooltip content='Lock selected shapes' triggerAsChild>
         <TldrawUiMenuItem {...tools['lock']} isSelected={false} />
       </Tooltip>
-      <Tooltip content='Unlock selected shapes' asChild>
+      <Tooltip content='Unlock selected shapes' triggerAsChild>
         <TldrawUiMenuItem {...tools['unlock']} isSelected={false} />
       </Tooltip>
     </DefaultToolbar>
