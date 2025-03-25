@@ -10,7 +10,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useCreateWorkspace } from '@/query/workspace.query';
@@ -35,7 +34,6 @@ interface CreateWorkspaceDialogProps {
 
 const workspaceFormSchema = z.object({
   name: z.string().min(3).max(50),
-  goalPrompt: z.string(),
 });
 
 type FormValues = z.infer<typeof workspaceFormSchema>;
@@ -51,7 +49,6 @@ export function CreateWorkspaceDialog({
     resolver: zodResolver(workspaceFormSchema),
     defaultValues: {
       name: '',
-      goalPrompt: '',
     },
   });
 
@@ -61,7 +58,6 @@ export function CreateWorkspaceDialog({
     try {
       const workspace = await createWorkspace({
         name: values.name,
-        goalPrompt: values.goalPrompt,
       });
 
       router.push(`/app/workspace/${workspace.id}`);
@@ -93,25 +89,6 @@ export function CreateWorkspaceDialog({
                     <FormLabel>Workspace Name</FormLabel>
                     <FormControl>
                       <Input placeholder='My Workspace' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='goalPrompt'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Goal Prompt (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder='e.g., I want to generate unique B2B vertical SaaS ideas'
-                        className='w-full'
-                        rows={4}
-                        {...field}
-                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

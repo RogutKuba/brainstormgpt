@@ -23,9 +23,6 @@ const createWorkspaceRoute = createRoute({
             name: z.string().min(3).max(100).openapi({
               description: 'Name of the workspace',
             }),
-            goalPrompt: z.string().optional().openapi({
-              description: 'Goal prompt for the workspace',
-            }),
           }),
         },
       },
@@ -87,7 +84,7 @@ const getAllWorkspacesRoute = createRoute({
 
 export const workspaceRouter = new OpenAPIHono<AppContext>()
   .openapi(createWorkspaceRoute, async (ctx) => {
-    const { name, goalPrompt } = await ctx.req.json();
+    const { name } = await ctx.req.json();
     const db = getDbConnection(ctx);
 
     // Check if user is authenticated
@@ -99,7 +96,7 @@ export const workspaceRouter = new OpenAPIHono<AppContext>()
       createdAt: new Date().toISOString(),
       ownerId: user.id,
       name,
-      goalPrompt,
+      goalPrompt: null,
     };
 
     await db.insert(workspaceTable).values(newWorkspace);

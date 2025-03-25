@@ -15,6 +15,7 @@ type LinkShapeProps = {
   minCollapsedHeight: number;
   prevCollapsedHeight: number;
   predictions: { text: string; type: 'text' | 'image' | 'web' }[];
+  isDefault: boolean;
 };
 
 export type LinkShape = TLBaseShape<'link', LinkShapeProps>;

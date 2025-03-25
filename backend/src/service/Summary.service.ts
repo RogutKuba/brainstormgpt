@@ -1,7 +1,7 @@
 import { AppContext } from '..';
-import { getDbConnectionFromEnv } from '../db/client';
+import { getDbConnectionFromEnv, takeFirst } from '../db/client';
 import { crawledPageTable } from '../db/crawledPage.db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { takeUnique } from '../db/client';
 import { PageSummaryEntity, pageSummaryTable } from '../db/pageSummary.db';
 import { generateId } from '../lib/id';
@@ -56,7 +56,8 @@ export const SummaryService = {
           eq(crawledPageTable.status, 'success')
         )
       )
-      .then(takeUnique);
+      .orderBy(desc(crawledPageTable.createdAt))
+      .then(takeFirst);
 
     if (!crawledPage) {
       throw new Error(
@@ -152,7 +153,8 @@ export const SummaryService = {
       .select()
       .from(pageSummaryTable)
       .where(eq(pageSummaryTable.url, crawledPageUrl))
-      .then(takeUnique);
+      .orderBy(desc(pageSummaryTable.createdAt))
+      .then(takeFirst);
 
     if (!pageSummary) {
       throw new Error(`Page summary for url: ${crawledPageUrl} not found`);

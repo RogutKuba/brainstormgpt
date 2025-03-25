@@ -35,7 +35,7 @@ export const useCreateWorkspace = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (params: { name: string; goalPrompt: string }) => {
+    mutationFn: async (params: { name: string }) => {
       const response = await clientFetch('/workspace', {
         method: 'POST',
         body: JSON.stringify(params),

@@ -44,6 +44,7 @@ export const calculateExpandedHeight = <
   // Base padding constants with defaults that can be overridden
   const Y_PADDING = options?.yPadding ?? 24; // Padding for borders and margins
   const BASE_ROW_HEIGHT = options?.baseRowHeight ?? 32; // Base height for a single line
+  const ROW_PADDING = 4; // Padding between prediction items
   const FONT_SIZE = options?.fontSize ?? 12; // Font size in pixels
   const PREDICTION_PADDING = options?.predictionPadding ?? 8; // Padding between prediction items
   const PREDICTION_HEADER_HEIGHT = options?.headerHeight ?? 24; // Height for the predictions section header
@@ -59,7 +60,8 @@ export const calculateExpandedHeight = <
     for (const prediction of predictions) {
       const textLength = prediction.text.length;
       const estimatedLines = Math.max(1, Math.ceil(textLength / charsPerLine));
-      const itemHeight = BASE_ROW_HEIGHT * estimatedLines;
+      const itemHeight =
+        BASE_ROW_HEIGHT * estimatedLines + ROW_PADDING * (estimatedLines - 1);
       predictionsHeight += itemHeight;
     }
 

@@ -34,6 +34,7 @@ import {
   ANIMATION_DURATION,
   calculateExpandedHeight,
   handleResizeEnd,
+  handleTranslateStart,
 } from '@/components/shape/BaseContentShape';
 import { useChat } from '@/components/chat/ChatContext';
 
@@ -507,16 +508,24 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     }
   }
 
-  onTranslateStart(shape: LinkShape) {
-    // If the shape is not locked, we don't need to do anything
-    if (!shape.props.isLocked) return;
-
-    // If the shape is locked, we want to lock it during translation
-    return {
-      id: shape.id,
-      type: 'link',
-      props: { isLocked: true },
-    } as LinkShape;
+  onTranslateStart(shape: LinkShape):
+    | void
+    | ({
+        id: TLShapeId;
+        meta?: Partial<JsonObject> | undefined;
+        props?: Partial<LinkShape> | undefined;
+        type: 'link';
+      } & Partial<Omit<LinkShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    // Use the standalone function instead of the hook
+    const result = handleTranslateStart(shape);
+    if (result) {
+      return {
+        id: shape.id,
+        type: 'link',
+        props: result.props,
+      };
+    }
+    return;
   }
 
   override onResize(shape: LinkShape, info: TLResizeInfo<LinkShape>) {

@@ -163,6 +163,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
             status: 'success',
             isLoading: false,
             predictions,
+            isDefault: false,
           },
         };
 
@@ -185,6 +186,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
             ...shape.props,
             status: 'error',
             isLoading: false,
+            isDefault: false,
             predictions: [], // Empty predictions on error
           },
         };
