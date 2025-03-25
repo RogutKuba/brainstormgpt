@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { useSendMessage } from '@/query/workspace.query';
 import { useStreamMessage } from '@/query/stream.query';
 import { Editor } from 'tldraw';
 
@@ -23,6 +22,7 @@ interface ChatContextValue {
   handleSendMessage: (params: {
     message: string;
     selectedItemIds: string[];
+    workspaceId: string;
     editor: Editor;
   }) => Promise<void>;
   clearMessages: () => void;
@@ -46,6 +46,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleSendMessage = async (params: {
     message: string;
     selectedItemIds: string[];
+    workspaceId: string;
     editor: Editor;
   }) => {
     // Check if input has more than 2 characters
@@ -86,6 +87,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           message: userMessage.content,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
+          workspaceId: params.workspaceId,
           onChunk: (chunk) => {
             // Update the AI message with each new chunk
             setMessages((prev) => {

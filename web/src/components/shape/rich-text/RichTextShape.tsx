@@ -22,6 +22,7 @@ import {
   handleTranslateStart,
 } from '@/components/shape/BaseContentShape';
 import { cx } from '@/components/ui/lib/utils';
+import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 
 // Define the properties specific to our RichTextShape
 export type RichTextShapeProps = ContentShapeProps & {
@@ -83,6 +84,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   component(shape: RichTextShape) {
     const { text, isLocked, predictions, isExpanded } = shape.props;
     const { handleSendMessage } = useChat();
+    const workspaceId = useCurrentWorkspaceId();
 
     // Get the content shape utilities
     const {
@@ -126,8 +128,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         handleSendMessage,
         {
           selectedItemIds: [shape.id],
-          predictionId: null,
-          predictionPosition: null,
+          workspaceId,
           editor: this.editor,
         }
       );

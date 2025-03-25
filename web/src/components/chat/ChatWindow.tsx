@@ -186,6 +186,7 @@ export const ChatWindow: React.FC = () => {
       await handleSendMessage({
         message,
         selectedItemIds: selectedItems.map((item) => item.id),
+        workspaceId,
         editor,
       });
     }

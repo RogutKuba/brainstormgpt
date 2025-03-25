@@ -13,7 +13,6 @@ import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { calculateNodeSize } from '@/components/chat/utils';
-import { PredictionShape } from '@/components/shape/prediction/PredictionShape';
 import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 
 export type StreamedNode = {
@@ -25,8 +24,6 @@ export type StreamedNode = {
 };
 
 export const useStreamMessage = () => {
-  const workspaceId = useCurrentWorkspaceId();
-
   const [streamingState, setStreamingState] = useState<{
     isStreaming: boolean;
     chunks: string;
@@ -46,6 +43,7 @@ export const useStreamMessage = () => {
       message: string;
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
+      workspaceId: string;
       editor: Editor;
       onChunk?: (chunk: string) => void;
       onStatus?: (status: string) => void;
@@ -63,7 +61,7 @@ export const useStreamMessage = () => {
         });
 
         // Create the request URL
-        const url = `/workspace/${workspaceId}/stream`;
+        const url = `/workspace/${params.workspaceId}/stream`;
 
         // Prepare the request
         const response = await fetch(
@@ -173,10 +171,6 @@ export const useStreamMessage = () => {
 
                   case 'prediction-chunk':
                     handlePredictionChunk(data, params.editor);
-                    break;
-
-                  case 'delete-prediction':
-                    handleDeletePrediction(data, params.editor);
                     break;
 
                   case 'nodes': {
@@ -461,21 +455,4 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
   } catch (error) {
     console.error('Error parsing prediction chunk:', error, 'chunk: ', rawData);
   }
-};
-
-const handleDeletePrediction = (rawData: string, editor: Editor) => {
-  const { id } = deletePredictionMessageSchema.parse(JSON.parse(rawData));
-
-  const existingPrediction = editor.getShape(id as TLShapeId) as
-    | PredictionShape
-    | undefined;
-
-  if (!existingPrediction) return;
-
-  editor.deleteShapes([
-    existingPrediction.id,
-    ...(existingPrediction.props.arrowId
-      ? [existingPrediction.props.arrowId]
-      : []),
-  ]);
 };

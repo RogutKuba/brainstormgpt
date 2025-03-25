@@ -46,8 +46,6 @@ import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
 import { useRouter } from 'next/navigation';
 import { CollectionProvider } from '@/components/collection/base/CollectionProvider';
 import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
-import { PredictionTool } from '@/components/shape/prediction/PredictionTool';
-import { PredictionShapeUtil } from '@/components/shape/prediction/PredictionShape';
 import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3ForceGraphLayoutCollection';
 import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -88,15 +86,6 @@ const customUiOverrides: TLUiOverrides = {
         kbd: 'r',
         onSelect() {
           editor.setCurrentTool('rich-text');
-        },
-      },
-      prediction: {
-        id: PredictionTool.id,
-        label: 'Prediction',
-        icon: 'prediction',
-        kbd: 'p',
-        onSelect() {
-          editor.setCurrentTool('prediction');
         },
       },
       lock: {
@@ -232,8 +221,8 @@ const CustomMainMenu = () => {
   );
 };
 
-const customTools = [LinkTool, RichTextTool, PredictionTool];
-const customShapes = [LinkShapeUtil, RichTextShapeUtil, PredictionShapeUtil];
+const customTools = [LinkTool, RichTextTool];
+const customShapes = [LinkShapeUtil, RichTextShapeUtil];
 
 function AiBrainstormBox() {
   const editor = useEditor();
