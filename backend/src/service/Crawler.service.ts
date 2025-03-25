@@ -116,6 +116,8 @@ export class CrawlerService {
       };
       await this.db.insert(crawledPageTable).values(errorCrawledPage);
 
+      console.error(error);
+
       return null;
     }
   }

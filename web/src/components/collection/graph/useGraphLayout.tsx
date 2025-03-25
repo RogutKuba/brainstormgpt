@@ -5,51 +5,84 @@ import { GraphLayoutCollection } from './GraphLayoutCollection';
 import debounce from 'lodash/debounce';
 import './dev-ui.css';
 
+// debounce time should be really short to avoid waiting for any updates
+const DEBOUNCE_TIME = 50;
+
 export const GraphLayout = () => {
   const editor = useEditor();
   const { collection, size } = useCollection<GraphLayoutCollection>('graph');
   const handlersRegistered = useRef(false);
+  // Add refs to store debounced functions per shape
+  const shapeHandlers = useRef(
+    new Map<
+      string,
+      {
+        create: (shape: any) => void;
+        change: (prev: any, next: any) => void;
+        delete: (shape: any) => void;
+      }
+    >()
+  );
 
   useEffect(() => {
     if (collection && editor && !handlersRegistered.current) {
       collection.add(editor.getCurrentPageShapes());
 
-      // Debounced handler for shape creation
-      const debouncedShapeCreateHandler = debounce((shape) => {
-        collection.add([shape]);
-      }, 300);
+      // Handler factory that creates or retrieves debounced handlers for a shape
+      const getShapeHandlers = (shapeId: string) => {
+        if (!shapeHandlers.current.has(shapeId)) {
+          shapeHandlers.current.set(shapeId, {
+            create: debounce((shape) => {
+              console.log('debouncedShapeCreateHandler', shape.id);
+              collection.add([shape]);
+            }, DEBOUNCE_TIME),
+            change: (prev, next) => {
+              collection._onShapeChange(prev, next);
+            },
+            delete: debounce((shape) => {
+              collection.remove([shape]);
+              // Cleanup handlers when shape is deleted
+              shapeHandlers.current.delete(shapeId);
+            }, DEBOUNCE_TIME),
+          });
+        }
+        return shapeHandlers.current.get(shapeId)!;
+      };
 
-      // Debounced handler for shape updates
-      const debouncedShapeChangeHandler = debounce((prev, next) => {
-        collection._onShapeChange(prev, next);
-      }, 300);
+      // Modified handlers that use per-shape debounced functions
+      const shapeCreateHandler = (shape: any) => {
+        const handlers = getShapeHandlers(shape.id);
+        handlers.create(shape);
+      };
 
-      // Debounced handler for shape deletion
-      const debouncedShapeDeleteHandler = debounce((shape) => {
-        collection.remove([shape]);
-      }, 300);
+      const shapeChangeHandler = (prev: any, next: any) => {
+        const handlers = getShapeHandlers(next.id);
+        handlers.change(prev, next);
+      };
 
-      // register event handlers for shapes added to the page
+      const shapeDeleteHandler = (shape: any) => {
+        const handlers = getShapeHandlers(shape.id);
+        handlers.delete(shape);
+      };
+
+      // Register event handlers with the new per-shape debounced functions
       editor.store.sideEffects.registerAfterCreateHandler(
         'shape',
-        debouncedShapeCreateHandler
+        shapeCreateHandler
       );
 
-      // register event handler for updated shape
       editor.store.sideEffects.registerAfterChangeHandler(
         'shape',
-        debouncedShapeChangeHandler
+        shapeChangeHandler
       );
 
-      // register event handlers for shapes removed from the page
       editor.store.sideEffects.registerAfterDeleteHandler(
         'shape',
-        debouncedShapeDeleteHandler
+        shapeDeleteHandler
       );
 
       // Debounced handler for binding creation
       const debouncedBindingCreateHandler = debounce((binding) => {
-        console.log('binding created', binding);
         // get the shape associated
         const arrowBindings = editor.getBindingsInvolvingShape(binding.fromId);
 
@@ -60,7 +93,7 @@ export const GraphLayout = () => {
             collection.add([shape]);
           }
         }
-      }, 300);
+      }, DEBOUNCE_TIME);
 
       // Debounced handler for binding deletion
       const debouncedBindingDeleteHandler = debounce((binding) => {
@@ -68,7 +101,7 @@ export const GraphLayout = () => {
         if (arrowShape) {
           collection.remove([arrowShape]);
         }
-      }, 300);
+      }, DEBOUNCE_TIME);
 
       // register event handlers for bindings added to the page
       editor.store.sideEffects.registerAfterCreateHandler(

@@ -351,11 +351,8 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
             <Button
               variant='icon'
               onClick={(e) => {
-                console.log('save', inputRef.current?.value);
-
                 if (inputRef.current) {
                   // Trigger the update with the current input value
-                  console.log('inputRef.current.value', inputRef.current.value);
                   handleSave();
                 }
                 setEditing(false);
@@ -516,6 +513,13 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         props?: Partial<LinkShape> | undefined;
         type: 'link';
       } & Partial<Omit<LinkShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    if (shape.props.isDefault) {
+      return {
+        id: shape.id,
+        type: 'link',
+      };
+    }
+
     // Use the standalone function instead of the hook
     const result = handleTranslateStart(shape);
     if (result) {
