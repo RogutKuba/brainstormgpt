@@ -2,24 +2,14 @@ import { useSync } from '@tldraw/sync';
 import {
   ArrowToolbarItem,
   Box,
-  CloudToolbarItem,
   DefaultMainMenu,
-  DefaultMainMenuContent,
-  DefaultMenuPanel,
-  DefaultQuickActions,
   DefaultToolbar,
-  DefaultToolbarContent,
   EditSubmenu,
-  EllipseToolbarItem,
   EraserToolbarItem,
   ExportFileContentSubMenu,
-  ExtrasGroup,
   HandToolbarItem,
-  OvalToolbarItem,
-  RectangleToolbarItem,
   SelectToolbarItem,
   TLComponents,
-  TLUiAssetUrlOverrides,
   TLUiOverrides,
   Tldraw,
   TldrawUiMenuGroup,
@@ -35,15 +25,7 @@ import {
   useValue,
   useTldrawUiComponents,
   PORTRAIT_BREAKPOINT,
-  TldrawUiButtonIcon,
   TldrawUiButton,
-  DefaultQuickActionsContent,
-  TldrawUiMenuActionItem,
-  useToasts,
-  TLBookmarkAsset,
-  getHashForString,
-  AssetRecordType,
-  TLAsset,
   TLUiTranslationKey,
   TLUiEventSource,
   Editor,
@@ -55,23 +37,21 @@ import { API_URL } from '@/lib/constants';
 import { LinkShapeUtil } from '@/components/shape/link/LinkShape';
 import { LinkTool } from '@/components/shape/link/LinkTool';
 import { memo, useMemo, useRef, useState } from 'react';
-import { SystemGoalDialog } from '@/components/SystemGoalDialog';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
-import { RiShare2Fill, RiShare2Line } from '@remixicon/react';
+import { RiShare2Line } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
 import { Collection } from '@/components/collection/base/CollectionProvider';
 import { RichTextShapeUtil } from '@/components/shape/rich-text/RichTextShape';
 import { useRouter } from 'next/navigation';
 import { CollectionProvider } from '@/components/collection/base/CollectionProvider';
-import { GraphLayoutCollection } from '@/components/collection/graph/GraphLayoutCollection';
 import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
 import { PredictionTool } from '@/components/shape/prediction/PredictionTool';
 import { PredictionShapeUtil } from '@/components/shape/prediction/PredictionShape';
-import { ConstraintGraphLayoutCollection } from '@/components/collection/graph/constraintGraphLayoutCollection';
 import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3ForceGraphLayoutCollection';
 import { toast } from 'sonner';
+import { Tooltip } from '@/components/ui/tooltip';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [D3ForceGraphLayoutCollection];
@@ -97,7 +77,7 @@ const customUiOverrides: TLUiOverrides = {
         id: LinkTool.id,
         label: 'Link',
         icon: 'link',
-        kbd: 'l',
+        kbd: 'w',
         onSelect() {
           editor.setCurrentTool('link');
         },
@@ -118,6 +98,46 @@ const customUiOverrides: TLUiOverrides = {
         kbd: 'p',
         onSelect() {
           editor.setCurrentTool('prediction');
+        },
+      },
+      lock: {
+        id: 'lock',
+        label: 'Lock',
+        icon: 'lock',
+        kbd: 'l',
+        onSelect() {
+          // set all shapes to locked
+          const selectedShapes = editor.getSelectedShapes();
+          editor.updateShapes(
+            selectedShapes
+              .filter((shape) => 'isLocked' in shape.props)
+              .map((shape) => ({
+                ...shape,
+                props: {
+                  isLocked: true,
+                },
+              }))
+          );
+        },
+      },
+      unlock: {
+        id: 'unlock',
+        label: 'Unlock',
+        icon: 'unlock',
+        kbd: 'u',
+        onSelect() {
+          // set all shapes to unlocked
+          const selectedShapes = editor.getSelectedShapes();
+          editor.updateShapes(
+            selectedShapes
+              .filter((shape) => 'isLocked' in shape.props)
+              .map((shape) => ({
+                ...shape,
+                props: {
+                  isLocked: false,
+                },
+              }))
+          );
         },
       },
     };
@@ -142,6 +162,8 @@ function CustomToolbar() {
   // const isAiBrainstormSelected = useIsToolSelected(tools['brainstorm']);
   const isLinkSelected = useIsToolSelected(tools['link']);
   const isRichTextSelected = useIsToolSelected(tools['rich-text']);
+  // const isLockSelected = useIsToolSelected(tools['lock']);
+  // const isUnlockSelected = useIsToolSelected(tools['unlock']);
   return (
     <DefaultToolbar>
       <SelectToolbarItem />
@@ -161,6 +183,12 @@ function CustomToolbar() {
       />
       <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
       <ArrowToolbarItem />
+      <Tooltip content='Lock selected shapes'>
+        <TldrawUiMenuItem {...tools['lock']} isSelected={false} />
+      </Tooltip>
+      <Tooltip content='Unlock selected shapes'>
+        <TldrawUiMenuItem {...tools['unlock']} isSelected={false} />
+      </Tooltip>
     </DefaultToolbar>
   );
 }
