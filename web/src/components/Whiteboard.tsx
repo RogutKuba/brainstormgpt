@@ -183,10 +183,10 @@ function CustomToolbar() {
       />
       <TldrawUiMenuItem {...tools['link']} isSelected={isLinkSelected} />
       <ArrowToolbarItem />
-      <Tooltip content='Lock selected shapes'>
+      <Tooltip content='Lock selected shapes' asChild>
         <TldrawUiMenuItem {...tools['lock']} isSelected={false} />
       </Tooltip>
-      <Tooltip content='Unlock selected shapes'>
+      <Tooltip content='Unlock selected shapes' asChild>
         <TldrawUiMenuItem {...tools['unlock']} isSelected={false} />
       </Tooltip>
     </DefaultToolbar>

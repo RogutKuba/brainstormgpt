@@ -638,14 +638,22 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
   }
 
   // Get the hierarchy level of a node (depth in the tree)
-  getHierarchyLevel(nodeId: TLShapeId): number {
+  getHierarchyLevel(nodeId: TLShapeId, visited = new Set<TLShapeId>()): number {
+    // Prevent cycles
+    if (visited.has(nodeId)) return 0;
+    visited.add(nodeId);
+
     let level = 0;
     let currentId = nodeId;
 
     // Traverse up the tree to count levels
-    while (this.nodeParents.has(currentId)) {
+    while (
+      this.nodeParents.has(currentId) &&
+      !visited.has(this.nodeParents.get(currentId)!)
+    ) {
       level++;
       currentId = this.nodeParents.get(currentId)!;
+      visited.add(currentId);
     }
 
     return level;
@@ -761,6 +769,9 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     const totalWidth = (childArray.length - 1) * this.siblingDistance;
     const startX = parentNode.x - totalWidth / 2;
 
+    // Create a set to track visited nodes to prevent cycles
+    const visited = new Set<TLShapeId>([nodeId]);
+
     childArray.forEach((childId, index) => {
       const childNode = this.forceNodes.get(childId);
       if (childNode) {
@@ -774,8 +785,11 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
           childNode.y = savedPos.y;
         }
 
-        // Recursively position this node's children
-        this.positionDescendants(childId, level + 1, positionSnapshot);
+        // Recursively position this node's children, but only if we haven't visited this node before
+        if (!visited.has(childId)) {
+          visited.add(childId);
+          this.positionDescendants(childId, level + 1, positionSnapshot);
+        }
       }
     });
   }
