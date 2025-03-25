@@ -11,7 +11,7 @@ import {
   TLResizeInfo,
   TLShapeId,
 } from 'tldraw';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   RiEditLine,
   RiExternalLinkLine,
@@ -20,11 +20,22 @@ import {
   RiSaveLine,
   RiLock2Line,
   RiLockUnlockLine,
+  RiGlobalLine,
+  RiImage2Line,
+  RiQuestionLine,
 } from '@remixicon/react';
 import { Input } from '@/components/ui/input';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCurrentWorkspaceId } from '@/lib/pathUtils';
+import {
+  useContentShape,
+  ANIMATION_DURATION,
+  calculateExpandedHeight,
+  handleResizeEnd,
+} from '@/components/shape/BaseContentShape';
+import { useChat } from '@/components/chat/ChatContext';
 
 // Define the properties specific to our LinkShape
 export type LinkShapeProps = {
@@ -43,6 +54,14 @@ export type LinkShapeProps = {
   error: string | null;
   previewImageUrl: string | null;
   isLocked: boolean;
+  isExpanded: boolean;
+  minCollapsedHeight: number;
+  prevCollapsedHeight: number;
+  predictions: Array<{
+    text: string;
+    type: 'text' | 'image' | 'web';
+  }>;
+  isDefault: boolean;
 };
 
 // Define the shape type by extending TLBaseShape with our props
@@ -67,6 +86,11 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       error: null,
       previewImageUrl: null,
       isLocked: true,
+      isExpanded: false,
+      minCollapsedHeight: 300,
+      prevCollapsedHeight: 300,
+      predictions: [],
+      isDefault: true,
     };
   }
 
@@ -78,6 +102,11 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     });
   }
 
+  // Calculate the height of the shape based on content and predictions
+  calculateShapeHeight = (shape: LinkShape): number => {
+    return calculateExpandedHeight(shape);
+  };
+
   component(shape: LinkShape) {
     const {
       url,
@@ -88,12 +117,62 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       error,
       previewImageUrl,
       isLocked,
+      predictions,
+      isExpanded,
+      isDefault,
     } = shape.props;
 
     const [editing, setEditing] = useState(false);
     const { updateLinkShape } = useUpdateLinkShape();
+    const { handleSendMessage } = useChat();
+    const workspaceId = useCurrentWorkspaceId();
     const inputRef = useRef<HTMLInputElement>(null);
     const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
+
+    // Get the content shape utilities
+    const {
+      stopEventPropagation,
+      toggleLock,
+      handleSelectionState,
+      handleExpansionAnimation,
+      handlePredictionClick,
+      renderPredictionsList,
+    } = useContentShape<LinkShape>();
+
+    // React to selection state
+    useEffect(() => {
+      handleSelectionState(shape, isSelected);
+    }, [isSelected, isExpanded, predictions.length]);
+
+    // Modify the expansion/collapse animation logic
+    useEffect(() => {
+      if (!isDefault) {
+        handleExpansionAnimation(
+          shape,
+          isExpanded,
+          predictions.length,
+          this.calculateShapeHeight
+        );
+      }
+    }, [isExpanded, predictions.length, isDefault]);
+
+    // Handle prediction click
+    const onPredictionClick = async (prediction: {
+      text: string;
+      type: 'text' | 'image' | 'web';
+    }) => {
+      await handlePredictionClick(
+        shape,
+        prediction,
+        this.calculateShapeHeight,
+        handleSendMessage,
+        {
+          selectedItemIds: [shape.id],
+          workspaceId,
+          editor: this.editor,
+        }
+      );
+    };
 
     const domain = (() => {
       try {
@@ -134,17 +213,6 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       }
     };
 
-    const stopEventPropagation = (e: any) => e.stopPropagation();
-
-    const toggleLock = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      this.editor.updateShape<LinkShape>({
-        id: shape.id,
-        type: 'link',
-        props: { isLocked: !isLocked },
-      });
-    };
-
     return (
       <HTMLContainer
         className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white border border-2 ${
@@ -162,7 +230,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
             className={`flex items-center justify-center ${
               !isSelected && !isLocked && 'hidden'
             } ${isSelected && 'cursor-pointer hover:bg-gray-100 rounded-full'}`}
-            onClick={toggleLock}
+            onClick={(e) => toggleLock(shape, e)}
             onPointerDown={(e) => e.stopPropagation()}
           >
             {isLocked ? (
@@ -180,7 +248,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         </div>
 
         {/* Title section at the top */}
-        <div className='flex items-center justify-center p-4 gap-4'>
+        <div className='flex items-center p-4 gap-4'>
           <img
             src={`https://www.google.com/s2/favicons?domain=${domain}`}
             alt={domain}
@@ -199,15 +267,18 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           <div className='text-2xl font-bold'>{title}</div>
         </div>
 
+        {/*   */}
+
         {/* Preview image or content area */}
         {previewImageUrl ? (
           <div
             style={{
               width: '100%',
-              flexGrow: 1,
-              overflow: 'hidden',
+              height: '200px',
               position: 'relative',
               backgroundColor: '#f0f0f0',
+              overflow: 'hidden',
+              flexShrink: 0,
             }}
           >
             <img
@@ -216,10 +287,23 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
+                objectPosition: 'center',
                 display: 'block',
               }}
               draggable={false}
+              onLoad={(e) => {
+                const img = e.target as HTMLImageElement;
+                const aspectRatio = img.naturalWidth / img.naturalHeight;
+                const containerWidth = img.width;
+                const idealHeight = containerWidth / aspectRatio;
+
+                const finalHeight = Math.min(Math.max(idealHeight, 150), 300);
+
+                (
+                  e.target as HTMLImageElement
+                ).parentElement!.style.height = `${finalHeight}px`;
+              }}
             />
           </div>
         ) : (
@@ -307,6 +391,13 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
             </a>
           </Button>
         </div>
+
+        {!isDefault
+          ? renderPredictionsList(predictions, isSelected, onPredictionClick, {
+              container: 'px-4 mt-0',
+              activeContainer: 'py-4 mt-2',
+            })
+          : null}
 
         {isLoading && (
           <div className='absolute inset-0 bg-white/70 flex flex-col items-center justify-center gap-3 backdrop-blur-sm transition-all duration-300'>
@@ -416,22 +507,90 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     }
   }
 
-  onTranslateStart(shape: LinkShape):
-    | void
-    | ({
-        id: TLShapeId;
-        meta?: Partial<JsonObject> | undefined;
-        props?: Partial<LinkShapeProps> | undefined;
-        type: 'link';
-      } & Partial<Omit<LinkShape, 'props' | 'type' | 'id' | 'meta'>>) {
+  onTranslateStart(shape: LinkShape) {
+    // If the shape is not locked, we don't need to do anything
+    if (!shape.props.isLocked) return;
+
+    // If the shape is locked, we want to lock it during translation
     return {
       id: shape.id,
       type: 'link',
       props: { isLocked: true },
-    };
+    } as LinkShape;
   }
 
   override onResize(shape: LinkShape, info: TLResizeInfo<LinkShape>) {
-    return resizeBox(shape, info);
+    const resized = resizeBox(shape, info);
+
+    // Update both minCollapsedHeight and prevCollapsedHeight if user resizes to a smaller height
+    if (resized.props.h < shape.props.minCollapsedHeight) {
+      const newHeight = resized.props.h;
+      return {
+        ...resized,
+        props: {
+          ...resized.props,
+          minCollapsedHeight: newHeight,
+          prevCollapsedHeight: newHeight,
+        },
+      };
+    }
+
+    // If shape is not expanded, update prevCollapsedHeight to match current height
+    if (!shape.props.isExpanded) {
+      return {
+        ...resized,
+        props: {
+          ...resized.props,
+          prevCollapsedHeight: resized.props.h,
+        },
+      };
+    }
+
+    return resized;
+  }
+
+  override onResizeEnd(
+    initial: LinkShape,
+    current: LinkShape
+  ):
+    | void
+    | ({
+        id: TLShapeId;
+        meta?: Partial<JsonObject>;
+        props?: Partial<LinkShapeProps>;
+        type: 'link';
+      } & Partial<Omit<LinkShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    // If the shape isn't expanded, we want to update the prevCollapsedHeight
+    if (!current.props.isExpanded) {
+      return {
+        id: current.id,
+        type: 'link',
+        props: {
+          prevCollapsedHeight: current.props.h,
+          minCollapsedHeight: Math.min(
+            current.props.minCollapsedHeight,
+            current.props.h
+          ),
+        },
+      };
+    }
+
+    // If the shape is expanded, use the base handler
+    const result = handleResizeEnd(current, this.calculateShapeHeight);
+    if (result) {
+      return {
+        id: current.id,
+        type: 'link',
+        props: {
+          ...result.props,
+          minCollapsedHeight: Math.min(
+            current.props.minCollapsedHeight,
+            current.props.h
+          ),
+        },
+      };
+    }
+
+    return;
   }
 }

@@ -11,6 +11,10 @@ type LinkShapeProps = {
   error: string | null;
   previewImageUrl: string | null;
   isLocked: boolean;
+  isExpanded: boolean;
+  minCollapsedHeight: number;
+  prevCollapsedHeight: number;
+  predictions: { text: string; type: 'text' | 'image' | 'web' }[];
 };
 
 export type LinkShape = TLBaseShape<'link', LinkShapeProps>;

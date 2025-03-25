@@ -289,14 +289,19 @@ export const useContentShape = <
     onPredictionClick: (prediction: {
       text: string;
       type: 'text' | 'image' | 'web';
-    }) => void
+    }) => void,
+    className?: {
+      container?: string;
+      activeContainer?: string;
+    }
   ) => {
     return (
       <div
         className={cx(
           'mt-4 border-t pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out',
+          className?.container ?? '',
           isSelected
-            ? 'max-h-[500px] opacity-100'
+            ? `max-h-[500px] opacity-100 ${className?.activeContainer}`
             : 'max-h-0 opacity-0 border-t-0 pt-0'
         )}
       >

@@ -130,14 +130,19 @@ export const SummaryService = {
   },
 
   branchPredictionsSchema: z.object({
-    predictions: z.array(z.string()),
+    predictions: z.array(
+      z.object({
+        text: z.string(),
+        type: z.enum(['text', 'image', 'web']),
+      })
+    ),
   }),
 
   // generate branch predictions for the page
   async generateBranchPredictions(params: {
     crawledPageUrl: string;
     env: AppContext['Bindings'];
-  }): Promise<string[]> {
+  }): Promise<z.infer<typeof this.branchPredictionsSchema>['predictions']> {
     const { crawledPageUrl, env } = params;
 
     const db = getDbConnectionFromEnv(env);

@@ -143,62 +143,30 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
         }
       );
 
-      // Add the predictions to the workspace
-      await step.do('add-predictions-to-workspace', async () => {
+      // Update the shape to include predictions instead of creating separate shapes
+      await step.do('update-shape-with-predictions', async () => {
         // Get the durable object for this workspace
         const workspaceDoId =
           this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
         const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
 
-        // Get the original shape to position predictions around it
+        // Get the original shape
         // @ts-ignore
         const shape = (await workspaceDo.getShape(shapeId)) as LinkShape;
         if (shape.type !== 'link') return;
 
-        if (shape && predictions.length > 0) {
-          const { shapes: predictionShapes, bindings: predictionBindings } =
-            getPredictionShapes(predictions, shape);
+        // Update the shape with predictions and success status
+        const updatedShape: LinkShape = {
+          ...shape,
+          props: {
+            ...shape.props,
+            status: 'success',
+            isLoading: false,
+            predictions,
+          },
+        };
 
-          console.log(
-            'adding-arrows',
-            JSON.stringify(
-              predictionShapes.filter((s) => s.type === 'arrow').slice(0, 1),
-              null,
-              2
-            )
-          );
-
-          // Add the prediction shapes to the workspace
-          await workspaceDo.addRecords([
-            ...predictionShapes,
-            ...predictionBindings,
-          ]);
-        }
-      });
-
-      // Update the shape to indicate processing is complete
-      await step.do('update-shape-status', async () => {
-        // Get the durable object for this workspace
-        const workspaceDoId =
-          this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
-        const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
-
-        // Find shapes that reference this URL
-        // @ts-ignore
-        const shape = (await workspaceDo.getShape(shapeId)) as any as LinkShape;
-
-        if (shape) {
-          const updatedShape: LinkShape = {
-            ...shape,
-            props: {
-              ...shape.props,
-              status: 'success',
-              isLoading: false,
-            },
-          };
-
-          await workspaceDo.updateShape(updatedShape);
-        }
+        await workspaceDo.updateShape(updatedShape);
       });
     } catch (error) {
       console.error('Error in ChunkWorkflow:', error);
@@ -217,6 +185,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
             ...shape.props,
             status: 'error',
             isLoading: false,
+            predictions: [], // Empty predictions on error
           },
         };
 

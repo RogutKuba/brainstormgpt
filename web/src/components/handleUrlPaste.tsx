@@ -26,6 +26,14 @@ export const handleCustomUrlPaste = (
       isLoading: true,
       w: 240,
       h: 160,
+      isLocked: true,
+      isExpanded: false,
+      predictions: [],
+      minCollapsedHeight: 160,
+      prevCollapsedHeight: 160,
+      status: 'scraping',
+      error: null,
+      previewImageUrl: null,
     },
   });
 
