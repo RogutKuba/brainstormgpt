@@ -17,7 +17,6 @@ import {
   ViewSubmenu,
   defaultShapeUtils,
   useBreakpoint,
-  useDialogs,
   useEditor,
   usePassThroughWheelEvents,
   useIsToolSelected,
@@ -39,7 +38,7 @@ import { LinkTool } from '@/components/shape/link/LinkTool';
 import { memo, useMemo, useRef, useState } from 'react';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
-import { RiShare2Line, RiLockLine, RiLockUnlockLine } from '@remixicon/react';
+import { RiShare2Line } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
 import { Collection } from '@/components/collection/base/CollectionProvider';
@@ -195,8 +194,6 @@ function CustomToolbar() {
 }
 
 const CustomMainMenu = () => {
-  const { addDialog } = useDialogs();
-
   const router = useRouter();
 
   return (

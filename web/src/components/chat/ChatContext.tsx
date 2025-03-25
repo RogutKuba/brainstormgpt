@@ -23,11 +23,6 @@ interface ChatContextValue {
   handleSendMessage: (params: {
     message: string;
     selectedItemIds: string[];
-    predictionId: string | null;
-    predictionPosition: {
-      x: number;
-      y: number;
-    } | null;
     editor: Editor;
   }) => Promise<void>;
   clearMessages: () => void;
@@ -51,11 +46,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleSendMessage = async (params: {
     message: string;
     selectedItemIds: string[];
-    predictionId: string | null;
-    predictionPosition: {
-      x: number;
-      y: number;
-    } | null;
     editor: Editor;
   }) => {
     // Check if input has more than 2 characters
@@ -96,8 +86,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           message: userMessage.content,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
-          predictionId: params.predictionId,
-          predictionPosition: params.predictionPosition,
           onChunk: (chunk) => {
             // Update the AI message with each new chunk
             setMessages((prev) => {
