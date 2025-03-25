@@ -65,21 +65,19 @@ export const calculateExpandedHeight = <
 
     // Add padding between items
     predictionsHeight += (predictions.length - 1) * PREDICTION_PADDING;
-
-    // Add header space for predictions section
-    predictionsHeight += PREDICTION_HEADER_HEIGHT;
-
-    // Add overall padding
-    predictionsHeight += Y_PADDING;
-
-    // Use the larger of calculated height or previous collapsed height
-    return Math.max(
-      prevCollapsedHeight + predictionsHeight,
-      minCollapsedHeight
-    );
   } else {
-    return prevCollapsedHeight;
+    // Add height for "No predictions available" message
+    predictionsHeight = BASE_ROW_HEIGHT + PREDICTION_PADDING;
   }
+
+  // Add header space for predictions section
+  predictionsHeight += PREDICTION_HEADER_HEIGHT;
+
+  // Add overall padding
+  predictionsHeight += Y_PADDING;
+
+  // Use the larger of calculated height or previous collapsed height
+  return Math.max(prevCollapsedHeight + predictionsHeight, minCollapsedHeight);
 };
 
 // Handle resize end for content shapes - moved outside the hook
@@ -165,10 +163,10 @@ export const useContentShape = <
 
   // Handle selection and expansion state
   const handleSelectionState = (shape: T, isSelected: boolean) => {
-    const { isExpanded, predictions } = shape.props;
+    const { isExpanded } = shape.props;
 
-    if (isSelected && !isExpanded && predictions.length > 0) {
-      // Only expand if there are predictions to show
+    if (isSelected && !isExpanded) {
+      // Expand when selected, regardless of predictions
       editor.updateShape({
         id: shape.id,
         type: shape.type,
@@ -194,8 +192,8 @@ export const useContentShape = <
     predictionsLength: number,
     calculateHeightFn: (shape: T) => number
   ) => {
-    if (isExpanded && predictionsLength > 0) {
-      // Expand the shape
+    if (isExpanded) {
+      // Expand the shape, even if there are no predictions
       editor.animateShape(
         {
           id: shape.id,
@@ -303,33 +301,39 @@ export const useContentShape = <
         )}
       >
         <ul className={cx('space-y-2', !isSelected && 'hidden')}>
-          {predictions.map((item) => (
-            <li
-              key={item.text}
-              className='flex items-center gap-2 hover:bg-gray-50 p-1 rounded cursor-pointer transition-colors pointer-events-auto'
-              onClick={(e) => {
-                e.stopPropagation();
-                onPredictionClick(item);
-              }}
-              onPointerDown={stopEventPropagation}
-              onTouchStart={stopEventPropagation}
-              onTouchEnd={stopEventPropagation}
-            >
-              {/* Render icon based on prediction type */}
-              <div className='flex items-center h-5'>
-                {item.type === 'image' ? (
-                  <RiImage2Line className='text-pink-500 h-5 w-5' />
-                ) : item.type === 'web' ? (
-                  <RiGlobalLine className='text-yellow-500 h-5 w-5' />
-                ) : (
-                  <RiQuestionLine className='text-green-500 h-5 w-5' />
-                )}
-              </div>
-              <span className='text-lg text-gray-700 pointer-events-auto'>
-                {item.text}
-              </span>
+          {predictions.length > 0 ? (
+            predictions.map((item) => (
+              <li
+                key={item.text}
+                className='flex items-center gap-2 hover:bg-gray-50 p-1 rounded cursor-pointer transition-colors pointer-events-auto'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPredictionClick(item);
+                }}
+                onPointerDown={stopEventPropagation}
+                onTouchStart={stopEventPropagation}
+                onTouchEnd={stopEventPropagation}
+              >
+                {/* Render icon based on prediction type */}
+                <div className='flex items-center h-5'>
+                  {item.type === 'image' ? (
+                    <RiImage2Line className='text-pink-500 h-5 w-5' />
+                  ) : item.type === 'web' ? (
+                    <RiGlobalLine className='text-yellow-500 h-5 w-5' />
+                  ) : (
+                    <RiQuestionLine className='text-green-500 h-5 w-5' />
+                  )}
+                </div>
+                <span className='text-lg text-gray-700 pointer-events-auto'>
+                  {item.text}
+                </span>
+              </li>
+            ))
+          ) : (
+            <li className='text-center p-2 text-gray-500 text-lg'>
+              No predictions available
             </li>
-          ))}
+          )}
         </ul>
       </div>
     );

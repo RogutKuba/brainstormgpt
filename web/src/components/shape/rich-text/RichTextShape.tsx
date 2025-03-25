@@ -10,13 +10,7 @@ import {
 } from 'tldraw';
 import ReactMarkdown from 'react-markdown';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  RiGlobalLine,
-  RiImageLine,
-  RiLock2Line,
-  RiLockUnlockLine,
-  RiQuestionLine,
-} from '@remixicon/react';
+import { RiLock2Line, RiLockUnlockLine } from '@remixicon/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useEffect } from 'react';
 import { useChat } from '@/components/chat/ChatContext';
@@ -203,12 +197,11 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
                 <ReactMarkdown>{text}</ReactMarkdown>
               </div>
 
-              {predictions.length > 0 &&
-                renderPredictionsList(
-                  predictions,
-                  isSelected,
-                  onPredictionClick
-                )}
+              {renderPredictionsList(
+                predictions,
+                isSelected,
+                onPredictionClick
+              )}
             </>
           )}
         </div>
