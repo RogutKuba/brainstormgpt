@@ -33,7 +33,6 @@ export const GraphLayout = () => {
         if (!shapeHandlers.current.has(shapeId)) {
           shapeHandlers.current.set(shapeId, {
             create: debounce((shape) => {
-              console.log('debouncedShapeCreateHandler', shape.id);
               collection.add([shape]);
             }, DEBOUNCE_TIME),
             change: (prev, next) => {

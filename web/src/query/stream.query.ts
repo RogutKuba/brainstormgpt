@@ -41,6 +41,7 @@ export const useStreamMessage = () => {
   const streamMessage = useCallback(
     async (params: {
       message: string;
+      searchType: 'text' | 'web' | 'image';
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
       workspaceId: string;
@@ -73,6 +74,7 @@ export const useStreamMessage = () => {
             },
             body: JSON.stringify({
               message: params.message,
+              searchType: params.searchType,
               chatHistory: params.chatHistory,
               selectedItems: params.selectedItems,
             }),

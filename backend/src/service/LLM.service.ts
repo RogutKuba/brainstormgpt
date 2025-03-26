@@ -2,6 +2,7 @@ import { AppContext } from '..';
 import OpenAI from 'openai';
 import { ZodObject, ZodSchema } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
+import { ContentDeltaEvent } from 'openai/lib/ChatCompletionStream.mjs';
 
 export const LLMService = {
   generateMessage: async (params: {
@@ -103,6 +104,61 @@ export const LLMService = {
         // console.log('content:', snapshot);
         // console.log('parsed:', parsed);
         onNewContent(parsed);
+      })
+      .on('content.done', (props) => {
+        console.log(props);
+      });
+
+    await stream.done();
+
+    const finalCompletion = await stream.finalChatCompletion();
+
+    return finalCompletion;
+  },
+
+  streamWebSearch: async (params: {
+    prompt: string;
+    chatHistory: {
+      content: string;
+      sender: 'user' | 'system';
+    }[];
+    env: AppContext['Bindings'];
+    structuredOutput: {
+      name: string;
+      schema: ZodObject<any>;
+    };
+    onNewContent: (parsedContent: unknown) => void;
+  }) => {
+    const { prompt, chatHistory, env, structuredOutput, onNewContent } = params;
+
+    const openrouter = new OpenAI({
+      apiKey: env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
+
+    const WEB_SEARCH_MODEL = 'perplexity/sonar-pro';
+
+    const stream = openrouter.beta.chat.completions
+      .stream({
+        model: WEB_SEARCH_MODEL,
+        messages: [
+          ...chatHistory.map((message) => ({
+            role: message.sender,
+            content: message.content,
+          })),
+          { role: 'user', content: prompt },
+        ],
+        response_format: zodResponseFormat(
+          structuredOutput.schema,
+          structuredOutput.name
+        ),
+      })
+      .on('refusal.done', () => console.log('request refused'))
+      .on('content.delta', ({ delta, snapshot, parsed }) => {
+        console.log('delta', delta);
+        console.log('content:', snapshot);
+        console.log('parsed:', parsed);
+        // onNewContent(parsed);
       })
       .on('content.done', (props) => {
         console.log(props);

@@ -130,6 +130,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
           selectedItemIds: [shape.id],
           workspaceId,
           editor: this.editor,
+          searchType: prediction.type,
         }
       );
     };

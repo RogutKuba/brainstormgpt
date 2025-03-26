@@ -5,6 +5,7 @@ import { LLMService } from '../service/LLM.service';
 import {
   brainstormResultSchema,
   BrainstormService,
+  brainstormStreamResultSchema,
 } from '../service/Brainstorm.service';
 import { ShapeService } from '../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
@@ -26,6 +27,9 @@ const sendMessageRoute = createRoute({
           schema: z.object({
             message: z.string().min(3).openapi({
               description: 'Message to send',
+            }),
+            searchType: z.enum(['text', 'web', 'image']).openapi({
+              description: 'Type of message',
             }),
             selectedItems: z.array(z.string()).openapi({
               description: 'Selected items ids for context',
@@ -66,7 +70,8 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
     const { workspaceId } = ctx.req.valid('param');
-    const { message, chatHistory, selectedItems } = ctx.req.valid('json');
+    const { message, searchType, chatHistory, selectedItems } =
+      ctx.req.valid('json');
 
     // Create a readable stream for the response
     const stream = new ReadableStream({
@@ -90,6 +95,20 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
 
           // create stream service
           const streamService = new StreamService(controller);
+
+          // if (true) {
+          //   console.log('handling web search');
+
+          //   await BrainstormService.streamWebSearch({
+          //     prompt: message,
+          //     chatHistory,
+          //     tree,
+          //     streamService,
+          //     ctx,
+          //   });
+          // }
+
+          // throw new Error('Invalid search type');
 
           // Use LLMService to stream the response
           const finalResult = await BrainstormService.streamBrainstorm({

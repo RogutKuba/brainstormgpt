@@ -21,6 +21,7 @@ interface ChatContextValue {
   isLoading: boolean;
   handleSendMessage: (params: {
     message: string;
+    searchType: 'text' | 'web' | 'image';
     selectedItemIds: string[];
     workspaceId: string;
     editor: Editor;
@@ -45,6 +46,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const handleSendMessage = async (params: {
     message: string;
+    searchType: 'text' | 'web' | 'image';
     selectedItemIds: string[];
     workspaceId: string;
     editor: Editor;
@@ -85,6 +87,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
         // Use streaming API
         await streamMessage({
           message: userMessage.content,
+          searchType: params.searchType,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
           workspaceId: params.workspaceId,

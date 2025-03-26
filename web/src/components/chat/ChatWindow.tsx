@@ -185,6 +185,7 @@ export const ChatWindow: React.FC = () => {
       // Use the handleSendMessage from context
       await handleSendMessage({
         message,
+        searchType: 'text',
         selectedItemIds: selectedItems.map((item) => item.id),
         workspaceId,
         editor,

@@ -168,6 +168,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         this.calculateShapeHeight,
         handleSendMessage,
         {
+          searchType: prediction.type,
           selectedItemIds: [shape.id],
           workspaceId,
           editor: this.editor,

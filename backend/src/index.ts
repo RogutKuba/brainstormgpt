@@ -14,6 +14,7 @@ import { chatRouter } from './endpoint/chat.endpoint';
 import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
 import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 import { streamRouter } from './endpoint/stream.endpoint';
+import { LLMService } from './service/LLM.service';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
