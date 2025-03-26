@@ -104,9 +104,6 @@ export const LLMService = {
         // console.log('content:', snapshot);
         // console.log('parsed:', parsed);
         onNewContent(parsed);
-      })
-      .on('content.done', (props) => {
-        console.log(props);
       });
 
     await stream.done();
@@ -115,6 +112,12 @@ export const LLMService = {
 
     return finalCompletion;
   },
+
+  /**
+   * Streams a web search prompt using Perplexity's Sonar model
+   * @param params
+   * @returns
+   */
 
   streamWebSearch: async (params: {
     prompt: string;
@@ -138,6 +141,9 @@ export const LLMService = {
 
     const WEB_SEARCH_MODEL = 'perplexity/sonar-pro';
 
+    // Buffer to accumulate content for parsing
+    let contentBuffer = '';
+
     const stream = openrouter.beta.chat.completions
       .stream({
         model: WEB_SEARCH_MODEL,
@@ -146,28 +152,466 @@ export const LLMService = {
             role: message.sender,
             content: message.content,
           })),
-          { role: 'user', content: prompt },
+          {
+            role: 'user',
+            content: `${prompt}\n\nIMPORTANT: Format your response using the following XML structure:
+
+<brainstormStream>
+  <explanation>
+    Brief summary of your findings here. This should be a concise overview of the key insights.
+  </explanation>
+  <nodes>
+    <node>
+      <type>text</type>
+      <text>## First Node Title
+
+Content for the first node goes here. Keep it concise and informative.</text>
+      <parentId>null</parentId>
+      <predictions>
+        <prediction>
+          <text>First follow-up question about this node?</text>
+          <type>text</type>
+        </prediction>
+        <prediction>
+          <text>A question that requires web search to answer?</text>
+          <type>web</type>
+        </prediction>
+        <prediction>
+          <text>A concept that would benefit from visualization?</text>
+          <type>image</type>
+        </prediction>
+      </predictions>
+    </node>
+    <node>
+      <type>text</type>
+      <text>## Second Node Title
+
+Content for the second node goes here. Keep it concise and informative.</text>
+      <parentId>none</parentId>
+      <predictions>
+        <prediction>
+          <text>First follow-up question about this node?</text>
+          <type>text</type>
+        </prediction>
+        <prediction>
+          <text>Second follow-up question about this node?</text>
+          <type>text</type>
+        </prediction>
+      </predictions>
+    </node>
+  </nodes>
+</brainstormStream>
+
+Each node should have:
+1. A type field (use "text")
+2. A text field with a clear, descriptive title (using ## markdown format) followed by concise content (1-2 paragraphs)
+3. A parentId field (use "null" for the first node, "none" for others, or a specific parent ID if extending an existing node)
+4. 3-5 predictions (follow-up questions) with:
+   - A text field containing the question or exploration prompt
+   - A type field that must be one of: "text", "web", or "image"
+
+PREDICTION TYPE GUIDELINES:
+- Use "text" for conceptual questions that can be answered with explanations
+- Use "web" for questions requiring current information or fact-checking
+- Use "image" for concepts that would benefit from visualization
+
+Make sure to properly nest all XML tags and maintain this exact structure.`,
+          },
         ],
-        response_format: zodResponseFormat(
-          structuredOutput.schema,
-          structuredOutput.name
-        ),
       })
       .on('refusal.done', () => console.log('request refused'))
-      .on('content.delta', ({ delta, snapshot, parsed }) => {
-        console.log('delta', delta);
-        console.log('content:', snapshot);
-        console.log('parsed:', parsed);
-        // onNewContent(parsed);
+      .on('content.delta', ({ delta, snapshot }) => {
+        // Add the new content to our buffer
+        contentBuffer += delta;
+
+        // Try to parse the accumulated content
+        const structuredContent = LLMService.parseRawStreamIntoStructured({
+          content: contentBuffer,
+          structuredOutput,
+        });
+        onNewContent(structuredContent);
       })
-      .on('content.done', (props) => {
-        console.log(props);
+      .on('chatCompletion', (completion) => {
+        console.log('completion', completion);
       });
 
     await stream.done();
 
-    const finalCompletion = await stream.finalChatCompletion();
+    const finalStructured = LLMService.parseRawStreamIntoStructured({
+      content: contentBuffer,
+      structuredOutput,
+    });
 
-    return finalCompletion;
+    return finalStructured;
+  },
+
+  /**
+   * Parses raw stream into structured format
+   * @param content
+   * @returns structured content
+   */
+  parseRawStreamIntoStructured: (params: {
+    content: string;
+    structuredOutput: {
+      name: string;
+      schema: ZodObject<any>;
+    };
+  }): unknown => {
+    const { content, structuredOutput } = params;
+
+    try {
+      // First try to parse as JSON directly
+      const parsedJson = JSON.parse(content);
+      return parsedJson;
+    } catch (error) {
+      // If not valid JSON, try to extract structured data from XML or text format
+      const result: { explanation?: string; nodes?: any[] } = {};
+
+      // Try to extract explanation even if the XML is incomplete
+      const explanationMatch = content.match(
+        /<explanation>(.*?)(?:<\/explanation>|$)/s
+      );
+      if (explanationMatch && explanationMatch[1]) {
+        result.explanation = explanationMatch[1].trim();
+      }
+
+      // Try to extract nodes even if some are incomplete
+      const nodesOpenTag = content.indexOf('<nodes>');
+      if (nodesOpenTag !== -1) {
+        const nodesContent = content.slice(nodesOpenTag + 7); // +7 to skip '<nodes>'
+
+        // First try to extract complete nodes
+        const completeNodeRegex = /<node>(.*?)<\/node>/gs;
+        const completeNodes: any[] = [];
+        let nodeMatch;
+
+        while ((nodeMatch = completeNodeRegex.exec(nodesContent)) !== null) {
+          const nodeXml = nodeMatch[0];
+          try {
+            // Extract node data as before
+            const typeMatch = nodeXml.match(/<type>(.*?)<\/type>/s);
+            const type = typeMatch ? typeMatch[1].trim() : 'text';
+
+            const textMatch = nodeXml.match(/<text>(.*?)<\/text>/s);
+            const text = textMatch ? textMatch[1].trim() : '';
+
+            const parentIdMatch = nodeXml.match(/<parentId>(.*?)<\/parentId>/s);
+            let parentId = parentIdMatch ? parentIdMatch[1].trim() : null;
+
+            if (parentId === 'null') parentId = null;
+            if (parentId === 'none') parentId = 'none';
+
+            const predictionsSection = nodeXml.match(
+              /<predictions>(.*?)<\/predictions>/s
+            );
+            let predictions: {
+              text: string;
+              type: 'text' | 'web' | 'image';
+            }[] = [];
+
+            if (predictionsSection) {
+              const predictionMatches = predictionsSection[1].match(
+                /<prediction>(.*?)<\/prediction>/gs
+              );
+
+              if (predictionMatches) {
+                predictions = predictionMatches.map((predXml) => {
+                  const predTextMatch = predXml.match(/<text>(.*?)<\/text>/s);
+                  const text = predTextMatch ? predTextMatch[1].trim() : '';
+
+                  const predTypeMatch = predXml.match(/<type>(.*?)<\/type>/s);
+                  const type = (
+                    predTypeMatch ? predTypeMatch[1].trim() : 'text'
+                  ) as 'text' | 'web' | 'image';
+
+                  return { text, type };
+                });
+              }
+            }
+
+            completeNodes.push({
+              type,
+              text,
+              parentId,
+              predictions,
+            });
+          } catch (nodeError) {
+            console.error('Error parsing complete node:', nodeError);
+          }
+        }
+
+        // Now try to extract partial nodes (those without closing tags)
+        // This is the key improvement - we'll look for partial nodes too
+        const partialNodes: any[] = [];
+
+        // Find all node opening tags
+        const nodeOpenings = [...nodesContent.matchAll(/<node>/g)];
+
+        for (let i = 0; i < nodeOpenings.length; i++) {
+          const startPos = nodeOpenings[i].index;
+          // If this is the last node or there's no complete node ending
+          const nextNodeStart =
+            i < nodeOpenings.length - 1 ? nodeOpenings[i + 1].index : -1;
+          const nodeEndTag = nodesContent.indexOf('</node>', startPos);
+
+          // If this node doesn't have a closing tag or the closing tag is after the next node starts
+          // (meaning it's a complete node we already processed)
+          if (
+            nodeEndTag === -1 ||
+            (nextNodeStart !== -1 && nodeEndTag > nextNodeStart)
+          ) {
+            // This is a partial node
+            const endPos =
+              nextNodeStart !== -1 ? nextNodeStart : nodesContent.length;
+            const partialNodeContent = nodesContent.substring(startPos, endPos);
+
+            try {
+              // Extract whatever data is available in the partial node
+              const typeMatch = partialNodeContent.match(
+                /<type>(.*?)(?:<\/type>|$)/s
+              );
+              const type =
+                typeMatch && typeMatch[1] ? typeMatch[1].trim() : 'text';
+
+              const textMatch = partialNodeContent.match(
+                /<text>(.*?)(?:<\/text>|$)/s
+              );
+              const text = textMatch && textMatch[1] ? textMatch[1].trim() : '';
+
+              const parentIdMatch = partialNodeContent.match(
+                /<parentId>(.*?)(?:<\/parentId>|$)/s
+              );
+              let parentId =
+                parentIdMatch && parentIdMatch[1]
+                  ? parentIdMatch[1].trim()
+                  : null;
+
+              if (parentId === 'null') parentId = null;
+              if (parentId === 'none') parentId = 'none';
+
+              // Try to extract any predictions that might be available
+              const predictionsOpenTag =
+                partialNodeContent.indexOf('<predictions>');
+              let predictions: {
+                text: string;
+                type: 'text' | 'web' | 'image';
+              }[] = [];
+
+              if (predictionsOpenTag !== -1) {
+                const predictionsContent = partialNodeContent.slice(
+                  predictionsOpenTag + 13
+                ); // +13 to skip '<predictions>'
+
+                // Find complete predictions
+                const predictionRegex = /<prediction>(.*?)<\/prediction>/gs;
+                let predMatch;
+
+                while (
+                  (predMatch = predictionRegex.exec(predictionsContent)) !==
+                  null
+                ) {
+                  const predXml = predMatch[0];
+
+                  const predTextMatch = predXml.match(/<text>(.*?)<\/text>/s);
+                  const predText =
+                    predTextMatch && predTextMatch[1]
+                      ? predTextMatch[1].trim()
+                      : '';
+
+                  const predTypeMatch = predXml.match(/<type>(.*?)<\/type>/s);
+                  const predType = (
+                    predTypeMatch && predTypeMatch[1]
+                      ? predTypeMatch[1].trim()
+                      : 'text'
+                  ) as 'text' | 'web' | 'image';
+
+                  if (predText) {
+                    predictions.push({ text: predText, type: predType });
+                  }
+                }
+
+                // Also look for partial predictions
+                const predOpenings = [
+                  ...predictionsContent.matchAll(/<prediction>/g),
+                ];
+
+                for (let j = 0; j < predOpenings.length; j++) {
+                  const predStartPos = predOpenings[j].index;
+                  const nextPredStart =
+                    j < predOpenings.length - 1
+                      ? predOpenings[j + 1].index
+                      : -1;
+                  const predEndTag = predictionsContent.indexOf(
+                    '</prediction>',
+                    predStartPos
+                  );
+
+                  // If this is a partial prediction
+                  if (
+                    predEndTag === -1 ||
+                    (nextPredStart !== -1 && predEndTag > nextPredStart)
+                  ) {
+                    const predEndPos =
+                      nextPredStart !== -1
+                        ? nextPredStart
+                        : predictionsContent.length;
+                    const partialPredContent = predictionsContent.substring(
+                      predStartPos,
+                      predEndPos
+                    );
+
+                    const partialPredTextMatch = partialPredContent.match(
+                      /<text>(.*?)(?:<\/text>|$)/s
+                    );
+                    const partialPredText =
+                      partialPredTextMatch && partialPredTextMatch[1]
+                        ? partialPredTextMatch[1].trim()
+                        : '';
+
+                    const partialPredTypeMatch = partialPredContent.match(
+                      /<type>(.*?)(?:<\/type>|$)/s
+                    );
+                    const partialPredType = (
+                      partialPredTypeMatch && partialPredTypeMatch[1]
+                        ? partialPredTypeMatch[1].trim()
+                        : 'text'
+                    ) as 'text' | 'web' | 'image';
+
+                    if (partialPredText) {
+                      predictions.push({
+                        text: partialPredText,
+                        type: partialPredType,
+                      });
+                    }
+                  }
+                }
+              }
+
+              // Only add the partial node if it has some meaningful content
+              if (text) {
+                partialNodes.push({
+                  type,
+                  text,
+                  parentId,
+                  predictions,
+                });
+              }
+            } catch (partialNodeError) {
+              console.error('Error parsing partial node:', partialNodeError);
+            }
+          }
+        }
+
+        // Combine complete and partial nodes, avoiding duplicates
+        // We'll consider nodes with the same text content as duplicates
+        const allNodes = [...completeNodes];
+
+        for (const partialNode of partialNodes) {
+          // Check if this partial node is already included in complete nodes
+          const isDuplicate = completeNodes.some(
+            (node) =>
+              node.text === partialNode.text &&
+              node.parentId === partialNode.parentId
+          );
+
+          if (!isDuplicate) {
+            allNodes.push(partialNode);
+          }
+        }
+
+        if (allNodes.length > 0) {
+          result.nodes = allNodes;
+        }
+      }
+
+      // If we extracted any structured data, return it
+      if (result.explanation || (result.nodes && result.nodes.length > 0)) {
+        return result;
+      }
+
+      // Fall back to text-based parsing if XML parsing fails
+      // (rest of the code remains the same)
+      const textExplanationMatch = content.match(
+        /explanation:(.*?)(?=nodes:|$)/s
+      );
+      if (textExplanationMatch) {
+        result.explanation = textExplanationMatch[1].trim();
+      }
+
+      // Look for nodes section
+      const nodesMatch = content.match(/nodes:(.*?)(?=$)/s);
+      if (nodesMatch) {
+        // Try to parse nodes from text
+        const nodesText = nodesMatch[1].trim();
+
+        // Look for node patterns like "## Node title"
+        const nodeMatches = nodesText.match(/##\s*(.*?)(?=##|$)/gs);
+
+        if (nodeMatches) {
+          result.nodes = nodeMatches.map((nodeText, index) => {
+            const titleMatch = nodeText.match(/##\s*(.*?)(?=\n|$)/);
+            const title = titleMatch ? titleMatch[1].trim() : '';
+
+            // Remove the title from the content
+            let nodeContent = nodeText.replace(/##\s*(.*?)(?=\n|$)/, '').trim();
+
+            // Extract predictions if they exist
+            const predictionsMatch = nodeContent.match(
+              /Predictions:(.*?)(?=$)/s
+            );
+            let predictions: {
+              text: string;
+              type: 'text' | 'web' | 'image';
+            }[] = [];
+
+            if (predictionsMatch) {
+              const predictionText = predictionsMatch[1].trim();
+              const predictionItems = predictionText.match(
+                /[-*]\s*(.*?)(?=[-*]|$)/gs
+              );
+
+              if (predictionItems) {
+                predictions = predictionItems.map((item) => {
+                  const cleanItem = item.replace(/[-*]\s*/, '').trim();
+
+                  // Determine prediction type based on content
+                  let type: 'text' | 'web' | 'image' = 'text';
+                  if (
+                    cleanItem.toLowerCase().includes('search') ||
+                    cleanItem.toLowerCase().includes('find') ||
+                    cleanItem.toLowerCase().includes('latest')
+                  ) {
+                    type = 'web';
+                  } else if (
+                    cleanItem.toLowerCase().includes('image') ||
+                    cleanItem.toLowerCase().includes('visual') ||
+                    cleanItem.toLowerCase().includes('picture')
+                  ) {
+                    type = 'image';
+                  }
+
+                  return { text: cleanItem, type };
+                });
+              }
+
+              // Remove predictions section from content
+              nodeContent = nodeContent
+                .replace(/Predictions:(.*?)(?=$)/s, '')
+                .trim();
+            }
+
+            return {
+              type: 'text',
+              text: `## ${title}\n\n${nodeContent}`,
+              parentId: index === 0 ? null : 'none',
+              predictions,
+            };
+          });
+        }
+      }
+
+      // Return whatever structured data we could extract
+      return result;
+    }
   },
 };

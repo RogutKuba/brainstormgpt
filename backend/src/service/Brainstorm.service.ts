@@ -7,7 +7,6 @@ import { PageSummaryEntity, pageSummaryTable } from '../db/pageSummary.db';
 import { inArray } from 'drizzle-orm';
 import { getDbConnection } from '../db/client';
 import { z } from 'zod';
-import { ReadableStreamController } from 'stream/web';
 import { StreamService } from './Stream.service';
 import { generateTlShapeId } from '../lib/id';
 
@@ -486,6 +485,8 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
       .partial()
       .safeParse(parsedContent);
 
+    console.log('got parsedContent', !!parsedContent);
+
     if (error) {
       console.error(
         'Error parsing content:',
@@ -612,38 +613,32 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
         name: 'brainstormStream',
         schema: brainstormStreamSchema,
       },
-      onNewContent: (parsedContent) => {
-        console.log('newParsed content', parsedContent);
-        // BrainstormService.handleStreamContent({
-        //   streamService,
-        //   parsedContent,
-        // }),
+      onNewContent: async (parsedContent) => {
+        await BrainstormService.handleStreamContent({
+          streamService,
+          parsedContent,
+        });
       },
     });
 
     // Send complete message with the final result
-    if (response.choices.length > 0 && response.choices[0].message.content) {
-      const finalContent = JSON.parse(response.choices[0].message.content);
-      const rawStreamResult = brainstormStreamSchema.parse(finalContent);
+    const rawStreamResult = brainstormStreamSchema.parse(response);
 
-      const formattedStreamResult = {
-        explanation: rawStreamResult.explanation ?? '',
-        nodes: (rawStreamResult.nodes ?? []).map((node, index) => {
-          const prevNodeInfo = streamService.getPrevNodeInfo(index);
-          const nodeId = prevNodeInfo?.id ?? generateTlShapeId();
-          return {
-            id: nodeId,
-            type: node.type ?? 'text',
-            text: node.text ?? '',
-            parentId: node.parentId ?? null,
-            predictions: node.predictions ?? [],
-          };
-        }),
-      };
+    const formattedStreamResult = {
+      explanation: rawStreamResult.explanation ?? '',
+      nodes: (rawStreamResult.nodes ?? []).map((node, index) => {
+        const prevNodeInfo = streamService.getPrevNodeInfo(index);
+        const nodeId = prevNodeInfo?.id ?? generateTlShapeId();
+        return {
+          id: nodeId,
+          type: node.type ?? 'text',
+          text: node.text ?? '',
+          parentId: node.parentId ?? null,
+          predictions: node.predictions ?? [],
+        };
+      }),
+    };
 
-      return formattedStreamResult;
-    } else {
-      throw new Error('No final response from LLM');
-    }
+    return formattedStreamResult;
   },
 };

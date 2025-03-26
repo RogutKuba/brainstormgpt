@@ -96,19 +96,19 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           // create stream service
           const streamService = new StreamService(controller);
 
-          // if (true) {
-          //   console.log('handling web search');
+          if (true) {
+            console.log('handling web search');
 
-          //   await BrainstormService.streamWebSearch({
-          //     prompt: message,
-          //     chatHistory,
-          //     tree,
-          //     streamService,
-          //     ctx,
-          //   });
-          // }
+            await BrainstormService.streamWebSearch({
+              prompt: message,
+              chatHistory,
+              tree,
+              streamService,
+              ctx,
+            });
+          }
 
-          // throw new Error('Invalid search type');
+          throw new Error('Invalid search type');
 
           // Use LLMService to stream the response
           const finalResult = await BrainstormService.streamBrainstorm({
