@@ -7,6 +7,7 @@ import { Context } from 'hono';
 import { AppContext } from '..';
 import { LinkShape } from '../shapes/Link.shape';
 import { RichTextShape } from '../shapes/RichText.shape';
+import { CrawlerService } from './Crawler.service';
 
 export class StreamService {
   // SCHEMAS
@@ -214,6 +215,27 @@ export class StreamService {
       ) as (LinkShape | RichTextShape)[];
 
       await workspace.addRecords([...nonTextShapes, ...bindings]);
+
+      // now start crawling service for all the newly added link shapes
+      const linkShapes = nonTextShapes.filter(
+        (shape) => shape.type === 'link'
+      ) as LinkShape[];
+
+      const crawlerService = new CrawlerService({
+        workspaceId,
+        ctx,
+      });
+
+      // this we can do in waitUntil as it will run in the backgrond
+      ctx.executionCtx.waitUntil(
+        crawlerService.updateLinkShapes({
+          shapes: linkShapes.map((shape) => ({
+            shapeId: shape.id,
+            url: shape.props.url,
+          })),
+          ctx,
+        })
+      );
     } else {
       throw new Error('Invalid search type');
     }

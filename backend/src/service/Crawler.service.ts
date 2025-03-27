@@ -6,6 +6,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { CrawledPageEntity, crawledPageTable } from '../db/crawledPage.db';
 import { and, eq } from 'drizzle-orm';
 import { generateId } from '../lib/id';
+import { LinkShape } from '../shapes/Link.shape';
 
 // TODO: replace with cloudflare browser rendering and make own scraper for less third-party dependencies
 export class CrawlerService {
@@ -120,5 +121,133 @@ export class CrawlerService {
 
       return null;
     }
+  }
+
+  async updateLinkShapes(params: {
+    shapes: {
+      shapeId: string;
+      url: string;
+    }[];
+    ctx: Context<AppContext>;
+  }) {
+    const { shapes, ctx } = params;
+
+    // Get the durable object for this workspace
+    const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(
+      this.workspaceId
+    );
+    const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
+
+    const results = [];
+
+    for (const shape of shapes) {
+      const { shapeId, url } = shape;
+
+      try {
+        // Get the current shape from the durable object
+        // @ts-ignore - Type instantiation is too deep as noted in the endpoint
+        const currentShape = (await workspaceDo.getShape(shapeId)) as LinkShape;
+
+        if (!currentShape) {
+          throw new Error('Shape not found');
+        }
+
+        // Crawl the URL
+        const crawlResult = await this.crawl(url);
+
+        if (!crawlResult) {
+          throw new Error('Failed to crawl URL');
+        }
+
+        // Update the shape with the crawled data
+        const updatedShape: LinkShape = {
+          ...currentShape,
+          props: {
+            ...currentShape.props,
+            url,
+            status: 'analyzing',
+            isLoading: true,
+            title: crawlResult.title,
+            description: crawlResult.description,
+            previewImageUrl: crawlResult.previewImageUrl,
+            error: null,
+          },
+          typeName: 'shape',
+        };
+
+        // Update the shape in the durable object
+        await workspaceDo.updateShape(updatedShape);
+
+        // Spawn a workflow to crawl the page and create a summary
+        const workflow = await ctx.env.ChunkWorkflow.create({
+          params: {
+            workspaceId: this.workspaceId,
+            shapeId,
+            crawledPageId: crawlResult.id,
+          },
+        });
+
+        console.log('Workflow spawned', workflow.id);
+
+        results.push({
+          ok: true,
+          shapeId,
+          shape: updatedShape,
+          crawlResult,
+        });
+      } catch (error) {
+        console.error('Error updating link shape:', error);
+
+        try {
+          // @ts-ignore - Type instantiation is too deep as noted in the endpoint
+          const currentShape = (await workspaceDo.getShape(
+            shapeId
+          )) as LinkShape;
+
+          if (currentShape) {
+            // Update the shape to be in error state
+            const errorShape: LinkShape = {
+              ...currentShape,
+              props: {
+                ...currentShape.props,
+                status: 'error',
+                isLoading: false,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : 'Failed to update link shape',
+              },
+            };
+
+            await workspaceDo.updateShape(errorShape);
+
+            results.push({
+              ok: false,
+              shapeId,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to update link shape',
+              shape: errorShape,
+            });
+          } else {
+            results.push({
+              ok: false,
+              shapeId,
+              error: 'Shape not found',
+            });
+          }
+        } catch (innerError) {
+          console.error('Error updating shape to error state:', innerError);
+          results.push({
+            ok: false,
+            shapeId,
+            error: 'Failed to update shape to error state',
+          });
+        }
+      }
+    }
+
+    return results;
   }
 }
