@@ -12,7 +12,11 @@ import {
 } from 'tldraw';
 import { LinkShape } from '../shapes/Link.shape';
 import { RichTextShape } from '../shapes/RichText.shape';
-import { BrainStormResult, brainstormStreamSchema } from './Brainstorm.service';
+import {
+  BrainStormResult,
+  brainstormStreamResultSchema,
+  brainstormStreamSchema,
+} from './Brainstorm.service';
 import { z } from 'zod';
 import { generateTlBindingId, generateTlShapeId } from '../lib/id';
 
@@ -287,7 +291,7 @@ export class ShapeService {
   }
 
   public getTlShapesAndBindings(
-    shapesToCreate: z.infer<typeof brainstormStreamSchema>['nodes']
+    shapesToCreate: z.infer<typeof brainstormStreamResultSchema>['nodes']
   ): {
     shapes: (LinkShape | RichTextShape | TLArrowShape)[];
     bindings: TLArrowBinding[];
@@ -319,12 +323,10 @@ export class ShapeService {
       const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
       const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
 
-      const newShapeId = generateTlShapeId();
+      const newShapeId = shapeToCreate.id;
 
       // Determine if this should be a link shape or rich text shape
-      const isLink =
-        shapeToCreate.text?.startsWith('http://') ||
-        shapeToCreate.text?.startsWith('https://');
+      const isLink = shapeToCreate.type === 'link';
 
       // Create base shape properties
       const baseProps = {
@@ -385,6 +387,7 @@ export class ShapeService {
           };
 
       shapes.push(newShape);
+      this.shapes.push(newShape);
 
       // Handle parent relationship with arrow and bindings
       if (shapeToCreate.parentId) {
@@ -404,6 +407,7 @@ export class ShapeService {
           );
 
           shapes.push(arrow);
+          this.shapes.push(arrow);
           bindings.push(binding1, binding2);
         }
       }

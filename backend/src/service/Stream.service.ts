@@ -208,8 +208,12 @@ export class StreamService {
         },
       });
     } else if (searchType === 'web' || searchType === 'image') {
-      // TODO: fix this so that we actually upsert shapes instead of just creating them
-      await workspace.addRecords([...shapes, ...bindings]);
+      // TODO: fix this so that we actually upsert all shapes instead of just creating links
+      const nonTextShapes = shapes.filter(
+        (shape) => shape.type !== 'rich-text'
+      ) as (LinkShape | RichTextShape)[];
+
+      await workspace.addRecords([...nonTextShapes, ...bindings]);
     } else {
       throw new Error('Invalid search type');
     }

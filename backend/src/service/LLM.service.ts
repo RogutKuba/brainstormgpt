@@ -118,7 +118,6 @@ export const LLMService = {
    * @param params
    * @returns
    */
-
   streamWebSearch: async (params: {
     prompt: string;
     chatHistory: {

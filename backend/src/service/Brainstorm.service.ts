@@ -9,7 +9,7 @@ import { getDbConnection } from '../db/client';
 import { z } from 'zod';
 import { StreamService } from './Stream.service';
 import { generateTlShapeId } from '../lib/id';
-import { TLArrowBinding, IndexKey } from 'tldraw';
+import { TLArrowBinding, IndexKey, Tldraw } from 'tldraw';
 import { LinkShape } from '../shapes/Link.shape';
 
 export type BrainStormResult = {
@@ -147,53 +147,36 @@ async function extractShapesWithText(params: {
     .join('\n');
 }
 
+const predictionNodeSchema = z.object({
+  text: z.string(),
+  type: z.enum(['text', 'image', 'web']),
+});
+
+const brainstormNodeSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  text: z.string(),
+  parentId: z.string().nullable().optional(),
+  predictions: z.array(predictionNodeSchema),
+});
+
 export const brainstormResultSchema = z.object({
   explanation: z.string(),
-  nodes: z.array(
-    z.object({
-      type: z.string(),
-      text: z.string(),
-      parentId: z.string().optional(),
-      // predictions: z.array(z.string()),
-    })
-  ),
+  nodes: z.array(brainstormNodeSchema),
 });
 
 export const brainstormStreamSchema = z
   .object({
     explanation: z.string(),
-    nodes: z.array(
-      z
-        .object({
-          type: z.string(),
-          text: z.string(),
-          parentId: z.string().or(z.literal('none')).nullable(),
-          predictions: z.array(
-            z.object({
-              text: z.string(),
-              type: z.enum(['text', 'image', 'web']),
-            })
-          ),
-        })
-        .partial()
-    ),
+    nodes: z.array(brainstormNodeSchema.partial()),
   })
   .partial();
 
 export const brainstormStreamResultSchema = z.object({
   explanation: z.string(),
   nodes: z.array(
-    z.object({
-      id: z.string(),
-      type: z.string(),
-      text: z.string(),
-      parentId: z.string().or(z.literal('none')).nullable(),
-      predictions: z.array(
-        z.object({
-          text: z.string(),
-          type: z.enum(['text', 'image', 'web']),
-        })
-      ),
+    brainstormNodeSchema.extend({
+      id: z.string().transform((str) => str as TLShapeId),
     })
   ),
 });
@@ -595,7 +578,10 @@ Your goal is to provide factual, well-researched information that directly addre
     });
 
     // Create a formatted result with a single main node
-    // const mainNodeId = generateTlShapeId();
+    const mainNodeId =
+      streamService.getPrevNodeInfo(0)?.id ?? generateTlShapeId();
+    console.log('mainNodeId', mainNodeId);
+
     // Extract the explanation and node content from the response
     // const rawStreamResult = response.choices[0].message.content;
 
@@ -606,17 +592,19 @@ Your goal is to provide factual, well-researched information that directly addre
     const formattedStreamResult = {
       explanation: '',
       nodes: [
-        // TODO: add back main node since this auto gets added
-        // {
-        //   id: mainNodeId,
-        //   type: 'text',
-        //   text: rawStreamResult ?? '',
-        //   parentId,
-        //   predictions: [],
-        // },
+        {
+          id: mainNodeId,
+          type: 'text',
+          text:
+            response.choices.length > 0
+              ? response.choices[0].message.content ?? ''
+              : '',
+          parentId,
+          predictions: [],
+        },
         ...BrainstormService.handleWebSearchCitations({
           citations: citations.slice(0, 3),
-          parentId,
+          parentId: mainNodeId,
         }),
       ],
     };
