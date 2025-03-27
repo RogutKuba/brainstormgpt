@@ -4,7 +4,6 @@ import {
   TLArrowBinding,
   TLArrowShape,
   TLBaseBoxShape,
-  TLBindingId,
   TLDocument,
   TLGeoShape,
   TLPage,
@@ -14,7 +13,6 @@ import {
 import { LinkShape } from '../shapes/Link.shape';
 import { RichTextShape } from '../shapes/RichText.shape';
 import { BrainStormResult, brainstormStreamSchema } from './Brainstorm.service';
-import { PredictionShape } from '../shapes/Prediction.shape';
 import { z } from 'zod';
 import { generateTlBindingId, generateTlShapeId } from '../lib/id';
 

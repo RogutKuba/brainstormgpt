@@ -10,6 +10,8 @@ import {
 import { ShapeService } from '../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
 import { StreamService } from '../service/Stream.service';
+import { HTTPException } from 'hono/http-exception';
+import { TLShapeId } from '@tldraw/tlschema';
 
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
@@ -70,8 +72,17 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
     const { workspaceId } = ctx.req.valid('param');
-    const { message, searchType, chatHistory, selectedItems } =
+    const { message, chatHistory, searchType, selectedItems } =
       ctx.req.valid('json');
+
+    if (selectedItems.length !== 1) {
+      throw new HTTPException(400, {
+        message: 'Web search only supports single item selection',
+      });
+    }
+
+    // for now force parentId equal to selectedItems id
+    const parentId = selectedItems[0];
 
     // Create a readable stream for the response
     const stream = new ReadableStream({
@@ -96,28 +107,30 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           // create stream service
           const streamService = new StreamService(controller);
 
-          if (true) {
-            console.log('handling web search');
-
-            await BrainstormService.streamWebSearch({
-              prompt: message,
-              chatHistory,
-              tree,
-              streamService,
-              ctx,
-            });
-          }
-
-          throw new Error('Invalid search type');
-
-          // Use LLMService to stream the response
-          const finalResult = await BrainstormService.streamBrainstorm({
-            prompt: message,
-            chatHistory,
-            tree,
-            streamService,
-            ctx,
-          });
+          const finalResult = await (async () => {
+            switch (searchType) {
+              case 'text':
+                return BrainstormService.streamBrainstorm({
+                  prompt: message,
+                  chatHistory,
+                  tree,
+                  streamService,
+                  ctx,
+                });
+              case 'web':
+              case 'image':
+                return BrainstormService.streamWebSearch({
+                  prompt: message,
+                  chatHistory,
+                  parentId: parentId as TLShapeId,
+                  tree,
+                  streamService,
+                  ctx,
+                });
+              default:
+                throw new Error('Invalid search type');
+            }
+          })();
 
           // Handle final result by parsing into shapes and bindings and adding to workspace iff doesnt exist
           const { shapes, bindings } = shapeService.getTlShapesAndBindings(
@@ -127,6 +140,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           await streamService.handleCompletedNodeShapes({
             shapes,
             bindings,
+            searchType,
             workspaceId,
             ctx,
           });

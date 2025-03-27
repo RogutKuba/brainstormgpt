@@ -126,13 +126,9 @@ export const LLMService = {
       sender: 'user' | 'system';
     }[];
     env: AppContext['Bindings'];
-    structuredOutput: {
-      name: string;
-      schema: ZodObject<any>;
-    };
-    onNewContent: (parsedContent: unknown) => void;
+    onNewContent: (streamedContent: string) => void;
   }) => {
-    const { prompt, chatHistory, env, structuredOutput, onNewContent } = params;
+    const { prompt, chatHistory, env, onNewContent } = params;
 
     const openrouter = new OpenAI({
       apiKey: env.OPENROUTER_API_KEY,
@@ -140,9 +136,6 @@ export const LLMService = {
     });
 
     const WEB_SEARCH_MODEL = 'perplexity/sonar-pro';
-
-    // Buffer to accumulate content for parsing
-    let contentBuffer = '';
 
     const stream = openrouter.beta.chat.completions
       .stream({
@@ -154,95 +147,18 @@ export const LLMService = {
           })),
           {
             role: 'user',
-            content: `${prompt}\n\nIMPORTANT: Format your response using the following XML structure:
-
-<brainstormStream>
-  <explanation>
-    Brief summary of your findings here. This should be a concise overview of the key insights.
-  </explanation>
-  <nodes>
-    <node>
-      <type>text</type>
-      <text>## First Node Title
-
-Content for the first node goes here. Keep it concise and informative.</text>
-      <parentId>null</parentId>
-      <predictions>
-        <prediction>
-          <text>First follow-up question about this node?</text>
-          <type>text</type>
-        </prediction>
-        <prediction>
-          <text>A question that requires web search to answer?</text>
-          <type>web</type>
-        </prediction>
-        <prediction>
-          <text>A concept that would benefit from visualization?</text>
-          <type>image</type>
-        </prediction>
-      </predictions>
-    </node>
-    <node>
-      <type>text</type>
-      <text>## Second Node Title
-
-Content for the second node goes here. Keep it concise and informative.</text>
-      <parentId>none</parentId>
-      <predictions>
-        <prediction>
-          <text>First follow-up question about this node?</text>
-          <type>text</type>
-        </prediction>
-        <prediction>
-          <text>Second follow-up question about this node?</text>
-          <type>text</type>
-        </prediction>
-      </predictions>
-    </node>
-  </nodes>
-</brainstormStream>
-
-Each node should have:
-1. A type field (use "text")
-2. A text field with a clear, descriptive title (using ## markdown format) followed by concise content (1-2 paragraphs)
-3. A parentId field (use "null" for the first node, "none" for others, or a specific parent ID if extending an existing node)
-4. 3-5 predictions (follow-up questions) with:
-   - A text field containing the question or exploration prompt
-   - A type field that must be one of: "text", "web", or "image"
-
-PREDICTION TYPE GUIDELINES:
-- Use "text" for conceptual questions that can be answered with explanations
-- Use "web" for questions requiring current information or fact-checking
-- Use "image" for concepts that would benefit from visualization
-
-Make sure to properly nest all XML tags and maintain this exact structure.`,
+            content: prompt,
           },
         ],
       })
       .on('refusal.done', () => console.log('request refused'))
-      .on('content.delta', ({ delta, snapshot }) => {
-        // Add the new content to our buffer
-        contentBuffer += delta;
-
-        // Try to parse the accumulated content
-        const structuredContent = LLMService.parseRawStreamIntoStructured({
-          content: contentBuffer,
-          structuredOutput,
-        });
-        onNewContent(structuredContent);
-      })
-      .on('chatCompletion', (completion) => {
-        console.log('completion', completion);
+      .on('content.delta', ({ snapshot }) => {
+        onNewContent(snapshot);
       });
 
     await stream.done();
 
-    const finalStructured = LLMService.parseRawStreamIntoStructured({
-      content: contentBuffer,
-      structuredOutput,
-    });
-
-    return finalStructured;
+    return stream.finalChatCompletion();
   },
 
   /**

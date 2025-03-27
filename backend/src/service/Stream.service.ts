@@ -124,7 +124,6 @@ export class StreamService {
       const pendingPredictions = prevNodeInfo?.pendingPredictions ?? [];
 
       const prevTextLength = prevNodeInfo?.textLength ?? 0;
-      let nodeChunkSent = false;
 
       // decide to stream new text chunk for node content
       if (node.text?.length && node.text?.length > prevTextLength) {
@@ -143,8 +142,6 @@ export class StreamService {
               `event: node-chunk\ndata: ${JSON.stringify(toSend)}\n\n`
             )
           );
-
-          nodeChunkSent = true;
 
           // Process any pending predictions immediately after sending a node chunk
           if (pendingPredictions.length > 0) {
@@ -188,10 +185,11 @@ export class StreamService {
   public handleCompletedNodeShapes = async (params: {
     shapes: (LinkShape | RichTextShape | TLArrowShape)[];
     bindings: TLArrowBinding[];
+    searchType: 'text' | 'web' | 'image';
     workspaceId: string;
     ctx: Context<AppContext>;
   }) => {
-    const { shapes, bindings, workspaceId, ctx } = params;
+    const { shapes, bindings, workspaceId, searchType, ctx } = params;
 
     // in this case, we add the nodes to the editor if they dont already exist, to make sure the writes are durable in
     // case client disconnects before the nodes are fully streamed.
@@ -199,14 +197,59 @@ export class StreamService {
     const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
     const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
 
-    await workspace.updateShapes(shapes, {
-      // TODO: fix this so that we actually create the shapes if they don't exist
-      // createIfMissing: true,
-      additionalRecords: bindings,
-      keysToMerge: {
-        shape: [''],
-        props: ['text', 'predictions'],
-      },
+    if (searchType === 'text') {
+      await workspace.updateShapes(shapes, {
+        // TODO: fix this so that we actually create the shapes if they don't exist
+        createIfMissing: false,
+        additionalRecords: bindings,
+        keysToMerge: {
+          shape: [''],
+          props: ['text', 'predictions'],
+        },
+      });
+    } else if (searchType === 'web' || searchType === 'image') {
+      // TODO: fix this so that we actually upsert shapes instead of just creating them
+      await workspace.addRecords([...shapes, ...bindings]);
+    } else {
+      throw new Error('Invalid search type');
+    }
+  };
+
+  public handleWebSearchContent = async (params: {
+    answerContent: string;
+    parentId: TLShapeId;
+  }) => {
+    const { answerContent, parentId } = params;
+    const MAIN_NODE_INDEX = 0;
+
+    const prevNodeInfo = this.getPrevNodeInfo(MAIN_NODE_INDEX);
+
+    // get shape id or generate new one
+    const id = prevNodeInfo?.id ?? generateTlShapeId();
+    const prevTextLength = prevNodeInfo?.textLength ?? 0;
+
+    const chunk = answerContent.substring(prevTextLength);
+
+    if (chunk.length > 0) {
+      const toSend: z.infer<typeof this.nodeMessageSchema> = {
+        id,
+        chunk,
+        parentId,
+        predictions: [],
+      };
+
+      this.streamController.enqueue(
+        this.encoder.encode(
+          `event: node-chunk\ndata: ${JSON.stringify(toSend)}\n\n`
+        )
+      );
+    }
+
+    this.prevNodeInfo.set(MAIN_NODE_INDEX, {
+      id,
+      textLength: answerContent.length,
+      prevPredictions: new Map(),
+      pendingPredictions: [],
     });
   };
 

@@ -9,6 +9,8 @@ import { getDbConnection } from '../db/client';
 import { z } from 'zod';
 import { StreamService } from './Stream.service';
 import { generateTlShapeId } from '../lib/id';
+import { TLArrowBinding, IndexKey } from 'tldraw';
+import { LinkShape } from '../shapes/Link.shape';
 
 export type BrainStormResult = {
   text: string;
@@ -244,10 +246,6 @@ export const BrainstormService = {
     };
 
     const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
-
-    // console.log('formattedShapes', formattedShapes);
-    // console.log('deepest level:', deepestLevel);
-    // console.log('deepest shape IDs:', deepestShapeIds);
 
     const newIdeasResult = await LLMService.generateMessage({
       prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You create concise, well-articulated nodes that function as interconnected knowledge units. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
@@ -485,8 +483,6 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
       .partial()
       .safeParse(parsedContent);
 
-    console.log('got parsedContent', !!parsedContent);
-
     if (error) {
       console.error(
         'Error parsing content:',
@@ -504,18 +500,24 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
     }
   },
 
-  // Handle web search
+  // #########################################################
+  // #########################################################
+  // WEB SEARCH VERSION
+  // #########################################################
+  // #########################################################
+
   streamWebSearch: async (params: {
     prompt: string;
     chatHistory: {
       content: string;
       sender: 'user' | 'system';
     }[];
+    parentId: TLShapeId;
     tree: TreeNode[];
     streamService: StreamService;
     ctx: Context<AppContext>;
   }): Promise<z.infer<typeof brainstormStreamResultSchema>> => {
-    const { prompt, chatHistory, streamService, tree, ctx } = params;
+    const { prompt, chatHistory, streamService, tree, ctx, parentId } = params;
     const encoder = new TextEncoder();
 
     const formattedShapes = await extractShapesWithText({ tree, ctx });
@@ -548,17 +550,15 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
       );
     };
 
-    const deepestShapeIds = findDeepestShapeIds(tree, 1, deepestLevel);
-
     // Send processing status
     streamService.streamController.enqueue(
       encoder.encode(
-        'event: processing\ndata: {"status":"Generating ideas..."}\n\n'
+        'event: processing\ndata: {"status":"Searching the web..."}\n\n'
       )
     );
 
     const response = await LLMService.streamWebSearch({
-      prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You create concise, well-articulated nodes that function as interconnected knowledge units. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
+      prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
       
 Based on these whiteboard nodes:
 
@@ -570,75 +570,72 @@ ${formattedShapes}
 ${prompt}
 </user-prompt>
 
-First, provide a brief, professional explanation that summarizes the key insights and concepts you're adding. This should be conversational and helpful to the user, not a meta-description of the nodes themselves. Focus on the actual subject matter and insights rather than describing what you're doing.
-
-IMPORTANT: When you see link nodes in the existing content, understand that users CANNOT see the content of these links directly on their whiteboard. The link summaries and key points are only visible to you as context. If you want to reference information from links, you should include that information explicitly in your new nodes.
+You will search the web to find relevant information and create a comprehensive answer to the user's query.
 
 PRIORITIZE extending the DEEPEST level of thinking in the existing nodes (level ${deepestLevel}). This should be your primary focus.
 
-However, if you identify a significant gap in the knowledge structure that requires a new top-level or mid-level concept, you may suggest such additions when clearly justified.
+Your main answer should:
+- Begin with a clear, descriptive title using markdown formatting (##)
+- Provide a comprehensive, factual answer based on web search results
+- Synthesize information from multiple sources
+- Include specific facts, figures, and data points when relevant
+- Be objective and balanced in presenting information
+- Aim for 4-6 sentences total - be concise but informative
+- Dont add any citations in the answer. Never have text with [1] or [2] or any other numbers.
 
-IMPORTANT FORMATTING GUIDELINES:
-1. Create CONCISE nodes that spark curiosity rather than exhaustive explanations
-2. Each node should be a brief introduction to a concept (like a Wikipedia preview, not the full article)
-3. Format each node with a clear, descriptive title followed by 1-2 SHORT paragraphs
-4. Use proper markdown formatting with headings (##) for titles
-5. Write in a professional, objective tone appropriate for knowledge documentation
-6. Aim for 2-4 sentences per node - be concise and thought-provoking
-7. Focus on introducing key ideas that encourage further exploration
-8. Avoid lengthy explanations - the goal is to spark curiosity, not provide comprehensive coverage
-9. Use bullet points sparingly and only for very brief lists
-
-For each node, include 3-5 predictions of follow-up questions or exploration paths. Each prediction must have:
-1. A 'text' field with the question or exploration prompt
-2. A 'type' field that must be one of:
-   - 'text': For questions that can be answered with text-based explanations
-   - 'web': For questions that would benefit from web search to find current or factual information
-   - 'image': For requests to visualize concepts
-
-PREDICTION TYPE GUIDELINES:
-- PRIORITIZE 'text' type predictions (aim for at least 2-3 text predictions per node)
-- Use 'text' for conceptual questions, explanations, theoretical discussions, and most follow-up questions
-- Use 'web' sparingly and only when truly necessary for fact-checking, current events, statistics, or when external sources would be clearly valuable
-- Use 'image' very selectively and only when a concept would be significantly better understood through visualization
-
-For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
-        ', '
-      )}
-
-Your goal is to create a network of concise, intriguing knowledge nodes that prompt further thinking and exploration. Think of each node as a conversation starter rather than a complete explanation.`,
+Your goal is to provide factual, well-researched information that directly addresses the user's query.`,
       chatHistory,
       env: ctx.env,
-      structuredOutput: {
-        name: 'brainstormStream',
-        schema: brainstormStreamSchema,
-      },
-      onNewContent: async (parsedContent) => {
-        await BrainstormService.handleStreamContent({
-          streamService,
-          parsedContent,
+      onNewContent: async (answerContent) => {
+        await streamService.handleWebSearchContent({
+          answerContent,
+          parentId,
         });
       },
     });
 
-    // Send complete message with the final result
-    const rawStreamResult = brainstormStreamSchema.parse(response);
+    // Create a formatted result with a single main node
+    // const mainNodeId = generateTlShapeId();
+    // Extract the explanation and node content from the response
+    // const rawStreamResult = response.choices[0].message.content;
 
+    // @ts-ignore
+    const citations: string[] = response.citations;
+
+    // Create a formatted result with the main node
     const formattedStreamResult = {
-      explanation: rawStreamResult.explanation ?? '',
-      nodes: (rawStreamResult.nodes ?? []).map((node, index) => {
-        const prevNodeInfo = streamService.getPrevNodeInfo(index);
-        const nodeId = prevNodeInfo?.id ?? generateTlShapeId();
-        return {
-          id: nodeId,
-          type: node.type ?? 'text',
-          text: node.text ?? '',
-          parentId: node.parentId ?? null,
-          predictions: node.predictions ?? [],
-        };
-      }),
+      explanation: '',
+      nodes: [
+        // TODO: add back main node since this auto gets added
+        // {
+        //   id: mainNodeId,
+        //   type: 'text',
+        //   text: rawStreamResult ?? '',
+        //   parentId,
+        //   predictions: [],
+        // },
+        ...BrainstormService.handleWebSearchCitations({
+          citations: citations.slice(0, 3),
+          parentId,
+        }),
+      ],
     };
 
     return formattedStreamResult;
+  },
+
+  handleWebSearchCitations: (params: {
+    citations: string[];
+    parentId: TLShapeId;
+  }): z.infer<typeof brainstormStreamResultSchema>['nodes'] => {
+    const { citations, parentId } = params;
+
+    return citations.map((citation) => ({
+      id: generateTlShapeId(),
+      type: 'link',
+      text: citation,
+      parentId,
+      predictions: [],
+    }));
   },
 };
