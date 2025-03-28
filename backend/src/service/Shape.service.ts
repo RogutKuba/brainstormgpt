@@ -19,6 +19,11 @@ import {
 } from './Brainstorm.service';
 import { z } from 'zod';
 import { generateTlBindingId, generateTlShapeId } from '../lib/id';
+import { Context } from 'hono';
+import { AppContext } from '..';
+import { PageSummaryEntity, pageSummaryTable } from '../db/pageSummary.db';
+import { getDbConnection } from '../db/client';
+import { inArray } from 'drizzle-orm';
 
 export type TreeNode = {
   id: string;
@@ -1126,5 +1131,134 @@ export class ShapeService {
       height: height + padding,
       width: width + padding,
     };
+  };
+
+  // Helper function to extract shapes with text from the tree structure
+  extractShapesWithText = async (params: {
+    tree: TreeNode[];
+    ctx: Context<AppContext>;
+  }): Promise<string> => {
+    const { tree, ctx } = params;
+
+    /*
+  the result of the function should be a string that contains the shapes with text
+  the format of the string should be:
+  <node id="shape-id-1" level="1">shape-text-1</node>
+    <node id="shape-id-2" level="2" parent="shape-id-1">shape-text-2</node>
+    <node id="shape-id-3" level="2" parent="shape-id-1">shape-text-3</node>
+  ...
+  */
+
+    /**
+     * Start by extracting all text out of nodes, then process link nodes in batch
+     * to avoid multiple database queries
+     */
+
+    // First pass: collect all nodes and identify link nodes
+    const allNodes: ({
+      id: string;
+      level: number;
+      parentId?: string;
+    } & (
+      | {
+          type: 'text' | 'rich-text';
+          text: string;
+        }
+      | { type: 'link'; url: string }
+    ))[] = [];
+
+    function collectNodes(
+      node: TreeNode,
+      level: number,
+      parentId?: string
+    ): void {
+      if (node.type === 'text' || node.type === 'rich-text') {
+        allNodes.push({
+          id: node.id,
+          level,
+          parentId,
+          type: 'text',
+          text: node.text,
+        });
+      } else if (node.type === 'link') {
+        allNodes.push({
+          id: node.id,
+          level,
+          parentId,
+          type: 'link',
+          url: node.url,
+        });
+      }
+
+      // Process children recursively
+      node.children.forEach((child) => collectNodes(child, level + 1, node.id));
+    }
+
+    // Collect all nodes
+    tree.forEach((node) => collectNodes(node, 1));
+
+    // Extract all unique URLs from link nodes
+    const linkNodes = allNodes.filter((node) => node.type === 'link');
+    const uniqueUrls = [...new Set(linkNodes.map((node) => node.url))];
+
+    // If we have link nodes, fetch all summaries in a single query
+    let urlToSummaryMap = new Map<string, PageSummaryEntity>();
+
+    // This would be an async function in practice, but we're keeping the original function signature
+    // In a real implementation, you'd need to make this function async or use a different pattern
+    if (uniqueUrls.length > 0) {
+      // This is a placeholder for the actual DB query
+      // In a real implementation, you would:
+      // 1. Get DB connection
+      // 2. Query all summaries for the unique URLs in one go
+      // 3. Map the results by URL for easy lookup
+      const db = getDbConnection(ctx);
+      const summaries = await db
+        .select()
+        .from(pageSummaryTable)
+        .where(inArray(pageSummaryTable.url, uniqueUrls));
+
+      summaries.forEach((summary) => {
+        urlToSummaryMap.set(summary.url, summary);
+      });
+    }
+
+    // Second pass: generate the final output string with all nodes in the original order
+    function processNode(node: {
+      id: string;
+      level: number;
+      parentId?: string;
+      type: 'text' | 'link' | 'rich-text';
+      text?: string;
+      url?: string;
+    }): string {
+      const parentAttr = node.parentId ? ` parent="${node.parentId}"` : '';
+      let nodeText = '';
+
+      if (node.type === 'text') {
+        nodeText = node.text || '';
+      } else if (node.type === 'link') {
+        // For link nodes, use the summary if available
+        const summary = urlToSummaryMap.get(node.url || '');
+        if (summary) {
+          nodeText = `${summary.gist}\n\n${summary.keyPoints}`;
+        } else {
+          nodeText = `Link: ${node.url}`;
+        }
+      }
+
+      return `<node id="${node.id}" level="${node.level}"${parentAttr}>${nodeText}</node>`;
+    }
+
+    // Generate the final output by processing each node in the original order
+    return allNodes
+      .sort((a, b) => {
+        // Sort by level first, then by original order
+        if (a.level !== b.level) return a.level - b.level;
+        // Use the original index in the allNodes array as a proxy for original order
+        return allNodes.indexOf(a) - allNodes.indexOf(b);
+      })
+      .map(processNode)
+      .join('\n');
   };
 }

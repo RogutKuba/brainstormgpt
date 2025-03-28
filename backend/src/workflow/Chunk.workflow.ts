@@ -23,6 +23,7 @@ export type ChunkWorkflowParams = {
   crawledPageId: string;
   shapeId: string;
   workspaceId: string;
+  context: string;
 };
 
 /**
@@ -42,7 +43,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
   ChunkWorkflowParams
 > {
   async run(event: WorkflowEvent<ChunkWorkflowParams>, step: WorkflowStep) {
-    const { crawledPageId, shapeId, workspaceId } = event.payload;
+    const { crawledPageId, shapeId, workspaceId, context } = event.payload;
 
     try {
       const existingCrawledPage = await step.do(
@@ -138,6 +139,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
           const _predictions = await SummaryService.generateBranchPredictions({
             crawledPageUrl: existingCrawledPage.url,
             env: this.env,
+            context,
           });
           return _predictions;
         }

@@ -142,9 +142,10 @@ export const SummaryService = {
   // generate branch predictions for the page
   async generateBranchPredictions(params: {
     crawledPageUrl: string;
+    context: string;
     env: AppContext['Bindings'];
   }): Promise<z.infer<typeof this.branchPredictionsSchema>['predictions']> {
-    const { crawledPageUrl, env } = params;
+    const { crawledPageUrl, context, env } = params;
 
     const db = getDbConnectionFromEnv(env);
 
@@ -163,6 +164,12 @@ export const SummaryService = {
     // generate branch predictions
     const branchPredictions = await LLMService.generateMessage({
       prompt: `You are an expert at generating thought-provoking follow-up questions and exploration paths based on content summaries.
+
+You are given the context of previous nodes in a thinking tree, along with a page summary.
+
+<previous-context>
+${context}
+</previous-context>
 
 Based on the following page summary:
 
@@ -184,8 +191,13 @@ GUIDELINES FOR GOOD BRANCH PREDICTIONS:
 5. Phrase predictions as questions or "How to..." statements that invite further exploration
 6. Avoid overly general or obvious predictions
 7. Each prediction should stand alone as a clear, self-contained prompt
+8. Consider the previous context to avoid redundancy and build upon existing ideas
+9. Each prediction should have a 'type' that indicates the best way to explore it:
+   - 'text' for conceptual questions that can be answered with explanations
+   - 'web' for questions that would benefit from web search for factual information
+   - 'image' for concepts that would be better understood through visualization
 
-Format your response as an array of strings, with each prediction as a separate string element.`,
+Format your response as structured output with an array of prediction objects, each containing 'text' and 'type' fields.`,
       chatHistory: [],
       env,
       structuredOutput: {

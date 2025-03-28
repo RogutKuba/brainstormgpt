@@ -97,6 +97,7 @@ export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
       // spawn a workflow to crawl the page and create a summary
       const workflow = await ctx.env.ChunkWorkflow.create({
         params: {
+          context: '',
           workspaceId,
           shapeId,
           crawledPageId: crawlResult.id,

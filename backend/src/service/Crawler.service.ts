@@ -128,9 +128,10 @@ export class CrawlerService {
       shapeId: string;
       url: string;
     }[];
+    context: string;
     ctx: Context<AppContext>;
   }) {
-    const { shapes, ctx } = params;
+    const { shapes, context, ctx } = params;
 
     // Get the durable object for this workspace
     const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(
@@ -184,6 +185,7 @@ export class CrawlerService {
             workspaceId: this.workspaceId,
             shapeId,
             crawledPageId: crawlResult.id,
+            context,
           },
         });
 

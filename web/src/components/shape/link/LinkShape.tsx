@@ -373,6 +373,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
+              disabled={isLoading}
             >
               <RiEditLine className='w-5 h-5 text-stone-500' />
             </Button>

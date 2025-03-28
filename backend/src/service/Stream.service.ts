@@ -71,11 +71,6 @@ export class StreamService {
     }
   > = new Map();
 
-  /**
-   * Tracks if we have deleted the existing prediction
-   */
-  private deletedPastPrediction: boolean = false;
-
   constructor(streamController: ReadableStreamController<any>) {
     this.streamController = streamController;
     this.encoder = new TextEncoder();
@@ -185,12 +180,13 @@ export class StreamService {
    */
   public handleCompletedNodeShapes = async (params: {
     shapes: (LinkShape | RichTextShape | TLArrowShape)[];
+    context: string;
     bindings: TLArrowBinding[];
     searchType: 'text' | 'web' | 'image';
     workspaceId: string;
     ctx: Context<AppContext>;
   }) => {
-    const { shapes, bindings, workspaceId, searchType, ctx } = params;
+    const { shapes, bindings, workspaceId, searchType, ctx, context } = params;
 
     // in this case, we add the nodes to the editor if they dont already exist, to make sure the writes are durable in
     // case client disconnects before the nodes are fully streamed.
@@ -233,6 +229,7 @@ export class StreamService {
             shapeId: shape.id,
             url: shape.props.url,
           })),
+          context,
           ctx,
         })
       );

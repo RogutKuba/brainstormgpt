@@ -104,6 +104,10 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           // Create shape service and get the tree
           const shapeService = new ShapeService(snapshot);
           const tree = shapeService.getSelectedTree(selectedItems);
+          const formattedShapes = await shapeService.extractShapesWithText({
+            tree,
+            ctx,
+          });
 
           // create stream service
           const streamService = new StreamService(controller);
@@ -115,6 +119,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                   prompt: message,
                   chatHistory,
                   tree,
+                  formattedShapes,
                   streamService,
                   ctx,
                 });
@@ -125,6 +130,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                   chatHistory,
                   parentId: parentId as TLShapeId,
                   tree,
+                  formattedShapes,
                   streamService,
                   ctx,
                 });
@@ -146,6 +152,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           await streamService.handleCompletedNodeShapes({
             shapes,
             bindings,
+            context: formattedShapes,
             searchType,
             workspaceId,
             ctx,
