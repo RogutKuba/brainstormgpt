@@ -153,50 +153,69 @@ export class CrawlerService {
           throw new Error('Shape not found');
         }
 
-        // Crawl the URL
-        const crawlResult = await this.crawl(url);
+        const updatedShape = await (async () => {
+          const uncrawlable = this.handleUncrawlableUrl(url, currentShape);
 
-        if (!crawlResult) {
-          throw new Error('Failed to crawl URL');
-        }
+          console.log('uncrawlable', uncrawlable);
 
-        // Update the shape with the crawled data
-        const updatedShape: LinkShape = {
-          ...currentShape,
-          props: {
-            ...currentShape.props,
-            url,
-            status: 'analyzing',
-            isLoading: true,
-            title: crawlResult.title,
-            description: crawlResult.description,
-            previewImageUrl: crawlResult.previewImageUrl,
-            error: null,
-          },
-          typeName: 'shape',
-        };
+          if (uncrawlable) {
+            results.push({
+              ok: true,
+              shapeId,
+              shape: uncrawlable,
+            });
+            return uncrawlable;
+          }
+
+          // Crawl the URL
+          const crawlResult = await this.crawl(url);
+
+          if (!crawlResult) {
+            throw new Error('Failed to crawl URL');
+          }
+
+          // Update the shape with the crawled data
+          const _updatedShape: LinkShape = {
+            ...currentShape,
+            props: {
+              ...currentShape.props,
+              url,
+              status: 'analyzing',
+              isLoading: true,
+              title: crawlResult.title,
+              description: crawlResult.description,
+              previewImageUrl: crawlResult.previewImageUrl,
+              error: null,
+            },
+            typeName: 'shape',
+          };
+
+          // Spawn a workflow to crawl the page and create a summary
+          const workflow = await ctx.env.ChunkWorkflow.create({
+            params: {
+              workspaceId: this.workspaceId,
+              shapeId,
+              crawledPageId: crawlResult.id,
+              context,
+            },
+          });
+
+          console.log('Workflow spawned', workflow.id);
+
+          results.push({
+            ok: true,
+            shapeId,
+            shape: _updatedShape,
+            crawlResult,
+          });
+
+          return _updatedShape;
+        })();
+
+        console.log('updating-shape', updatedShape);
 
         // Update the shape in the durable object
         await workspaceDo.updateShape(updatedShape);
-
-        // Spawn a workflow to crawl the page and create a summary
-        const workflow = await ctx.env.ChunkWorkflow.create({
-          params: {
-            workspaceId: this.workspaceId,
-            shapeId,
-            crawledPageId: crawlResult.id,
-            context,
-          },
-        });
-
-        console.log('Workflow spawned', workflow.id);
-
-        results.push({
-          ok: true,
-          shapeId,
-          shape: updatedShape,
-          crawlResult,
-        });
       } catch (error) {
         console.error('Error updating link shape:', error);
 
@@ -251,5 +270,40 @@ export class CrawlerService {
     }
 
     return results;
+  }
+
+  /**
+   * Currently can't handle PDFs, or youtube links
+   * @param url
+   */
+  handleUncrawlableUrl(url: string, currentShape: LinkShape): LinkShape | null {
+    const isPdf = (() => {
+      // check if extension is pdf, or site is usual pdf sites like arxiv
+      const extension = url.split('.').pop();
+      return extension === 'pdf' || url.includes('arxiv.org/pdf');
+    })();
+    const isYoutube = url.includes('youtube.com');
+
+    // if one of these, want to return updated shape with completed state and
+    if (isPdf || isYoutube) {
+      const updatedShape: LinkShape = {
+        ...currentShape,
+        props: {
+          ...currentShape.props,
+          url,
+          title: isYoutube ? 'YouTube video' : 'PDF document',
+          description: isYoutube ? 'YouTube video' : 'PDF document',
+          predictions: [],
+          previewImageUrl: null,
+          status: 'success',
+          isLoading: false,
+          error: null,
+        },
+      };
+
+      return updatedShape;
+    }
+
+    return null;
   }
 }
