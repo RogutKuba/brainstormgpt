@@ -156,8 +156,6 @@ export class CrawlerService {
         const updatedShape = await (async () => {
           const uncrawlable = this.handleUncrawlableUrl(url, currentShape);
 
-          console.log('uncrawlable', uncrawlable);
-
           if (uncrawlable) {
             results.push({
               ok: true,
@@ -211,8 +209,6 @@ export class CrawlerService {
 
           return _updatedShape;
         })();
-
-        console.log('updating-shape', updatedShape);
 
         // Update the shape in the durable object
         await workspaceDo.updateShape(updatedShape);
@@ -291,8 +287,8 @@ export class CrawlerService {
         props: {
           ...currentShape.props,
           url,
-          title: isYoutube ? 'YouTube video' : 'PDF document',
-          description: isYoutube ? 'YouTube video' : 'PDF document',
+          title: isYoutube ? 'YouTube' : 'PDF',
+          description: isYoutube ? 'YouTube' : 'PDF Document',
           predictions: [],
           previewImageUrl: null,
           status: 'success',
