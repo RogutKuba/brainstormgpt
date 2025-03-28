@@ -141,7 +141,6 @@ export const chatRouter = new OpenAPIHono<AppContext>().openapi(
       const shape = newShapeMap.get(node.id);
       if (shape) {
         // print out the node x y for shape
-        console.log('shape', shape.id, shape.x, shape.y, '->', node.x, node.y);
 
         return {
           ...shape,

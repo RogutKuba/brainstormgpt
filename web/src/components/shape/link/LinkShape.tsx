@@ -23,6 +23,7 @@ import {
   RiGlobalLine,
   RiImage2Line,
   RiQuestionLine,
+  RiErrorWarningLine,
 } from '@remixicon/react';
 import { Input } from '@/components/ui/input';
 import { useUpdateLinkShape } from '@/query/shape.query';
@@ -83,8 +84,8 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       title: 'Google',
       description: 'Google',
       isLoading: false,
-      status: 'success',
-      error: null,
+      status: 'error',
+      error: 'Error loading content',
       previewImageUrl: null,
       isLocked: true,
       isExpanded: false,
@@ -147,7 +148,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
     // Modify the expansion/collapse animation logic
     useEffect(() => {
-      if (!isDefault) {
+      if (!isDefault && !isLoading && !error) {
         handleExpansionAnimation(
           shape,
           isExpanded,
@@ -155,7 +156,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           this.calculateShapeHeight
         );
       }
-    }, [isExpanded, predictions.length, isDefault]);
+    }, [isExpanded, predictions.length, isDefault, isLoading, error]);
 
     // Handle prediction click
     const onPredictionClick = async (prediction: {
@@ -391,7 +392,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           </Button>
         </div>
 
-        {!isDefault
+        {!isDefault && !isLoading && !error
           ? renderPredictionsList(predictions, isSelected, onPredictionClick, {
               container: 'px-4 mt-0',
               activeContainer: 'py-4 mt-2',
@@ -399,7 +400,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           : null}
 
         {isLoading && (
-          <div className='absolute inset-0 bg-white/70 flex flex-col items-center justify-center gap-3 backdrop-blur-sm transition-all duration-300'>
+          <div className='absolute inset-0 bottom-[46px] bg-white/70 flex flex-col items-center justify-center gap-3 backdrop-blur-sm transition-all duration-300'>
             {status === 'scraping' && (
               <>
                 <div className='flex items-center justify-center'>
@@ -479,14 +480,21 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         )}
 
         {error && (
-          <div
-            style={{
-              padding: '8px',
-              color: '#d32f2f',
-              fontSize: '12px',
-            }}
-          >
-            {error}
+          <div className='absolute inset-0 bottom-[46px] bg-white/70 flex flex-col items-center justify-center gap-3 backdrop-blur-sm transition-all duration-300'>
+            <div className='flex items-center justify-center'>
+              <div className='relative w-12 h-12'>
+                <RiErrorWarningLine
+                  className='absolute inset-0 w-12 h-12 text-red-500 p-2 animate-pulse'
+                  style={{ animationDuration: '2s' }}
+                />
+              </div>
+            </div>
+            <div className='text-base font-medium text-red-500 [text-shadow:0_0_10px_rgba(220,38,38,0.2)]'>
+              Error loading content
+            </div>
+            <div className='text-sm text-red-600 max-w-[80%] text-center'>
+              {error}
+            </div>
           </div>
         )}
       </HTMLContainer>

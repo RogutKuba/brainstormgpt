@@ -9,8 +9,6 @@ import { getDbConnection } from '../db/client';
 import { z } from 'zod';
 import { StreamService } from './Stream.service';
 import { generateTlShapeId } from '../lib/id';
-import { TLArrowBinding, IndexKey, Tldraw } from 'tldraw';
-import { LinkShape } from '../shapes/Link.shape';
 
 export type BrainStormResult = {
   text: string;
@@ -540,11 +538,11 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
       )
     );
 
-    const response = await LLMService.streamWebSearch({
-      prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
-      
+    let response;
+    try {
+      response = await LLMService.streamWebSearch({
+        prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You create concise, well-articulated nodes that function as interconnected knowledge units. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
 Based on these whiteboard nodes:
-
 <existing-nodes>
 ${formattedShapes}
 </existing-nodes>
@@ -553,54 +551,148 @@ ${formattedShapes}
 ${prompt}
 </user-prompt>
 
-You will search the web to find relevant information and create a comprehensive answer to the user's query.
-
+First, provide a brief, professional explanation that summarizes what you found from web search and how it relates to the user's query. This should be conversational and helpful to the user, not a meta-description of the search process.
+IMPORTANT: When you see link nodes in the existing content, understand that users CANNOT see the content of these links directly on their whiteboard. The link summaries and key points are only visible to you as context. If you want to reference information from links, you should include that information explicitly in your new nodes.
 PRIORITIZE extending the DEEPEST level of thinking in the existing nodes (level ${deepestLevel}). This should be your primary focus.
 
-Your main answer should:
-- Begin with a clear, descriptive title using markdown formatting (##)
-- Provide a comprehensive, factual answer based on web search results
-- Synthesize information from multiple sources
-- Include specific facts, figures, and data points when relevant
-- Be objective and balanced in presenting information
-- Aim for 4-6 sentences total - be concise but informative
-- Dont add any citations in the answer. Never have text with [1] or [2] or any other numbers.
+Your response must be structured in the following format:
 
-Your goal is to provide factual, well-researched information that directly addresses the user's query.`,
-      chatHistory,
-      env: ctx.env,
-      onNewContent: async (answerContent) => {
-        await streamService.handleWebSearchContent({
-          answerContent,
-          parentId,
-        });
-      },
-    });
+<explanation>A brief explanation of what you found and how it relates to the user's query</explanation>
+
+<node>## Clear Descriptive Title
+Your comprehensive, factual answer based on web search results. Synthesize information from multiple sources.
+Include specific facts, figures, and data points when relevant. Be objective and balanced.
+Aim for 4-6 sentences total in markdown format. Be concise but informative.
+</node>
+
+<predictions>
+- What are the latest developments in this area?|web
+- How does this concept relate to [related concept]?|text
+- Can you visualize this process or concept?|image
+</predictions>
+
+IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Instead, incorporate the information naturally into your text.`,
+        chatHistory,
+        env: ctx.env,
+        onNewContent: async (answerContent) => {
+          await streamService.handleWebSearchContent({
+            answerContent,
+            parentId,
+          });
+        },
+      });
+    } catch (error) {
+      console.error('Error in streamWebSearch:', error);
+
+      // Create a fallback response with an error message
+      const mainNodeId =
+        streamService.getPrevNodeInfo(0)?.id ?? generateTlShapeId();
+
+      // Return a graceful error message as a node
+      return {
+        explanation:
+          "I encountered an issue while searching the web. Here's what I could find:",
+        nodes: [
+          {
+            id: mainNodeId,
+            type: 'text',
+            text: `## Web Search Results\n\nI wasn't able to complete the web search due to a technical issue. You can try:\n\n1. Rephrasing your question\n2. Trying again in a moment\n3. Breaking your query into smaller parts`,
+            parentId,
+            predictions: [
+              {
+                text: 'Try a more specific search query',
+                type: 'web',
+              },
+              {
+                text: 'Can you explain this topic without web search?',
+                type: 'text',
+              },
+            ],
+          },
+        ],
+      };
+    }
 
     // Create a formatted result with a single main node
     const mainNodeId =
       streamService.getPrevNodeInfo(0)?.id ?? generateTlShapeId();
-    console.log('mainNodeId', mainNodeId);
 
-    // Extract the explanation and node content from the response
-    // const rawStreamResult = response.choices[0].message.content;
-
+    // Handle the case where response might be undefined or malformed
     // @ts-ignore
-    const citations: string[] = response.citations;
+    const citations: string[] = response?.citations ?? [];
+
+    // Extract content from the response
+    let explanation = '';
+    let answerText = '';
+    let predictions: Array<{ text: string; type: 'text' | 'web' | 'image' }> =
+      [];
+
+    if (
+      response?.choices?.length > 0 &&
+      response.choices[0]?.message?.content
+    ) {
+      const content = response.choices[0].message.content;
+
+      // Extract explanation
+      const explanationMatch = content.match(
+        /<explanation>(.*?)<\/explanation>/s
+      );
+      if (explanationMatch && explanationMatch[1]) {
+        explanation = explanationMatch[1].trim();
+      }
+
+      // Extract answer from node tag
+      const nodeMatch = content.match(/<node>(.*?)<\/node>/s);
+      if (nodeMatch && nodeMatch[1]) {
+        answerText = nodeMatch[1].trim();
+      } else {
+        // If no answer tags, use the whole content as the answer
+        answerText = content;
+      }
+
+      // Extract predictions
+      const predictionsMatch = content.match(
+        /<predictions>(.*?)<\/predictions>/s
+      );
+      if (predictionsMatch && predictionsMatch[1]) {
+        const predictionLines = predictionsMatch[1].trim().split('\n');
+
+        predictions = predictionLines
+          .filter((line) => line.trim().startsWith('-'))
+          .map((line) => {
+            const cleanLine = line.trim().substring(1).trim();
+            const parts = cleanLine.split('|');
+
+            return {
+              text: parts[0].trim(),
+              type: (parts[1]?.trim() || 'text') as 'text' | 'web' | 'image',
+            };
+          });
+      }
+    } else {
+      // Fallback if we have a response but it's malformed
+      answerText =
+        "## Web Search Results\n\nI found some information but couldn't format it properly. You might want to try a more specific search.";
+
+      // Add some default predictions
+      predictions = [
+        { text: 'Can you try a more specific search?', type: 'web' },
+        { text: 'What exactly are you looking for?', type: 'text' },
+      ];
+    }
 
     // Create a formatted result with the main node
     const formattedStreamResult = {
-      explanation: '',
+      explanation: explanation || "Here's what I found from searching the web:",
       nodes: [
         {
           id: mainNodeId,
           type: 'text',
           text:
-            response.choices.length > 0
-              ? response.choices[0].message.content ?? ''
-              : '',
+            answerText ||
+            'No specific results found. Try refining your search.',
           parentId,
-          predictions: [],
+          predictions,
         },
         ...BrainstormService.handleWebSearchCitations({
           citations: citations.slice(0, 3),

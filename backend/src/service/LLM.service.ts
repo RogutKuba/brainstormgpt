@@ -1,8 +1,7 @@
 import { AppContext } from '..';
 import OpenAI from 'openai';
-import { ZodObject, ZodSchema } from 'zod';
+import { ZodObject } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
-import { ContentDeltaEvent } from 'openai/lib/ChatCompletionStream.mjs';
 
 export const LLMService = {
   generateMessage: async (params: {
@@ -47,8 +46,6 @@ export const LLMService = {
     }
 
     const choice = completion.choices[0];
-
-    console.log('choice', JSON.parse(choice.message.content!));
 
     if (structuredOutput) {
       // @ts-ignore
@@ -149,11 +146,16 @@ export const LLMService = {
             content: prompt,
           },
         ],
+        stream: true,
       })
+      // .on('chunk', (chunk, snapshot) => console.log('chunk', chunk, snapshot))
       .on('refusal.done', () => console.log('request refused'))
       .on('content.delta', ({ snapshot }) => {
         onNewContent(snapshot);
-      });
+      })
+      .on('refusal.done', (refusal) => console.log('request refused', refusal))
+      .on('refusal.delta', (response) => console.log('refusal delta', response))
+      .on('error', () => {});
 
     await stream.done();
 

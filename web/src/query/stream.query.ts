@@ -13,7 +13,6 @@ import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { calculateNodeSize } from '@/components/chat/utils';
-import { useCurrentWorkspaceId } from '@/lib/pathUtils';
 
 export type StreamedNode = {
   id: TLShapeId;

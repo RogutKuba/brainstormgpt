@@ -250,34 +250,189 @@ export class StreamService {
 
     const prevNodeInfo = this.getPrevNodeInfo(MAIN_NODE_INDEX);
 
-    // get shape id or generate new one
+    // Get shape id or generate new one
     const id = prevNodeInfo?.id ?? generateTlShapeId();
     const prevTextLength = prevNodeInfo?.textLength ?? 0;
 
-    const chunk = answerContent.substring(prevTextLength);
+    // Initialize or get the prediction map
+    const predictionMap = prevNodeInfo?.prevPredictions ?? new Map();
+    const pendingPredictions = prevNodeInfo?.pendingPredictions ?? [];
 
-    if (chunk.length > 0) {
-      const toSend: z.infer<typeof this.nodeMessageSchema> = {
-        id,
-        chunk,
-        parentId,
-        predictions: [],
-      };
+    // Parse the content to extract explanation, answer, and predictions
+    const parsedContent = this.parseWebSearchContent(answerContent);
 
-      this.streamController.enqueue(
-        this.encoder.encode(
-          `event: node-chunk\ndata: ${JSON.stringify(toSend)}\n\n`
-        )
-      );
+    // Handle the main answer content
+    if (parsedContent.answer && parsedContent.answer.length > prevTextLength) {
+      const chunk = parsedContent.answer.substring(prevTextLength);
+
+      if (chunk.length > 0) {
+        const toSend: z.infer<typeof this.nodeMessageSchema> = {
+          id,
+          chunk,
+          parentId,
+          predictions: parsedContent.predictions || [],
+        };
+
+        this.streamController.enqueue(
+          this.encoder.encode(
+            `event: node-chunk\ndata: ${JSON.stringify(toSend)}\n\n`
+          )
+        );
+      }
     }
 
+    // Handle explanation separately if needed
+    if (
+      parsedContent.explanation &&
+      parsedContent.explanation.length !== this.prevExplanationLength
+    ) {
+      this.handleExplanation(parsedContent.explanation);
+    }
+
+    // Handle predictions - send any new predictions that weren't sent before
+    if (parsedContent.predictions && parsedContent.predictions.length > 0) {
+      parsedContent.predictions.forEach((prediction, index) => {
+        const prevPrediction = predictionMap.get(index);
+
+        // If this prediction doesn't exist yet or has changed
+        if (!prevPrediction || prevPrediction.length < prediction.text.length) {
+          const predId = prevPrediction?.id ?? generateTlShapeId();
+          const prevLength = prevPrediction?.length ?? 0;
+          const predChunk = prediction.text.substring(prevLength);
+
+          if (predChunk.length > 0) {
+            // If the main node is established, send the prediction immediately
+            if (prevTextLength > 0) {
+              const predChunkToSend: z.infer<
+                typeof this.predictionMessageSchema
+              > = {
+                id: predId,
+                chunk: predChunk,
+                parentId: id,
+              };
+
+              this.streamController.enqueue(
+                this.encoder.encode(
+                  `event: prediction-chunk\ndata: ${JSON.stringify(
+                    predChunkToSend
+                  )}\n\n`
+                )
+              );
+            } else {
+              // Otherwise, queue it to be sent after the node is established
+              pendingPredictions.push({
+                predIndex: index,
+                predId,
+                predChunk,
+              });
+            }
+          }
+
+          // Update the prediction map
+          predictionMap.set(index, {
+            id: predId,
+            length: prediction.text.length,
+          });
+        }
+      });
+    }
+
+    // Update the node info
     this.prevNodeInfo.set(MAIN_NODE_INDEX, {
       id,
-      textLength: answerContent.length,
-      prevPredictions: new Map(),
-      pendingPredictions: [],
+      textLength: parsedContent.answer?.length ?? 0,
+      prevPredictions: predictionMap,
+      pendingPredictions,
     });
   };
+
+  /**
+   * Parses web search content to extract explanation, answer, and predictions
+   * Handles partial tags and streaming content
+   */
+  private parseWebSearchContent(content: string): {
+    explanation?: string;
+    answer?: string;
+    predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
+  } {
+    const result: {
+      explanation?: string;
+      answer?: string;
+      predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
+    } = {};
+
+    // Extract explanation - handle both complete and partial tags
+    const explanationMatch = content.match(
+      /<explanation>(.*?)(?:<\/explanation>|$)/s
+    );
+    if (explanationMatch && explanationMatch[1]) {
+      result.explanation = explanationMatch[1].trim();
+    }
+
+    // Extract answer - handle both complete and partial tags
+    const answerMatch = content.match(/<node>(.*?)(?:<\/node>|$)/s);
+    if (answerMatch && answerMatch[1]) {
+      result.answer = answerMatch[1].trim();
+    } else if (!content.includes('<node>')) {
+      // If no answer tags at all, use the whole content as the answer
+      // But exclude any explanation or predictions sections
+      let fullContent = content;
+
+      // Remove explanation section if it exists
+      if (content.includes('<explanation>')) {
+        const explanationEndIndex = content.includes('</explanation>')
+          ? content.indexOf('</explanation>') + 14
+          : content.indexOf('<explanation>') +
+            (explanationMatch?.[0].length ?? 0);
+
+        fullContent = fullContent.substring(explanationEndIndex).trim();
+      }
+
+      // Remove predictions section if it exists
+      if (fullContent.includes('<predictions>')) {
+        fullContent = fullContent
+          .substring(0, fullContent.indexOf('<predictions>'))
+          .trim();
+      }
+
+      if (fullContent) {
+        result.answer = fullContent;
+      }
+    }
+
+    // Extract predictions - handle both complete and partial tags
+    const predictionsMatch = content.match(
+      /<predictions>(.*?)(?:<\/predictions>|$)/s
+    );
+    if (predictionsMatch && predictionsMatch[1]) {
+      const predictionsContent = predictionsMatch[1].trim();
+
+      // Look for prediction items (lines starting with -)
+      const predictionLines = predictionsContent
+        .split('\n')
+        .filter((line) => line.trim().startsWith('-'))
+        .map((line) => line.trim().substring(1).trim());
+
+      if (predictionLines.length > 0) {
+        result.predictions = predictionLines.map((line) => {
+          // Parse the prediction format: "text|type"
+          const parts = line.split('|');
+          const predictionText = parts[0].trim();
+          const predictionType = (parts[1]?.trim() || 'text') as
+            | 'text'
+            | 'web'
+            | 'image';
+
+          return {
+            text: predictionText,
+            type: predictionType,
+          };
+        });
+      }
+    }
+
+    return result;
+  }
 
   public getPrevNodeInfo(index: number) {
     return this.prevNodeInfo.get(index);

@@ -41,42 +41,12 @@ export class ShapeService {
   private bindings: TLArrowBinding[];
 
   constructor(snapshot: RoomSnapshot) {
-    // this.snapshot = snapshot;
+    this.document = {} as TLDocument;
+    this.page = {} as TLPage;
+    this.shapes = [];
+    this.bindings = [];
 
-    // find document
-    const _document = snapshot.documents.find(
-      (doc) => doc.state.typeName === 'document'
-    )?.state as TLDocument | undefined;
-
-    // find page
-    const _page = snapshot.documents.find(
-      (doc) => doc.state.typeName === 'page'
-    )?.state as TLPage | undefined;
-
-    // find bindings
-    const _bindings = snapshot.documents
-      .filter((doc) => doc.state.typeName === 'binding')
-      .map((doc) => doc.state as TLArrowBinding);
-
-    // find shapes
-    const _shapes = snapshot.documents
-      .filter(
-        (doc) => !['page', 'document', 'binding'].includes(doc.state.typeName)
-      )
-      .map((doc) => doc.state as TLShape);
-
-    if (!_document || !_page || !_shapes) {
-      throw new Error(
-        `No ${_document ? '' : 'document'} ${_page ? '' : 'page'} ${
-          _shapes ? '' : 'shapes'
-        } found in snapshot!.`
-      );
-    }
-
-    this.document = _document;
-    this.page = _page;
-    this.shapes = _shapes;
-    this.bindings = _bindings;
+    this.updateSnapshot(snapshot);
   }
 
   getSelectedTree(selectedItemIds: string[]) {
@@ -349,6 +319,8 @@ export class ShapeService {
             type: 'link',
             props: {
               ...baseProps,
+              h: 350,
+              w: 500,
               url: shapeToCreate.text ?? '',
               title: '',
               description: '',
@@ -398,6 +370,14 @@ export class ShapeService {
         ) as (LinkShape | RichTextShape) | undefined;
 
         if (parentShape) {
+          // Position the new text shape with consistent offset in random directions
+          // Use a fixed distance with random direction (positive or negative)
+          const offsetDistance = 150 + Math.random() * 50; // 150-200px distance
+          const offsetX = offsetDistance * (Math.random() > 0.5 ? 1 : -1); // Random positive or negative
+          const offsetY = offsetDistance * (Math.random() > 0.5 ? 1 : -1); // Random positive or negative
+          newShape.x = parentShape.x + offsetX;
+          newShape.y = parentShape.y + offsetY;
+
           const arrowId = generateTlShapeId('arr');
           const arrow = this.createArrowShape(arrowId, parentShape, newShape);
           const [binding1, binding2] = this.createArrowBindings(
@@ -1088,4 +1068,63 @@ export class ShapeService {
       },
     ];
   }
+
+  updateSnapshot(snapshot: RoomSnapshot) {
+    // find document
+    const _document = snapshot.documents.find(
+      (doc) => doc.state.typeName === 'document'
+    )?.state as TLDocument | undefined;
+
+    // find page
+    const _page = snapshot.documents.find(
+      (doc) => doc.state.typeName === 'page'
+    )?.state as TLPage | undefined;
+
+    // find bindings
+    const _bindings = snapshot.documents
+      .filter((doc) => doc.state.typeName === 'binding')
+      .map((doc) => doc.state as TLArrowBinding);
+
+    // find shapes
+    const _shapes = snapshot.documents
+      .filter(
+        (doc) => !['page', 'document', 'binding'].includes(doc.state.typeName)
+      )
+      .map((doc) => doc.state as TLShape);
+
+    if (!_document || !_page || !_shapes) {
+      throw new Error(
+        `No ${_document ? '' : 'document'} ${_page ? '' : 'page'} ${
+          _shapes ? '' : 'shapes'
+        } found in snapshot!.`
+      );
+    }
+
+    this.document = _document;
+    this.page = _page;
+    this.shapes = _shapes;
+    this.bindings = _bindings;
+  }
+
+  calculatePredictionSize = (text: string) => {
+    const MIN_HEIGHT = 200;
+    const MIN_WIDTH = 300;
+    const CHARS_PER_LINE = 50;
+    const HEIGHT_PER_LINE = 75;
+
+    const textLength = text.length;
+    const widthScale = Math.min(2, 1 + textLength / 500); // Cap at 2x original width
+    const width = Math.ceil(MIN_WIDTH * widthScale);
+
+    const charsPerWidthAdjustedLine = CHARS_PER_LINE * (width / MIN_WIDTH);
+    const numLines = Math.ceil(textLength / charsPerWidthAdjustedLine);
+    const height = Math.max(numLines * HEIGHT_PER_LINE, MIN_HEIGHT);
+
+    const padding = 25;
+
+    return {
+      height: height + padding,
+      width: width + padding,
+    };
+  };
 }

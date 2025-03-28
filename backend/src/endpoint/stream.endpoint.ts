@@ -74,8 +74,9 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
     const { workspaceId } = ctx.req.valid('param');
     const { message, chatHistory, searchType, selectedItems } =
       ctx.req.valid('json');
+    // const searchType = 'web';
 
-    if (selectedItems.length !== 1) {
+    if (searchType === 'web' && selectedItems.length !== 1) {
       throw new HTTPException(400, {
         message: 'Web search only supports single item selection',
       });
@@ -131,6 +132,11 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                 throw new Error('Invalid search type');
             }
           })();
+
+          // before adding shapes and bindings to workspace, we need to update the snapshot
+          const newSnapshot =
+            (await workspace.getCurrentSnapshot()) as unknown as RoomSnapshot;
+          shapeService.updateSnapshot(newSnapshot);
 
           // Handle final result by parsing into shapes and bindings and adding to workspace iff doesnt exist
           const { shapes, bindings } = shapeService.getTlShapesAndBindings(
