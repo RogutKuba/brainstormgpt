@@ -287,8 +287,8 @@ export class CrawlerService {
         props: {
           ...currentShape.props,
           url,
-          title: isYoutube ? 'YouTube' : 'PDF',
-          description: isYoutube ? 'YouTube' : 'PDF Document',
+          title: url,
+          description: url,
           predictions: [],
           previewImageUrl: null,
           status: 'success',

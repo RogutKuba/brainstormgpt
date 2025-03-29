@@ -281,26 +281,25 @@ export const ChatWindow: React.FC = () => {
             {messages && messages.length > 0 ? (
               <div className='flex flex-col p-3 space-y-4'>
                 {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cx('flex flex-col select-auto')}
-                  >
+                  <div key={message.id} className={cx('flex flex-col')}>
                     <div
                       className={cx(
-                        'p-3 rounded-lg select-auto',
+                        'p-3 rounded-lg',
                         message.sender === 'user'
                           ? 'bg-blue-50 border border-blue-100 text-gray-800'
                           : message.level === 'error'
                           ? 'bg-red-50 border border-red-200 text-red-800'
                           : 'bg-white border border-gray-200 text-gray-800'
                       )}
+                      style={{ userSelect: 'text', WebkitUserSelect: 'text' }}
                     >
                       <p
                         className={cx(
-                          'text-sm whitespace-pre-wrap select-auto',
+                          'text-sm whitespace-pre-wrap',
                           message.level === 'error' &&
                             'text-red-800 font-medium'
                         )}
+                        style={{ userSelect: 'text', WebkitUserSelect: 'text' }}
                       >
                         {message.content}
                       </p>

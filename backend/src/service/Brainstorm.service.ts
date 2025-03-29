@@ -287,9 +287,8 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
     );
 
     let response;
-    try {
-      response = await LLMService.streamWebSearch({
-        prompt: `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You create concise, well-articulated nodes that function as interconnected knowledge units. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
+
+    const totalPrompt = `You are a professional whiteboard brainstorming assistant that helps users develop their ideas through structured, wiki-like content organization. You create concise, well-articulated nodes that function as interconnected knowledge units. You are given a user prompt and a list of current whiteboard nodes with their shape IDs and levels.
 Based on these whiteboard nodes:
 <existing-nodes>
 ${formattedShapes}
@@ -314,12 +313,18 @@ Aim for 4-6 sentences total in markdown format. Be concise but informative.
 </node>
 
 <predictions>
-- What are the latest developments in this area?|web
-- How does this concept relate to [related concept]?|text
-- Can you visualize this process or concept?|image
+- web|What are the latest developments in this area?
+- text|How does this concept relate to [related concept]?
+- image|Can you visualize this process or concept?
 </predictions>
 
-IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Instead, incorporate the information naturally into your text.`,
+IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Instead, incorporate the information naturally into your text.`;
+
+    console.log('total-prompt', totalPrompt);
+
+    try {
+      response = await LLMService.streamWebSearch({
+        prompt: totalPrompt,
         chatHistory,
         env: ctx.env,
         onNewContent: async (answerContent) => {
@@ -332,32 +337,11 @@ IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Ins
     } catch (error) {
       console.error('Error in streamWebSearch:', error);
 
-      // Create a fallback response with an error message
-      const mainNodeId =
-        streamService.getPrevNodeInfo(0)?.id ?? generateTlShapeId();
-
       // Return a graceful error message as a node
       return {
         explanation:
           "I encountered an issue while searching the web. Here's what I could find:",
-        nodes: [
-          {
-            id: mainNodeId,
-            type: 'text',
-            text: `## Web Search Results\n\nI wasn't able to complete the web search due to a technical issue. You can try:\n\n1. Rephrasing your question\n2. Trying again in a moment\n3. Breaking your query into smaller parts`,
-            parentId,
-            predictions: [
-              {
-                text: 'Try a more specific search query',
-                type: 'web',
-              },
-              {
-                text: 'Can you explain this topic without web search?',
-                type: 'text',
-              },
-            ],
-          },
-        ],
+        nodes: [],
       };
     }
 

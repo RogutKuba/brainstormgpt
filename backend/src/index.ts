@@ -88,6 +88,12 @@ app
       credentials: true,
     })
   )
+  // .post('/waitlist', async (ctx) => {
+  //   const email = ctx.req.json().email;
+  //   const waitlistService = new WaitlistService(ctx);
+  //   await waitlistService.addEmail(email);
+  //   return ctx.json({ message: 'Email added to waitlist' }, 200);
+  // })
   .route('/workspace/:workspaceId/chat', chatRouter)
   .route('/workspace/:workspaceId/stream', streamRouter)
   .route('/workspace/:workspaceId/shape/url', urlShapeRouter)

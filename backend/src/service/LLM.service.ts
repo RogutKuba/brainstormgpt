@@ -83,7 +83,7 @@ export const LLMService = {
 
     const stream = openrouter.beta.chat.completions
       .stream({
-        model: 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
+        model: 'google/gemini-2.5-pro-exp-03-25:free',
         messages: [
           ...chatHistory.map((message) => ({
             role: message.sender,

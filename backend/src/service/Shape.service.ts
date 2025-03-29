@@ -324,8 +324,8 @@ export class ShapeService {
             type: 'link',
             props: {
               ...baseProps,
-              h: 400,
-              w: 750,
+              h: 450,
+              w: 650,
               url: shapeToCreate.text ?? '',
               title: shapeToCreate.text ?? '',
               description: shapeToCreate.text ?? '',

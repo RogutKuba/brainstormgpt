@@ -424,36 +424,46 @@ const handlePredictionChunk = (rawData: string, editor: Editor) => {
       return;
     }
 
-    // Check if this prediction already exists in the parent's predictions array
-    const existingPredictionIndex = parentShape.props.predictions.findIndex(
-      (pred) => pred.text.includes(predictionChunk.chunk)
-    );
+    // Check if this prediction already exists at the specified index
+    const index = predictionChunk.index ?? 0;
+    const existingPrediction = parentShape.props.predictions[index];
 
-    if (existingPredictionIndex !== -1) {
-      // If prediction already exists, no need to add it again
-      return;
+    if (existingPrediction) {
+      // Update the existing prediction at this index
+      const updatedPredictions = [...parentShape.props.predictions];
+      updatedPredictions[index] = {
+        text: existingPrediction.text + predictionChunk.chunk,
+        type: predictionChunk.type,
+      };
+
+      // Update the parent shape with the updated prediction
+      editor.updateShape<RichTextShape>({
+        id: parentShape.id,
+        type: 'rich-text',
+        props: {
+          predictions: updatedPredictions,
+        },
+      });
+    } else {
+      // Add the new prediction to the parent shape
+      const updatedPredictions: RichTextShape['props']['predictions'] = [
+        ...parentShape.props.predictions,
+        {
+          text: predictionChunk.chunk,
+          type: predictionChunk.type,
+        },
+      ];
+
+      // Update the parent shape with the new prediction
+      editor.updateShape<RichTextShape>({
+        id: parentShape.id,
+        type: 'rich-text',
+        props: {
+          predictions: updatedPredictions,
+        },
+      });
     }
-
-    // Add the new prediction to the parent shape
-    const updatedPredictions: RichTextShape['props']['predictions'] = [
-      ...parentShape.props.predictions,
-      {
-        text: predictionChunk.chunk,
-        type: 'text', // Default to text type, can be adjusted based on content analysis
-      },
-    ];
-
-    // Update the parent shape with the new prediction
-    editor.updateShape<RichTextShape>({
-      id: parentShape.id,
-      type: 'rich-text',
-      props: {
-        predictions: updatedPredictions,
-        // If the shape is currently selected, it will automatically expand to show the new prediction
-        // due to the useEffect in the RichTextShape component
-      },
-    });
   } catch (error) {
-    console.error('Error parsing prediction chunk:', error, 'chunk: ', rawData);
+    console.log('Error parsing prediction chunk:', error, 'chunk: ', rawData);
   }
 };

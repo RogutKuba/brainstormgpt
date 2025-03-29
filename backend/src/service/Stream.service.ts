@@ -35,6 +35,8 @@ export class StreamService {
     id: z.string(),
     chunk: z.string(),
     parentId: z.string().nullable(),
+    type: z.enum(['text', 'image', 'web']),
+    index: z.number(),
   });
 
   // PRIVATE PROPERTIES
@@ -67,6 +69,7 @@ export class StreamService {
         predIndex: number;
         predId: string;
         predChunk: string;
+        predType: 'text' | 'web' | 'image';
       }>;
     }
   > = new Map();
@@ -141,23 +144,27 @@ export class StreamService {
 
           // Process any pending predictions immediately after sending a node chunk
           if (pendingPredictions.length > 0) {
-            pendingPredictions.forEach(({ predId, predChunk }) => {
-              const predChunkToSend: z.infer<
-                typeof this.predictionMessageSchema
-              > = {
-                id: predId,
-                chunk: predChunk,
-                parentId: id,
-              };
+            pendingPredictions.forEach(
+              ({ predId, predChunk, predType }, index) => {
+                const predChunkToSend: z.infer<
+                  typeof this.predictionMessageSchema
+                > = {
+                  id: predId,
+                  chunk: predChunk,
+                  parentId: id,
+                  type: predType,
+                  index,
+                };
 
-              this.streamController.enqueue(
-                this.encoder.encode(
-                  `event: prediction-chunk\ndata: ${JSON.stringify(
-                    predChunkToSend
-                  )}\n\n`
-                )
-              );
-            });
+                this.streamController.enqueue(
+                  this.encoder.encode(
+                    `event: prediction-chunk\ndata: ${JSON.stringify(
+                      predChunkToSend
+                    )}\n\n`
+                  )
+                );
+              }
+            );
 
             // Clear the pending predictions after sending them
             pendingPredictions.length = 0;
@@ -306,6 +313,8 @@ export class StreamService {
                 id: predId,
                 chunk: predChunk,
                 parentId: id,
+                type: prediction.type,
+                index,
               };
 
               this.streamController.enqueue(
@@ -321,6 +330,7 @@ export class StreamService {
                 predIndex: index,
                 predId,
                 predChunk,
+                predType: prediction.type,
               });
             }
           }
@@ -358,74 +368,62 @@ export class StreamService {
       predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
     } = {};
 
-    // Extract explanation - handle both complete and partial tags
-    const explanationMatch = content.match(
-      /<explanation>(.*?)(?:<\/explanation>|$)/s
-    );
-    if (explanationMatch && explanationMatch[1]) {
-      result.explanation = explanationMatch[1].trim();
+    // Extract answer from node tag - only if we have a complete opening tag
+    if (content.includes('<node>')) {
+      // Get everything between <node> and </node> or end of string
+      const nodeRegex = /<node>(.*?)(?:<\/node>|$)/s;
+      const nodeMatch = content.match(nodeRegex);
+
+      if (nodeMatch && nodeMatch[1]) {
+        // Clean up the answer - remove any trailing '>' characters that might be part of malformed XML
+        let answer = nodeMatch[1].trim();
+        answer = answer.replace(/>[^<]*$/, ''); // Remove trailing '>' and any text after it
+        result.answer = answer;
+      }
+    } else if (
+      !content.includes('<node') &&
+      !content.includes('<explanation') &&
+      !content.includes('<predictions')
+    ) {
+      // If no tags at all, use the whole content as the answer
+      result.answer = content.trim();
     }
 
-    // Extract answer - handle both complete and partial tags
-    const answerMatch = content.match(/<node>(.*?)(?:<\/node>|$)/s);
-    if (answerMatch && answerMatch[1]) {
-      result.answer = answerMatch[1].trim();
-    } else if (!content.includes('<node>')) {
-      // If no answer tags at all, use the whole content as the answer
-      // But exclude any explanation or predictions sections
-      let fullContent = content;
-
-      // Remove explanation section if it exists
-      if (content.includes('<explanation>')) {
-        const explanationEndIndex = content.includes('</explanation>')
-          ? content.indexOf('</explanation>') + 14
-          : content.indexOf('<explanation>') +
-            (explanationMatch?.[0].length ?? 0);
-
-        fullContent = fullContent.substring(explanationEndIndex).trim();
-      }
-
-      // Remove predictions section if it exists
-      if (fullContent.includes('<predictions>')) {
-        fullContent = fullContent
-          .substring(0, fullContent.indexOf('<predictions>'))
-          .trim();
-      }
-
-      if (fullContent) {
-        result.answer = fullContent;
+    // Extract explanation if present
+    if (content.includes('<explanation>')) {
+      const explanationRegex = /<explanation>(.*?)(?:<\/explanation>|$)/s;
+      const explanationMatch = content.match(explanationRegex);
+      if (explanationMatch && explanationMatch[1]) {
+        result.explanation = explanationMatch[1].trim();
       }
     }
 
-    // Extract predictions - handle both complete and partial tags
-    const predictionsMatch = content.match(
-      /<predictions>(.*?)(?:<\/predictions>|$)/s
-    );
-    if (predictionsMatch && predictionsMatch[1]) {
-      const predictionsContent = predictionsMatch[1].trim();
+    // Extract predictions - look for specific format in the content
+    // This handles both structured predictions and unstructured text that looks like predictions
+    const predictionRegex = /(?:^|\n)-\s*((?:text|web|image)\|.+?)(?:\n|$)/g;
+    const predictions: Array<{ text: string; type: 'text' | 'web' | 'image' }> =
+      [];
 
-      // Look for prediction items (lines starting with -)
-      const predictionLines = predictionsContent
-        .split('\n')
-        .filter((line) => line.trim().startsWith('-'))
-        .map((line) => line.trim().substring(1).trim());
+    let match;
+    while ((match = predictionRegex.exec(content)) !== null) {
+      const predLine = match[1].trim();
+      const parts = predLine.split('|');
 
-      if (predictionLines.length > 0) {
-        result.predictions = predictionLines.map((line) => {
-          // Parse the prediction format: "text|type"
-          const parts = line.split('|');
-          const predictionText = parts[0].trim();
-          const predictionType = (parts[1]?.trim() || 'text') as
-            | 'text'
-            | 'web'
-            | 'image';
+      if (parts.length >= 2) {
+        const predType = parts[0].trim() as 'text' | 'web' | 'image';
+        const predText = parts[1].trim();
 
-          return {
-            text: predictionText,
-            type: predictionType,
-          };
-        });
+        if (predText) {
+          predictions.push({
+            text: predText,
+            type: predType,
+          });
+        }
       }
+    }
+
+    if (predictions.length > 0) {
+      result.predictions = predictions;
     }
 
     return result;
