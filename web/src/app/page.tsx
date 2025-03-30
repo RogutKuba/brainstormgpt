@@ -190,7 +190,7 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* About Tangent Section */}
+        {/* About Curiosity Section */}
         <motion.div
           className='max-w-3xl mx-auto mb-32'
           initial={{ opacity: 0, y: 20 }}
@@ -199,16 +199,16 @@ export default function Home() {
         >
           <Card className='bg-white/10 backdrop-blur-md border-white/20 text-white'>
             <CardHeader className='pb-2'>
-              <CardTitle className='text-xl'>About Tangent</CardTitle>
+              <CardTitle className='text-xl'>About Curiosity</CardTitle>
             </CardHeader>
             <CardContent>
               <p className='text-white/90 mb-4'>
-                Tangent began when our team of researchers and educators noticed
-                a problem: traditional search tools force linear thinking, but
-                human curiosity doesn't work that way.
+                Curiosity began when our team of researchers and educators
+                noticed a problem: traditional search tools force linear
+                thinking, but human curiosity doesn't work that way.
               </p>
               <p className='text-white/90'>
-                Today, Tangent is used by students, researchers, writers, and
+                Today, Curiosity is used by students, researchers, writers, and
                 curious minds across the globe. Our mission is to make knowledge
                 exploration more intuitive, enjoyable, and productive for
                 everyone.
@@ -218,11 +218,6 @@ export default function Home() {
         </motion.div>
 
         <LandingPricing />
-
-        {/* Footer */}
-        <div className='text-center mt-16 text-sm text-white/70'>
-          <p>© 2024 Tangent AI. All rights reserved.</p>
-        </div>
       </div>
     </div>
   );
