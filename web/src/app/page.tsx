@@ -6,11 +6,16 @@ import {
   RiArrowRightLine,
   RiSendPlaneFill,
   RiFireLine,
+  RiCheckLine,
+  RiStarFill,
 } from '@remixicon/react';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LandingHeader } from '@/components/landing/Header';
+import { Tooltip } from '@/components/ui/tooltip';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { LandingPricing } from '@/components/landing/Pricing';
 
 export default function Home() {
   const [inputValue, setInputValue] = useState('');
@@ -20,33 +25,37 @@ export default function Home() {
   const trendingTopics = [
     {
       id: 1,
-      title: 'Climate adaptation strategies',
+      title:
+        'How will the new US-Canada aluminum tariffs impact consumer prices?',
       image:
-        'https://images.unsplash.com/photo-1569163139599-0f4517e36f31?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
+        'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
     },
     {
       id: 2,
-      title: 'Quantum computing applications',
+      title:
+        'Why are Studio Ghibli images trending across social media platforms?',
       image:
-        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
+        'https://images.unsplash.com/photo-1541562232579-512a21360020?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
     },
     {
       id: 3,
-      title: 'Future of remote work',
+      title: 'How are CRISPR gene editing techniques revolutionizing medicine?',
       image:
-        'https://images.unsplash.com/photo-1584661156681-540e80a161d3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
+        'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
     },
     {
       id: 4,
-      title: 'Advances in renewable energy',
+      title:
+        'What does the latest Fed interest rate decision mean for housing markets?',
       image:
-        'https://images.unsplash.com/photo-1509391366360-2e959784a276?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
+        'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
     },
     {
       id: 5,
-      title: 'AI in healthcare diagnostics',
+      title:
+        'What are the most challenging concepts for first-year university students?',
       image:
-        'https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
+        'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80',
     },
   ];
 
@@ -125,7 +134,7 @@ export default function Home() {
 
         {/* Trending Topics Section - Infinite Carousel */}
         <motion.div
-          className='max-w-3xl mx-auto'
+          className='max-w-3xl mx-auto mb-32'
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
@@ -153,30 +162,62 @@ export default function Home() {
                 }}
               >
                 {duplicatedTopics.map((topic, index) => (
-                  <div
+                  <Tooltip
+                    content={topic.title}
                     key={`${topic.id}-${index}`}
-                    className='flex-shrink-0 w-64 mx-3 bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all duration-300 overflow-hidden shadow-sm hover:shadow-md border border-white/10'
+                    side='bottom'
+                    className='z-50 bg-white/90 text-gray-800 border border-white/20 backdrop-blur-md shadow-lg rounded-lg p-2 text-sm max-w-xs'
+                    arrowClassName='fill-white/90'
                   >
-                    <div className='aspect-video overflow-hidden'>
-                      <img
-                        src={topic.image}
-                        alt={topic.title}
-                        className='w-full h-full object-cover transition-transform duration-300 hover:scale-105'
-                      />
-                    </div>
-                    <div className='p-4'>
-                      <div className='flex justify-between items-center'>
-                        <p className='font-medium text-white text-sm line-clamp-1'>
+                    <div className='flex-shrink-0 w-64 mx-3 bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all duration-300 overflow-hidden shadow-sm hover:shadow-md border border-white/10'>
+                      <div className='aspect-video overflow-hidden rounded-t-xl'>
+                        <img
+                          src={topic.image}
+                          alt={topic.title}
+                          className='w-full h-full object-cover transition-transform duration-300 hover:scale-105 filter brightness-90'
+                        />
+                      </div>
+                      <div className='p-4 w-full'>
+                        <p className='font-medium text-white text-sm line-clamp-1 text-left w-full'>
                           {topic.title}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Tooltip>
                 ))}
               </motion.div>
             </div>
           </div>
         </motion.div>
+
+        {/* About Tangent Section */}
+        <motion.div
+          className='max-w-3xl mx-auto mb-32'
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <Card className='bg-white/10 backdrop-blur-md border-white/20 text-white'>
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-xl'>About Tangent</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className='text-white/90 mb-4'>
+                Tangent began when our team of researchers and educators noticed
+                a problem: traditional search tools force linear thinking, but
+                human curiosity doesn't work that way.
+              </p>
+              <p className='text-white/90'>
+                Today, Tangent is used by students, researchers, writers, and
+                curious minds across the globe. Our mission is to make knowledge
+                exploration more intuitive, enjoyable, and productive for
+                everyone.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <LandingPricing />
 
         {/* Footer */}
         <div className='text-center mt-16 text-sm text-white/70'>

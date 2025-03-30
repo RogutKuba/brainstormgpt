@@ -13,13 +13,14 @@ export const LandingHeader = () => {
       </Link>
 
       <div className='flex items-center gap-3'>
-        <Link href='/about'>
+        {/* <Link href='/about'>
           <Button className='bg-transparent hover:bg-white/5 border-white/50 hover:border-white/60'>
             About
           </Button>
-        </Link>
+        </Link> */}
         <Link href='/app/login'>
-          <Button variant='secondary' className='hover:bg-white/90'>
+          {/* <Button variant='secondary' className='hover:bg-white/90'> */}
+          <Button className='bg-transparent hover:bg-white/5 border-white/50 hover:border-white/60'>
             Sign In
           </Button>
         </Link>
