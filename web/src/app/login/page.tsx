@@ -3,7 +3,7 @@
 import { LandingHeader } from '@/components/landing/Header';
 import { Button } from '@/components/ui/button';
 import { RiBrain2Fill, RiGoogleFill } from '@remixicon/react';
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!NEXT_PUBLIC_API_URL) {
@@ -11,8 +11,20 @@ if (!NEXT_PUBLIC_API_URL) {
 }
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const prompt = searchParams.get('prompt');
+
+  // Create the login URL with prompt parameter if it exists
+  const loginUrl = prompt
+    ? `${NEXT_PUBLIC_API_URL}/auth/google/login?prompt=${encodeURIComponent(
+        prompt
+      )}`
+    : `${NEXT_PUBLIC_API_URL}/auth/google/login`;
+
+  console.log('loginUrl', loginUrl);
+
   return (
-    <div className='min-h-screen bg-gradient-to-b from-blue-500 via-blue-400 to-blue-500 overflow-hidden relative flex flex-col'>
+    <div className='min-h-screen bg-gradient-to-b from-blue-500 via-blue-500 to-blue-400 overflow-hidden relative flex flex-col'>
       {/* Frosted glass effect */}
       <div className='absolute inset-0 backdrop-blur-md bg-white/10'></div>
 
@@ -41,7 +53,7 @@ export default function LoginPage() {
               asChild
               className='w-full bg-blue-500 hover:bg-blue-600 text-white'
             >
-              <a href={`${NEXT_PUBLIC_API_URL}/auth/google/login`}>
+              <a href={loginUrl}>
                 <RiGoogleFill className='size-5 mr-2' aria-hidden={true} />
                 Sign in with Google
               </a>

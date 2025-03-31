@@ -15,6 +15,13 @@ import { decodeIdToken } from 'arctic';
 const loginRoute = createRoute({
   method: 'get',
   path: '/login',
+  request: {
+    query: z.object({
+      prompt: z.string().optional().openapi({
+        description: 'Prompt from login page',
+      }),
+    }),
+  },
   responses: {
     302: {
       description: 'Returns google login redirect',
@@ -45,8 +52,11 @@ const callbackRoute = createRoute({
   },
 });
 
+const USER_PROMPT_COOKIE_NAME = 'user_prompt';
+
 export const googleAuthRouter = new OpenAPIHono<AppContext>()
   .openapi(loginRoute, async (ctx) => {
+    const { prompt } = ctx.req.valid('query');
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
 
@@ -55,6 +65,16 @@ export const googleAuthRouter = new OpenAPIHono<AppContext>()
       'email',
       'profile',
     ]);
+
+    if (prompt) {
+      setCookie(ctx, USER_PROMPT_COOKIE_NAME, prompt, {
+        path: '/',
+        httpOnly: true,
+        secure: ctx.env.NODE_ENV === 'production',
+        maxAge: 60 * 10, // 10 min
+        sameSite: 'Lax', // Allow cookies in redirects
+      });
+    }
 
     // store state verifier as cookieSite: "lax"
     setCookie(ctx, 'state', state, {
@@ -79,6 +99,8 @@ export const googleAuthRouter = new OpenAPIHono<AppContext>()
   .openapi(callbackRoute, async (ctx) => {
     const { code, state } = ctx.req.valid('query');
 
+    const userPrompt = getCookie(ctx, USER_PROMPT_COOKIE_NAME);
+
     const storedState = getCookie(ctx, 'state');
     const storedCodeVerifier = getCookie(ctx, 'code_verifier');
 
@@ -99,6 +121,10 @@ export const googleAuthRouter = new OpenAPIHono<AppContext>()
         googleUser: claims,
         ctx,
       });
+
+      if (userPrompt) {
+        console.log('userPrompt', userPrompt);
+      }
 
       return ctx.redirect(redirectUrl, 302);
     } catch (e) {

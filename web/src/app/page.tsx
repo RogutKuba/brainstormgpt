@@ -1,24 +1,19 @@
 'use client';
 
 import { motion, useAnimationControls } from 'motion/react';
-import {
-  RiBrain2Fill,
-  RiArrowRightLine,
-  RiSendPlaneFill,
-  RiFireLine,
-  RiCheckLine,
-  RiStarFill,
-} from '@remixicon/react';
-import Link from 'next/link';
+import { RiSendPlaneFill, RiLoader2Fill } from '@remixicon/react';
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { LandingHeader } from '@/components/landing/Header';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { LandingPricing } from '@/components/landing/Pricing';
+import { useRouter } from 'next/navigation';
+import { SITE_ROUTES } from '@/lib/siteConfig';
 
 export default function Home() {
+  const router = useRouter();
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const carouselControls = useAnimationControls();
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -81,11 +76,31 @@ export default function Home() {
     startCarouselAnimation();
   }, [carouselControls]);
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (inputValue.trim()) {
+      setIsLoading(true);
+      try {
+        // Simulate a small delay to show loading state
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        router.push(
+          `${SITE_ROUTES.LOGIN}?prompt=${encodeURIComponent(inputValue)}`
+        );
+      } catch (error) {
+        console.error('Navigation error:', error);
+        setIsLoading(false);
+      }
+    }
+  };
+
   return (
     <div className='min-h-screen bg-gradient-to-b from-blue-500 via-blue-400 to-blue-500 text-white overflow-hidden relative'>
-      {/* Background decorative elements */}
-      <div className='absolute top-20 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl'></div>
-      <div className='absolute bottom-20 right-10 w-80 h-80 bg-white/5 rounded-full blur-3xl'></div>
+      {/* Frosted glass effect */}
+      <div className='absolute inset-0 backdrop-blur-md bg-white/10'></div>
+
+      {/* Decorative elements */}
+      <div className='absolute top-20 left-10 w-64 h-64 bg-white/10 rounded-full blur-3xl'></div>
+      <div className='absolute bottom-20 right-10 w-80 h-80 bg-white/10 rounded-full blur-3xl'></div>
 
       <div className='w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 relative z-10'>
         <LandingHeader />
@@ -97,7 +112,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className='text-4xl sm:text-5xl md:text-6xl font-medium mb-4 tracking-tight'>
+          <h1 className='text-4xl sm:text-5xl md:text-6xl font-medium mb-2 tracking-tight'>
             Follow your curiosity
           </h1>
           <p className='text-lg max-w-2xl mx-auto text-white/90 mb-8'>
@@ -112,7 +127,10 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <div className='bg-white/10 backdrop-blur-md p-1 rounded-xl shadow-lg border border-white/20'>
+          <form
+            onSubmit={handleSubmit}
+            className='bg-white/10 backdrop-blur-md p-1 rounded-xl shadow-lg border border-white/20'
+          >
             <div className='flex items-center bg-white rounded-lg'>
               <input
                 type='text'
@@ -120,12 +138,21 @@ export default function Home() {
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder='Ask anything or share a link...'
                 className='flex-grow bg-transparent text-gray-800 border-none rounded-lg transition-colors placeholder:text-gray-400 px-5 py-4 focus:outline-none user-select-none focus:ring-0'
+                disabled={isLoading}
               />
-              <button className='mr-2 p-2 text-white rounded-lg hover:bg-gray-100 transition-colors'>
-                <RiSendPlaneFill className='h-5 w-5 text-primary' />
+              <button
+                type='submit'
+                className='mr-2 p-2 text-white rounded-lg hover:bg-gray-100 transition-colors cursor-pointer'
+                disabled={isLoading || !inputValue.trim()}
+              >
+                {isLoading ? (
+                  <RiLoader2Fill className='h-5 w-5 text-primary animate-spin' />
+                ) : (
+                  <RiSendPlaneFill className='h-5 w-5 text-primary' />
+                )}
               </button>
             </div>
-          </div>
+          </form>
           <p className='text-center text-white/80 text-sm mt-2'>
             Ask anything that sparks your curiosity or paste an URL to explore
             deeper
