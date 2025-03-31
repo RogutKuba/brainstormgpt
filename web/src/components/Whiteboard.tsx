@@ -35,7 +35,7 @@ import { BrainstormDragging } from '@/components/brainstorm-tool/child-states/Dr
 import { API_URL } from '@/lib/constants';
 import { LinkShapeUtil } from '@/components/shape/link/LinkShape';
 import { LinkTool } from '@/components/shape/link/LinkTool';
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
 import { RiShare2Line } from '@remixicon/react';
@@ -366,6 +366,15 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
         // set the editor
         setEditor(editor);
 
+        editor.registerExternalContentHandler('tldraw', (content) => {
+          // only create shapes that dont have isRoot set to true
+          editor.createShapes(
+            content.content.shapes.filter(
+              (shape) => (shape.props as any).isRoot !== true
+            )
+          );
+        });
+
         // when the editor is ready, we need to register our bookmark unfurling service
         editor.registerExternalContentHandler('url', (content) =>
           handleCustomUrlPaste(editor, content, (params) => {
@@ -375,6 +384,15 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
             }, 2500);
           })
         );
+
+        editor.sideEffects.registerBeforeDeleteHandler('shape', (shape) => {
+          console.log('before delete handler', shape);
+          // @ts-ignore
+          if ((shape.props as any).isRoot === true) {
+            return false;
+          }
+          return;
+        });
       }}
     >
       {editor && (

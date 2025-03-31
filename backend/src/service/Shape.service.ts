@@ -54,6 +54,73 @@ export class ShapeService {
     this.updateSnapshot(snapshot);
   }
 
+  createRootShape(
+    prompt: string,
+    predictions: {
+      text: string;
+      type: 'text' | 'image' | 'web';
+    }[]
+  ): LinkShape | RichTextShape {
+    // check if prompt is text or link
+    const isLink = prompt.startsWith('http');
+
+    const baseProps = {
+      h: 450,
+      w: 650,
+      isLocked: false,
+      isExpanded: false,
+      minCollapsedHeight: 450,
+      prevCollapsedHeight: 450,
+      predictions,
+      isRoot: true,
+    };
+
+    if (isLink) {
+      return {
+        id: generateTlShapeId(),
+        type: 'link',
+        props: {
+          ...baseProps,
+          url: prompt,
+          title: prompt,
+          description: prompt,
+          isLoading: true,
+          status: 'scraping',
+          error: null,
+          previewImageUrl: null,
+          isDefault: false,
+        },
+        x: 0,
+        y: 0,
+        rotation: 0,
+        isLocked: false,
+        opacity: 1,
+        meta: {},
+        parentId: this.page.id,
+        index: 'a2' as IndexKey,
+        typeName: 'shape',
+      };
+    } else {
+      return {
+        id: generateTlShapeId(),
+        type: 'rich-text',
+        props: {
+          ...baseProps,
+          text: prompt,
+        },
+        x: 0,
+        y: 0,
+        rotation: 0,
+        isLocked: false,
+        opacity: 1,
+        meta: {},
+        parentId: this.page.id,
+        index: 'a2' as IndexKey,
+        typeName: 'shape',
+      };
+    }
+  }
+
   getSelectedTree(selectedItemIds: string[]) {
     // need to construct tree of shapes from the ids and bindings between them
     const tree: TreeNode[] = [];

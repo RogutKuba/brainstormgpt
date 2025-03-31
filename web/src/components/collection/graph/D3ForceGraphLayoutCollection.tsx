@@ -320,6 +320,12 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
         newNodes.push(node);
       }
 
+      // Lock root nodes automatically
+      const isRoot = this.rootNodes.has(node.id);
+      if (isRoot) {
+        node.fixed = true;
+      }
+
       if (selectedIds.has(node.id) || node.fixed) {
         // Set fixed position for d3
         node.fx = node.x;
@@ -384,9 +390,9 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     this.simulation.alphaTarget(0.3).restart();
 
     // After a short delay, set alphaTarget back to 0 to allow cooling
-    setTimeout(() => {
-      this.simulation.alphaTarget(0);
-    }, 300);
+    // setTimeout(() => {
+    //   this.simulation.alphaTarget(0);
+    // }, 300);
   }
 
   updateShapePositions() {
@@ -912,6 +918,55 @@ export class D3ForceGraphLayoutCollection extends BaseCollection {
     if (this.isRunning) {
       this.simulation.alpha(1).restart();
     }
+  }
+
+  applyRadialLayout() {
+    // Remove hierarchical forces
+    this.simulation.force('x', null);
+    this.simulation.force('y', null);
+
+    // Add or update radial force
+    let radialForce = this.simulation.force(
+      'radial'
+    ) as d3.ForceRadial<ForceNode>;
+
+    if (!radialForce) {
+      radialForce = d3
+        .forceRadial<ForceNode>(
+          (d) =>
+            this.getHierarchyLevel(d.id) * this.radiusIncrement +
+            this.radialRadius
+        )
+        .strength(0.3);
+      this.simulation.force('radial', radialForce);
+    }
+
+    // Find the center of all nodes to use as the center of the radial layout
+    const nodes = Array.from(this.forceNodes.values());
+    let centerX = 0,
+      centerY = 0;
+
+    if (nodes.length > 0) {
+      for (const node of nodes) {
+        centerX += node.x;
+        centerY += node.y;
+      }
+      centerX /= nodes.length;
+      centerY /= nodes.length;
+    }
+
+    // Set the center of the radial layout
+    radialForce
+      .x(centerX)
+      .y(centerY)
+      .radius(
+        (d) =>
+          this.getHierarchyLevel(d.id) * this.radiusIncrement +
+          this.radialRadius
+      );
+
+    // Restart the simulation with high alpha to apply the new layout
+    this.simulation.alpha(1).restart();
   }
 }
 

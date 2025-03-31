@@ -324,6 +324,7 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
           predictions: nodeChunk.predictions,
           minCollapsedHeight: height,
           prevCollapsedHeight: height,
+          isRoot: false,
         },
       };
 

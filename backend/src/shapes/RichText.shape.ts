@@ -1,9 +1,7 @@
 import { TLBaseShape } from 'tldraw';
-
+import { BaseContentShapeProps } from './BaseContent.shape';
 type RichTextShapeProps = {
-  h: number;
-  w: number;
   text: string;
-};
+} & BaseContentShapeProps;
 
 export type RichTextShape = TLBaseShape<'rich-text', RichTextShapeProps>;

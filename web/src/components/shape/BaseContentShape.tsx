@@ -15,6 +15,7 @@ export interface ContentShapeProps {
   }>;
   minCollapsedHeight: number;
   prevCollapsedHeight: number;
+  isRoot?: boolean;
 }
 
 // Animation duration constant for shape animations
@@ -134,7 +135,18 @@ export const handleTranslateStart = <
   type: string;
   props: Partial<ContentShapeProps>;
 } | void => {
-  // Lock the shape during translation but maintain current expansion state
+  // If the shape is a root, prevent dragging by locking it
+  if (shape.props.isRoot) {
+    return {
+      id: shape.id,
+      type: shape.type,
+      props: {
+        isLocked: true,
+      },
+    };
+  }
+
+  // For non-root shapes, lock during translation but maintain current expansion state
   return {
     id: shape.id,
     type: shape.type,
@@ -156,11 +168,27 @@ export const useContentShape = <
   // Toggle lock state for a shape
   const toggleLock = (shape: T, e: SyntheticEvent) => {
     e.stopPropagation();
+
+    // Don't allow unlocking root shapes
+    if (shape.props.isRoot) {
+      return;
+    }
+
     editor.updateShape({
       id: shape.id,
       type: shape.type,
       props: { isLocked: !shape.props.isLocked },
     });
+  };
+
+  // Check if a shape is a root
+  const isRoot = (shape: T) => {
+    return !!shape.props.isRoot;
+  };
+
+  // Prevent deletion of root shapes
+  const handleDelete = (shape: T) => {
+    return shape.props.isRoot;
   };
 
   // Handle selection and expansion state
@@ -353,5 +381,7 @@ export const useContentShape = <
     handleExpansionAnimation,
     handlePredictionClick,
     renderPredictionsList,
+    isRoot,
+    handleDelete,
   };
 };

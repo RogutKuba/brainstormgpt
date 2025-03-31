@@ -1,8 +1,7 @@
 import { TLBaseShape } from 'tldraw';
+import { BaseContentShapeProps } from './BaseContent.shape';
 
 type LinkShapeProps = {
-  h: number;
-  w: number;
   url: string;
   title: string;
   description: string;
@@ -10,12 +9,7 @@ type LinkShapeProps = {
   status: 'success' | 'error' | 'scraping' | 'analyzing';
   error: string | null;
   previewImageUrl: string | null;
-  isLocked: boolean;
-  isExpanded: boolean;
-  minCollapsedHeight: number;
-  prevCollapsedHeight: number;
-  predictions: { text: string; type: 'text' | 'image' | 'web' }[];
   isDefault: boolean;
-};
+} & BaseContentShapeProps;
 
 export type LinkShape = TLBaseShape<'link', LinkShapeProps>;

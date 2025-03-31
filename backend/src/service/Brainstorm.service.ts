@@ -320,8 +320,6 @@ Aim for 4-6 sentences total in markdown format. Be concise but informative.
 
 IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Instead, incorporate the information naturally into your text.`;
 
-    console.log('total-prompt', totalPrompt);
-
     try {
       response = await LLMService.streamWebSearch({
         prompt: totalPrompt,
@@ -449,5 +447,83 @@ IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Ins
       parentId,
       predictions: [],
     }));
+  },
+
+  // #########################################################
+  // #########################################################
+  // PREDICTION GENERATION (NON-STREAMING)
+  // #########################################################
+  // #########################################################
+
+  // You could also add a version that takes a shape or node content as context
+  generatePredictions: async (params: {
+    prompt: string;
+    nodeContent: string;
+    chatHistory: {
+      content: string;
+      sender: 'user' | 'system';
+    }[];
+    ctx: Context<AppContext>;
+  }): Promise<Array<{ text: string; type: 'text' | 'image' | 'web' }>> => {
+    const { prompt, nodeContent, chatHistory, ctx } = params;
+
+    console.log('prompt', prompt);
+
+    try {
+      const response = await LLMService.generateMessage({
+        prompt: `You are an expert at generating thought-provoking follow-up questions and exploration paths based on content.
+
+Based on the user prompt:
+
+<user-prompt>
+${prompt}
+</user-prompt>
+
+Generate 3-5 predictions that represent natural next questions or exploration paths a user might want to follow.
+
+GUIDELINES FOR GOOD PREDICTIONS:
+1. Each prediction should be a concise, specific question or exploration prompt (1-2 sentences)
+2. Focus on extending the most interesting or complex ideas from the content
+3. Include a mix of clarifying questions and expansions into related topics
+4. Ensure predictions are directly relevant to the content but explore new angles
+5. Phrase predictions as questions or "How to..." statements that invite further exploration
+6. Avoid overly general or obvious predictions
+7. Each prediction should stand alone as a clear, self-contained prompt
+8. Each prediction should have a 'type' that indicates the best way to explore it:
+   - 'text' for conceptual questions that can be answered with explanations (use this for most conceptual questions)
+   - 'web' for questions that would benefit from web search for factual information (use sparingly, only for fact-checking)
+   - 'image' for concepts that would be better understood through visualization (use very selectively)
+
+Format your response as structured output with an array of prediction objects, each containing 'text' and 'type' fields.`,
+        chatHistory,
+        env: ctx.env,
+        structuredOutput: {
+          name: 'predictions',
+          schema: z.object({
+            predictions: z.array(
+              z.object({
+                text: z.string(),
+                type: z.enum(['text', 'image', 'web']),
+              })
+            ),
+          }),
+        },
+      });
+
+      // Type assertion for the response
+      const typedResponse = response as {
+        predictions: Array<{ text: string; type: 'text' | 'image' | 'web' }>;
+      };
+
+      return typedResponse.predictions || [];
+    } catch (error) {
+      console.error('Error generating predictions with context:', error);
+      // Return some default predictions in case of error
+      return [
+        { text: 'Can you elaborate on this concept?', type: 'text' },
+        { text: 'What are the practical applications of this?', type: 'text' },
+        { text: 'Are there any recent studies on this topic?', type: 'web' },
+      ];
+    }
   },
 };

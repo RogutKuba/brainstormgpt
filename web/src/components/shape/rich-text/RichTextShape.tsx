@@ -35,13 +35,13 @@ export type RichTextShape = TLBaseShape<'rich-text', RichTextShapeProps>;
 export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   static override type = 'rich-text' as const;
 
-  override canEdit() {
-    return true;
+  override canEdit(_shape: RichTextShape) {
+    return !_shape.props.isRoot;
   }
 
   getDefaultProps(): RichTextShape['props'] {
     return {
-      w: 300,
+      w: 450,
       h: 250,
       text: '# JavaScript Promises\n\nPromises are objects representing the eventual completion or failure of an asynchronous operation.',
       isLocked: true,
@@ -70,6 +70,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       ],
       minCollapsedHeight: 250,
       prevCollapsedHeight: 250,
+      isRoot: true,
     };
   }
 
@@ -96,6 +97,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       renderPredictionsList,
     } = useContentShape<RichTextShape>();
 
+    const isRoot = shape.props.isRoot;
     const isEditing = this.editor.getEditingShapeId() === shape.id;
     const selectedIds = this.editor.getSelectedShapeIds();
     const isSelected =
@@ -138,7 +140,9 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return (
       <HTMLContainer
         className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 ${
-          isLocked
+          isRoot
+            ? 'border-primary shadow-[0_0_0_3px_rgba(59,130,246,0.3),0_0_15px_rgba(59,130,246,0.25)]'
+            : isLocked
             ? 'border-primary/30 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]'
             : 'border-gray-200'
         } pointer-events-auto`}
@@ -154,7 +158,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             onClick={(e) => toggleLock(shape, e)}
             onPointerDown={stopEventPropagation}
           >
-            {isLocked ? (
+            {isRoot ? null : isLocked ? (
               <Tooltip content='Position locked'>
                 <RiLock2Line className='text-primary/80 h-5 w-5' />
               </Tooltip>
@@ -195,9 +199,15 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             />
           ) : (
             <>
-              <div className='markdown-content prose prose-sm max-w-none text-xl mb-4'>
-                <ReactMarkdown>{text}</ReactMarkdown>
-              </div>
+              {isRoot ? (
+                <div className='markdown-content max-w-none text-center py-4 text-4xl font-bold'>
+                  {text}
+                </div>
+              ) : (
+                <div className='markdown-content prose prose-sm max-w-none text-xl mb-4'>
+                  <ReactMarkdown>{text}</ReactMarkdown>
+                </div>
+              )}
 
               {renderPredictionsList(
                 predictions,
@@ -235,8 +245,37 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return;
   }
 
+  onTranslate(
+    initial: RichTextShape,
+    current: RichTextShape
+  ):
+    | void
+    | ({
+        id: TLShapeId;
+        meta?: Partial<JsonObject> | undefined;
+        props?: Partial<RichTextShapeProps> | undefined;
+        type: 'rich-text';
+      } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+    if (initial.props.isRoot) {
+      return initial;
+    }
+
+    return current;
+  }
+
   onDoubleClick(shape: RichTextShape) {
+    if (shape.props.isRoot) {
+      return;
+    }
+
     this.editor.setEditingShape(shape.id);
+  }
+
+  canResize(_shape: RichTextShape): boolean {
+    if (_shape.props.isRoot) {
+      return false;
+    }
+    return true;
   }
 
   override onResize(shape: RichTextShape, info: TLResizeInfo<RichTextShape>) {

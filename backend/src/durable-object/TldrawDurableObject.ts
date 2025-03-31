@@ -51,6 +51,12 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     });
   }
 
+  public async init(params: { workspaceId: string }) {
+    const { workspaceId } = params;
+    this.workspaceId = workspaceId;
+    await this.ctx.storage.put('workspaceId', workspaceId);
+  }
+
   private readonly router = AutoRouter({
     catch: (e) => {
       console.log(e);
@@ -295,6 +301,7 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     const room = await this.getRoom();
     room.updateStore((store) => {
       records.forEach((record) => {
+        console.log('adding record', record);
         store.put(record);
       });
     });

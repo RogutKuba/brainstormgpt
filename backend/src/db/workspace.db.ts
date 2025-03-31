@@ -9,7 +9,8 @@ export const workspaceTable = pgTable('workspaces', {
   ownerId: text('owner_id')
     .notNull()
     .references(() => userTable.id),
-  goalPrompt: text('goal_prompt'),
+  prompt: text('prompt').notNull(),
+  doId: text('do_id').notNull(),
 });
 
 export type WorkspaceEntity = typeof workspaceTable.$inferSelect;
@@ -17,5 +18,6 @@ export type WorkspaceEntity = typeof workspaceTable.$inferSelect;
 export const workspaceSchema = baseSchema.extend({
   name: z.string().min(1).max(100),
   ownerId: z.string().uuid(),
-  goalPrompt: z.string().nullable(),
+  prompt: z.string(),
+  doId: z.string(),
 });

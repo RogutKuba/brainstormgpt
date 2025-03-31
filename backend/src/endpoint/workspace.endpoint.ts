@@ -10,6 +10,9 @@ import {
 } from '../db/workspace.db';
 import { getSession } from '../lib/session';
 import { desc, eq } from 'drizzle-orm';
+import { ShapeService } from '../service/Shape.service';
+import { RoomSnapshot } from '@tldraw/sync-core';
+import { BrainstormService } from '../service/Brainstorm.service';
 
 // CREATE WORKSPACE ROUTE
 const createWorkspaceRoute = createRoute({
@@ -22,6 +25,9 @@ const createWorkspaceRoute = createRoute({
           schema: z.object({
             name: z.string().min(3).max(100).openapi({
               description: 'Name of the workspace',
+            }),
+            prompt: z.string().min(3).max(1000).openapi({
+              description: 'Prompt for the workspace',
             }),
           }),
         },
@@ -84,21 +90,43 @@ const getAllWorkspacesRoute = createRoute({
 
 export const workspaceRouter = new OpenAPIHono<AppContext>()
   .openapi(createWorkspaceRoute, async (ctx) => {
-    const { name } = await ctx.req.json();
+    const { name, prompt } = ctx.req.valid('json');
     const db = getDbConnection(ctx);
 
     // Check if user is authenticated
     const { user } = getSession(ctx);
 
+    const workspaceId = crypto.randomUUID().substring(0, 8);
+
+    // init the durable object for the workspace
+    const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
+    await workspaceDo.init({ workspaceId });
+
+    const predictions = await BrainstormService.generatePredictions({
+      prompt,
+      nodeContent: prompt,
+      chatHistory: [],
+      ctx,
+    });
+
+    // actually create the shape
+    const baseSnapshot =
+      (await workspaceDo.getCurrentSnapshot()) as unknown as RoomSnapshot;
+    const shapeService = new ShapeService(baseSnapshot);
+    const rootShape = shapeService.createRootShape(prompt, predictions);
+
+    await workspaceDo.addRecords([rootShape]);
+
     // Create workspace in database
     const newWorkspace: WorkspaceEntity = {
-      id: crypto.randomUUID().substring(0, 8),
+      id: workspaceId,
       createdAt: new Date().toISOString(),
       ownerId: user.id,
       name,
-      goalPrompt: null,
+      prompt,
+      doId: workspaceDoId.toString(),
     };
-
     await db.insert(workspaceTable).values(newWorkspace);
 
     return ctx.json(newWorkspace, 200);

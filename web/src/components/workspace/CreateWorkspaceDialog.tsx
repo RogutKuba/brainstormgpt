@@ -27,6 +27,7 @@ import { RiAddLine, RiLoader2Line } from '@remixicon/react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CreateWorkspaceDialogProps {
   children: React.ReactNode;
@@ -34,6 +35,7 @@ interface CreateWorkspaceDialogProps {
 
 const workspaceFormSchema = z.object({
   name: z.string().min(3).max(50),
+  prompt: z.string().min(3).max(1000),
 });
 
 type FormValues = z.infer<typeof workspaceFormSchema>;
@@ -49,6 +51,7 @@ export function CreateWorkspaceDialog({
     resolver: zodResolver(workspaceFormSchema),
     defaultValues: {
       name: '',
+      prompt: '',
     },
   });
 
@@ -56,9 +59,7 @@ export function CreateWorkspaceDialog({
     setLoading(true);
 
     try {
-      const workspace = await createWorkspace({
-        name: values.name,
-      });
+      const workspace = await createWorkspace(values);
 
       router.push(`/app/workspace/${workspace.id}`);
     } finally {
@@ -89,6 +90,23 @@ export function CreateWorkspaceDialog({
                     <FormLabel>Workspace Name</FormLabel>
                     <FormControl>
                       <Input placeholder='My Workspace' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='prompt'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prompt</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder='My Workspace'
+                        {...field}
+                        rows={3}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
