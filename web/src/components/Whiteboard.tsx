@@ -366,6 +366,15 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
         // set the editor
         setEditor(editor);
 
+        // zoom to bounds on load
+        const bounds =
+          editor.getSelectionPageBounds() ?? editor.getCurrentPageBounds();
+        if (bounds) {
+          editor.zoomToBounds(bounds, {
+            targetZoom: Math.min(1, editor.getZoomLevel()),
+          });
+        }
+
         editor.registerExternalContentHandler('tldraw', (content) => {
           // only create shapes that dont have isRoot set to true
           editor.createShapes(
