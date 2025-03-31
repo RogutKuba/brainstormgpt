@@ -10,9 +10,7 @@ import {
 } from '../db/workspace.db';
 import { getSession } from '../lib/session';
 import { desc, eq } from 'drizzle-orm';
-import { ShapeService } from '../service/Shape.service';
-import { RoomSnapshot } from '@tldraw/sync-core';
-import { BrainstormService } from '../service/Brainstorm.service';
+import { WorkspaceService } from '../service/Workspace.service';
 
 // CREATE WORKSPACE ROUTE
 const createWorkspaceRoute = createRoute({
@@ -91,76 +89,43 @@ const getAllWorkspacesRoute = createRoute({
 export const workspaceRouter = new OpenAPIHono<AppContext>()
   .openapi(createWorkspaceRoute, async (ctx) => {
     const { name, prompt } = ctx.req.valid('json');
-    const db = getDbConnection(ctx);
 
     // Check if user is authenticated
     const { user } = getSession(ctx);
 
-    const workspaceId = crypto.randomUUID().substring(0, 8);
-
-    // init the durable object for the workspace
-    const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
-    const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
-    await workspaceDo.init({ workspaceId });
-
-    const predictions = await BrainstormService.generatePredictions({
-      prompt,
-      nodeContent: prompt,
-      chatHistory: [],
-      ctx,
-    });
-
-    // actually create the shape
-    const baseSnapshot =
-      (await workspaceDo.getCurrentSnapshot()) as unknown as RoomSnapshot;
-    const shapeService = new ShapeService(baseSnapshot);
-    const rootShape = shapeService.createRootShape(prompt, predictions);
-
-    await workspaceDo.addRecords([rootShape]);
-
-    // Create workspace in database
-    const newWorkspace: WorkspaceEntity = {
-      id: workspaceId,
-      createdAt: new Date().toISOString(),
-      ownerId: user.id,
+    // Use the WorkspaceService to create the workspace
+    const newWorkspace = await WorkspaceService.createWorkspace({
       name,
       prompt,
-      doId: workspaceDoId.toString(),
-    };
-    await db.insert(workspaceTable).values(newWorkspace);
+      ctx,
+    });
 
     return ctx.json(newWorkspace, 200);
   })
   .openapi(getWorkspaceRoute, async (ctx) => {
     const { id } = ctx.req.valid('param');
 
-    const db = getDbConnection(ctx);
+    try {
+      // Use the WorkspaceService to get the workspace
+      const workspace = await WorkspaceService.getWorkspace({
+        id,
+        ctx,
+      });
 
-    // Get workspace from database
-    const workspace = await db
-      .select()
-      .from(workspaceTable)
-      .where(eq(workspaceTable.id, id))
-      .then(takeUnique);
-
-    if (!workspace) {
+      return ctx.json(workspace, 200);
+    } catch (error) {
       throw new HTTPException(404, { message: 'Workspace not found' });
     }
-
-    return ctx.json(workspace, 200);
   })
   .openapi(getAllWorkspacesRoute, async (ctx) => {
-    const db = getDbConnection(ctx);
-
     // Check if user is authenticated
     const { user } = getSession(ctx);
 
-    // Get all workspaces for the user
-    const workspaces = await db
-      .select()
-      .from(workspaceTable)
-      .where(eq(workspaceTable.ownerId, user.id))
-      .orderBy(desc(workspaceTable.createdAt));
+    // Use the WorkspaceService to get all workspaces for the user
+    const workspaces = await WorkspaceService.getUserWorkspaces({
+      userId: user.id,
+      ctx,
+    });
 
     return ctx.json(workspaces, 200);
   });

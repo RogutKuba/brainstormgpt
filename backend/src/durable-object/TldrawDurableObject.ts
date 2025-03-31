@@ -33,7 +33,7 @@ const schema = createTLSchema({
 export class TldrawDurableObject extends DurableObject<Environment> {
   private r2: R2Bucket;
   // the room ID will be missing while the room is being initialized
-  private workspaceId: string | null = null;
+  private workspaceCode: string | null = null;
   // when we load the room from the R2 bucket, we keep it here. it's a promise so we only ever
   // load it once.
   private roomPromise: Promise<TLSocketRoom<TLRecord, void>> | null = null;
@@ -46,15 +46,15 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     this.r2 = env.TLDRAW_BUCKET;
 
     ctx.blockConcurrencyWhile(async () => {
-      this.workspaceId = ((await this.ctx.storage.get('workspaceId')) ??
+      this.workspaceCode = ((await this.ctx.storage.get('workspaceCode')) ??
         null) as string | null;
     });
   }
 
-  public async init(params: { workspaceId: string }) {
-    const { workspaceId } = params;
-    this.workspaceId = workspaceId;
-    await this.ctx.storage.put('workspaceId', workspaceId);
+  public async init(params: { code: string }) {
+    const { code } = params;
+    this.workspaceCode = code;
+    await this.ctx.storage.put('workspaceCode', code);
   }
 
   private readonly router = AutoRouter({
@@ -64,11 +64,14 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     },
   })
     // when we get a connection request, we stash the room id if needed and handle the connection
-    .get('/connect/:workspaceId', async (request) => {
-      if (!this.workspaceId) {
+    .get('/connect/:workspaceCode', async (request) => {
+      if (!this.workspaceCode) {
         await this.ctx.blockConcurrencyWhile(async () => {
-          await this.ctx.storage.put('workspaceId', request.params.workspaceId);
-          this.workspaceId = request.params.workspaceId;
+          await this.ctx.storage.put(
+            'workspaceCode',
+            request.params.workspaceCode
+          );
+          this.workspaceCode = request.params.workspaceCode;
         });
       }
       return this.handleConnect(request);
@@ -100,13 +103,13 @@ export class TldrawDurableObject extends DurableObject<Environment> {
   }
 
   getRoom() {
-    const workspaceId = this.workspaceId;
-    if (!workspaceId) throw new Error('Missing workspaceId');
+    const workspaceCode = this.workspaceCode;
+    if (!workspaceCode) throw new Error('Missing workspaceCode');
 
     if (!this.roomPromise) {
       this.roomPromise = (async () => {
         // fetch the room from R2
-        const roomFromBucket = await this.r2.get(`rooms/${workspaceId}`);
+        const roomFromBucket = await this.r2.get(`rooms/${workspaceCode}`);
 
         // if it doesn't exist, we'll just create a new empty room
         const initialSnapshot = roomFromBucket
@@ -266,12 +269,12 @@ export class TldrawDurableObject extends DurableObject<Environment> {
 
   // we throttle persistance so it only happens every 10 seconds
   private schedulePersistToR2 = throttle(async () => {
-    if (!this.roomPromise || !this.workspaceId) return;
+    if (!this.roomPromise || !this.workspaceCode) return;
     const room = await this.getRoom();
 
     // convert the room to JSON and upload it to R2
     const snapshot = JSON.stringify(room.getCurrentSnapshot());
-    await this.r2.put(`rooms/${this.workspaceId}`, snapshot);
+    await this.r2.put(`rooms/${this.workspaceCode}`, snapshot);
   }, 10_000);
 
   // EXTERNAL METHODS

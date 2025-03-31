@@ -64,6 +64,31 @@ export const useCreateWorkspace = () => {
   };
 };
 
+export const useCreateAnonWorkspace = () => {
+  const mutation = useMutation({
+    mutationFn: async (params: { prompt: string }) => {
+      const response = await clientFetch('/workspace/anonymous', {
+        method: 'POST',
+        body: JSON.stringify(params),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create anonymous workspace');
+      }
+
+      return response.json() as Promise<WorkspaceEntity>;
+    },
+  });
+
+  return {
+    createAnonWorkspace: mutation.mutateAsync,
+    ...mutation,
+  };
+};
+
 export const useSendMessage = () => {
   const mutation = useMutation({
     mutationFn: async (params: {

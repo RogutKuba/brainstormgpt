@@ -6,6 +6,7 @@ const Entities = {
   crawledPage: 'cp_',
   pageChunk: 'pc_',
   pageSummary: 'ps_',
+  workspace: 'w_',
 };
 
 type Entities = typeof Entities;

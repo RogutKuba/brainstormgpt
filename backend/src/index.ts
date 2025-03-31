@@ -15,6 +15,7 @@ import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
 import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 import { streamRouter } from './endpoint/stream.endpoint';
 import { LLMService } from './service/LLM.service';
+import { anonWorkspaceRouter } from './endpoint/workspace/anon.endpoint';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -97,6 +98,7 @@ app
   .route('/workspace/:workspaceId/chat', chatRouter)
   .route('/workspace/:workspaceId/stream', streamRouter)
   .route('/workspace/:workspaceId/shape/url', urlShapeRouter)
+  .route('/workspace/anonymous', anonWorkspaceRouter)
   .get('/health', async (ctx) => {
     return ctx.text('ok');
   })

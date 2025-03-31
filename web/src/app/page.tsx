@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { LandingPricing } from '@/components/landing/Pricing';
 import { useRouter } from 'next/navigation';
 import { SITE_ROUTES } from '@/lib/siteConfig';
+import { useCreateAnonWorkspace } from '@/query/workspace.query';
 
 export default function Home() {
   const router = useRouter();
@@ -16,6 +17,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const carouselControls = useAnimationControls();
   const carouselRef = useRef<HTMLDivElement>(null);
+  const { createAnonWorkspace, isPending: isCreatingWorkspace } =
+    useCreateAnonWorkspace();
+  const [loadingTopicId, setLoadingTopicId] = useState<number | null>(null);
 
   const trendingTopics = [
     {
@@ -90,6 +94,20 @@ export default function Home() {
         console.error('Navigation error:', error);
         setIsLoading(false);
       }
+    }
+  };
+
+  // Handle topic click to create an anonymous workspace
+  const handleTopicClick = async (topic: (typeof trendingTopics)[0]) => {
+    if (isCreatingWorkspace || loadingTopicId !== null) return;
+
+    try {
+      setLoadingTopicId(topic.id);
+      const workspace = await createAnonWorkspace({ prompt: topic.title });
+      router.push(`/app/workspace/${workspace.id}`);
+    } catch (error) {
+      console.error('Error creating workspace:', error);
+      setLoadingTopicId(null);
     }
   };
 
@@ -196,13 +214,21 @@ export default function Home() {
                     className='z-50 bg-white/90 text-gray-800 border border-white/20 backdrop-blur-md shadow-lg rounded-lg p-2 text-sm max-w-xs'
                     arrowClassName='fill-white/90'
                   >
-                    <div className='flex-shrink-0 w-64 mx-3 bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all duration-300 overflow-hidden shadow-sm hover:shadow-md border border-white/10'>
-                      <div className='aspect-video overflow-hidden rounded-t-xl'>
+                    <div
+                      className='flex-shrink-0 w-64 mx-3 bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all duration-300 overflow-hidden shadow-sm hover:shadow-md border border-white/10'
+                      onClick={() => handleTopicClick(topic)}
+                    >
+                      <div className='aspect-video overflow-hidden rounded-t-xl relative'>
                         <img
                           src={topic.image}
                           alt={topic.title}
                           className='w-full h-full object-cover transition-transform duration-300 hover:scale-105 filter brightness-90'
                         />
+                        {loadingTopicId === topic.id && (
+                          <div className='absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm'>
+                            <RiLoader2Fill className='h-8 w-8 text-white animate-spin' />
+                          </div>
+                        )}
                       </div>
                       <div className='p-4 w-full'>
                         <p className='font-medium text-white text-sm line-clamp-1 text-left w-full'>
