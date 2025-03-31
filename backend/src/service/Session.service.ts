@@ -5,7 +5,7 @@ import {
   userTable,
 } from '../db/user.db';
 import { Context } from 'hono';
-import { setCookie, deleteCookie } from 'hono/cookie';
+import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { AppContext } from '..';
 import { getDbConnection } from '../db/client';
 import { eq } from 'drizzle-orm';
@@ -15,6 +15,7 @@ import {
 } from '@oslojs/encoding';
 import { sha256 } from '@oslojs/crypto/sha2';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { HTTPException } from 'hono/http-exception';
 
 export const SESSION_COOKIE_NAME = 'brainstormgpt-session';
 
@@ -114,5 +115,35 @@ export const SessionService = {
   },
   deleteSessionTokenCookie: (ctx: Context<AppContext>) => {
     deleteCookie(ctx, SESSION_COOKIE_NAME, { path: '/' });
+  },
+
+  authenticateSession: async (
+    ctx: Context<AppContext>
+  ): Promise<SessionValidationResult> => {
+    const sessionId = getCookie(ctx, SESSION_COOKIE_NAME) ?? null;
+
+    // return no auth if no session cookie
+    if (!sessionId) {
+      throw new HTTPException(401, { message: 'Unauthorized' });
+    }
+
+    // validate session token
+    const { session, user } = await SessionService.validateSessionToken(
+      sessionId,
+      ctx
+    );
+
+    if (!session) {
+      SessionService.deleteSessionTokenCookie(ctx);
+    }
+
+    if (!user) {
+      // return no auth
+      throw new HTTPException(401, { message: 'Unauthorized' });
+    }
+
+    ctx.set('user', user);
+    ctx.set('session', session);
+    return { session, user };
   },
 };

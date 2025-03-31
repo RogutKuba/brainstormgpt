@@ -16,6 +16,7 @@ import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 import { streamRouter } from './endpoint/stream.endpoint';
 import { LLMService } from './service/LLM.service';
 import { anonWorkspaceRouter } from './endpoint/workspace/anon.endpoint';
+import { connectWorkspaceRouter } from './endpoint/workspace/connect.endpoint';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -58,30 +59,7 @@ const app = new Hono<AppContext>();
 // Add CORS middleware
 app
   // THIS ROUTE DOESNT NEED AUTH OR CORS
-  .get('/connect/:workspaceId', async (ctx) => {
-    const workspaceId = ctx.req.param('workspaceId');
-
-    // save visitor to db for some sort of user analytics
-    ctx.executionCtx.waitUntil(
-      new VisitedService(ctx).handleVisitedWorkspace(ctx)
-    );
-
-    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
-    const room = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
-
-    return room.fetch(ctx.req.url, {
-      headers: ctx.req.raw.headers,
-      body: ctx.req.raw.body,
-    });
-  })
-  .post('/uploads/:uploadId', async (ctx) => {
-    const result = await handleAssetUpload(ctx);
-    return ctx.json(result, 200);
-  })
-  .get('/uploads/:uploadId', async (ctx) => {
-    const result = await handleAssetDownload(ctx);
-    return ctx.json(result, 200);
-  })
+  .route('/workspace/:workspaceCode/connect', connectWorkspaceRouter)
   .use(
     '*',
     cors({
@@ -95,9 +73,9 @@ app
   //   await waitlistService.addEmail(email);
   //   return ctx.json({ message: 'Email added to waitlist' }, 200);
   // })
-  .route('/workspace/:workspaceId/chat', chatRouter)
-  .route('/workspace/:workspaceId/stream', streamRouter)
-  .route('/workspace/:workspaceId/shape/url', urlShapeRouter)
+  .route('/workspace/:workspaceCode/chat', chatRouter)
+  .route('/workspace/:workspaceCode/stream', streamRouter)
+  .route('/workspace/:workspaceCode/shape/url', urlShapeRouter)
   .route('/workspace/anonymous', anonWorkspaceRouter)
   .get('/health', async (ctx) => {
     return ctx.text('ok');

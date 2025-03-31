@@ -336,7 +336,7 @@ const customComponents: TLComponents = {
   StylePanel: null,
 };
 
-export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
+export const Whiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
   const [editor, setEditor] = useState<Editor | null>(null);
   const shapeUtils = useMemo(() => [...customShapes, ...defaultShapeUtils], []);
   const { updateLinkShape } = useUpdateLinkShape();
@@ -345,7 +345,7 @@ export const Whiteboard = ({ workspaceId }: { workspaceId: string }) => {
   const store = useSync({
     shapeUtils,
     // We need to know the websockets URI...
-    uri: `${API_URL}/connect/${workspaceId}`,
+    uri: `${API_URL}/workspace/${workspaceCode}/connect`,
     // ...and how to handle static assets like images & videos
     assets: multiplayerAssetStore,
   });

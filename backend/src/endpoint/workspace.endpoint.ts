@@ -90,9 +90,6 @@ export const workspaceRouter = new OpenAPIHono<AppContext>()
   .openapi(createWorkspaceRoute, async (ctx) => {
     const { name, prompt } = ctx.req.valid('json');
 
-    // Check if user is authenticated
-    const { user } = getSession(ctx);
-
     // Use the WorkspaceService to create the workspace
     const newWorkspace = await WorkspaceService.createWorkspace({
       name,

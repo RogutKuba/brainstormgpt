@@ -1,11 +1,11 @@
 import { useParams } from 'next/navigation';
 
-export const useCurrentWorkspaceId = () => {
-  const params = useParams<{ workspaceId: string }>();
+export const useCurrentWorkspaceCode = () => {
+  const params = useParams<{ workspaceCode: string }>();
 
-  if (!params.workspaceId) {
-    throw new Error('Workspace ID is required');
+  if (!params.workspaceCode) {
+    throw new Error('Workspace Code is required');
   }
 
-  return params.workspaceId;
+  return params.workspaceCode;
 };
