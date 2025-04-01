@@ -154,29 +154,38 @@ export const useWorkspaceStatus = () => {
   const query = useQuery({
     queryKey: ['workspaceStatus'],
     queryFn: async () => {
-      const response = await clientFetch(`/workspace/${workspaceCode}/status`);
+      try {
+        const response = await clientFetch(
+          `/workspace/${workspaceCode}/connect/status`
+        );
 
-      if (!response.ok) {
-        // handle different 400 errors
-        if (response.status === 401 || response.status === 403) {
+        if (!response.ok) {
+          // handle different 400 errors
+          if (response.status === 401 || response.status === 403) {
+            return {
+              status: 'error',
+              error: 'Unauthorized to access workspace',
+            };
+          } else if (response.status === 404) {
+            return {
+              status: 'error',
+              error: 'Workspace not found',
+            };
+          }
+
           return {
             status: 'error',
-            error: 'Unauthorized to access workspace',
-          };
-        } else if (response.status === 404) {
-          return {
-            status: 'error',
-            error: 'Workspace not found',
+            error: 'Failed to fetch workspace status',
           };
         }
 
+        return response.json() as Promise<{ status: 'ok'; error: null }>;
+      } catch (error) {
         return {
           status: 'error',
           error: 'Failed to fetch workspace status',
         };
       }
-
-      return response.json() as Promise<{ status: 'ok'; error: null }>;
     },
     retry: (failureCount, _) => {
       if (failureCount >= 2) {

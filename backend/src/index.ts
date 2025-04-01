@@ -11,7 +11,10 @@ import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
 import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 import { streamRouter } from './endpoint/stream.endpoint';
 import { anonWorkspaceRouter } from './endpoint/workspace/anon.endpoint';
-import { connectWorkspaceRouter } from './endpoint/workspace/connect.endpoint';
+import {
+  connectAuthRouter,
+  connectWorkspaceRouter,
+} from './endpoint/workspace/connect.endpoint';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -53,7 +56,7 @@ const app = new Hono<AppContext>();
 
 // Add CORS middleware
 app
-  // THIS ROUTE DOESNT NEED AUTH OR CORS
+  // this route not part of cors middleware sine websocket connection fails with cors middleware
   .route('/workspace/:workspaceCode/connect', connectWorkspaceRouter)
   .use(
     '*',
@@ -62,18 +65,14 @@ app
       credentials: true,
     })
   )
-  // .post('/waitlist', async (ctx) => {
-  //   const email = ctx.req.json().email;
-  //   const waitlistService = new WaitlistService(ctx);
-  //   await waitlistService.addEmail(email);
-  //   return ctx.json({ message: 'Email added to waitlist' }, 200);
-  // })
-  .route('/workspace/:workspaceCode/stream', streamRouter)
-  .route('/workspace/:workspaceCode/shape/url', urlShapeRouter)
-  .route('/workspace/anonymous', anonWorkspaceRouter)
   .get('/health', async (ctx) => {
     return ctx.text('ok');
   })
+  // TODO: refactor to combine into one router for all this workspace stuff
+  .route('/workspace/:workspaceCode/connect/status', connectAuthRouter)
+  .route('/workspace/:workspaceCode/stream', streamRouter)
+  .route('/workspace/:workspaceCode/shape/url', urlShapeRouter)
+  .route('/workspace/anonymous', anonWorkspaceRouter)
   .route('/auth', authRouter)
   .route('/auth/google', googleAuthRouter)
   .use(authMiddleware)
@@ -81,3 +80,5 @@ app
 
 // export our app for cloudflare
 export default app;
+
+// console.log('app', app.routes);

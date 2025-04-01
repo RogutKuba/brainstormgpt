@@ -32,20 +32,19 @@ const connectAuthMiddleware = createMiddleware<AppContext>(
     // can return early if workspace is public or anonymous
     if (workspace.isPublic || workspace.isAnonymous) {
       return next();
-    }
+    } else {
+      await SessionService.authenticateSession(ctx);
+      const { user } = getSession(ctx);
 
-    await SessionService.authenticateSession(ctx);
-    const { user } = getSession(ctx);
-    if (!user) {
-      throw new HTTPException(401, { message: 'Unauthorized' });
-    }
+      // ensure user owns the workspace
+      if (workspace.ownerId !== user.id) {
+        throw new HTTPException(401, {
+          message: 'Unauthorized (user does not own workspace)',
+        });
+      }
 
-    // ensure user owns the workspace
-    if (workspace.ownerId !== user.id) {
-      throw new HTTPException(401, { message: 'Unauthorized' });
+      return next();
     }
-
-    return next();
   }
 );
 
@@ -70,12 +69,25 @@ export const connectWorkspaceRouter = new Hono<AppContext>()
       headers: ctx.req.raw.headers,
       body: ctx.req.raw.body,
     });
-  })
-  // TODO: simplify this
-  .get('/status', async (ctx) => {
-    // this is just used to check auth since have to query this seaprately from the websocket endpoint
-    return ctx.json({
-      status: 'ok',
-      error: null,
-    });
+  });
+// TODO: simplify this
+// .get('/status', async (ctx) => {
+//   console.log('status');
+//   // this is just used to check auth since have to query this seaprately from the websocket endpoint
+//   return ctx.json(
+//     {
+//       status: 'ok',
+//       error: null,
+//     },
+//     200
+//   );
+// });
+
+/**
+ * For some reason cors middleware doesnt like when you have multiple CORS middlewares so have to separate into seperate router?
+ */
+export const connectAuthRouter = new Hono<AppContext>()
+  .use('*', connectAuthMiddleware)
+  .get('/', async (ctx) => {
+    return ctx.json({ status: 'ok' }, 200);
   });
