@@ -17,11 +17,10 @@ export class WorkspaceService {
    * @returns The created workspace entity
    */
   static async createWorkspace(params: {
-    name: string;
     prompt: string;
     ctx: Context<AppContext>;
   }): Promise<WorkspaceEntity> {
-    const { name, prompt, ctx } = params;
+    const { prompt, ctx } = params;
     const db = getDbConnection(ctx);
 
     // Check if user is authenticated
@@ -75,7 +74,7 @@ export class WorkspaceService {
       code: workspaceCode,
       createdAt: new Date().toISOString(),
       ownerId: user.id,
-      name,
+      name: prompt,
       prompt,
       doId: workspaceDoId.toString(),
       isAnonymous: false,

@@ -15,9 +15,6 @@ const createWorkspaceRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            name: z.string().min(3).max(100).openapi({
-              description: 'Name of the workspace',
-            }),
             prompt: z.string().min(3).max(1000).openapi({
               description: 'Prompt for the workspace',
             }),
@@ -82,11 +79,10 @@ const getAllWorkspacesRoute = createRoute({
 
 export const workspaceRouter = new OpenAPIHono<AppContext>()
   .openapi(createWorkspaceRoute, async (ctx) => {
-    const { name, prompt } = ctx.req.valid('json');
+    const { prompt } = ctx.req.valid('json');
 
     // Use the WorkspaceService to create the workspace
     const newWorkspace = await WorkspaceService.createWorkspace({
-      name,
       prompt,
       ctx,
     });

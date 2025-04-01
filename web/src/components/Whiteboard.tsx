@@ -44,6 +44,7 @@ import {
   RiArrowLeftLine,
   RiRefreshLine,
   RiAlertFill,
+  RiMenu5Line,
 } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
@@ -57,6 +58,7 @@ import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useWorkspaceStatus } from '@/query/workspace.query';
 import { Button } from '@/components/ui/button';
+import { useSidebar } from '@/components/landing/Sidebar';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [D3ForceGraphLayoutCollection];
@@ -281,6 +283,8 @@ function AiBrainstormBox() {
 const CustomMenuPanel = memo(function MenuPanel() {
   const breakpoint = useBreakpoint();
 
+  const { toggleSidebar } = useSidebar();
+
   const ref = useRef<HTMLDivElement>(null);
   usePassThroughWheelEvents(ref as React.RefObject<HTMLElement>);
 
@@ -319,6 +323,10 @@ const CustomMenuPanel = memo(function MenuPanel() {
           }}
         >
           <RiShare2Line className='w-[15px] h-[15px]' />
+        </TldrawUiButton>
+
+        <TldrawUiButton type='normal' onClick={toggleSidebar}>
+          <RiMenu5Line className='w-[15px] h-[15px]' />
         </TldrawUiButton>
       </div>
     </div>
