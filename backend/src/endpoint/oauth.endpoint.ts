@@ -127,7 +127,6 @@ export const googleAuthRouter = new OpenAPIHono<AppContext>()
         // create new user and workspace
         const workspace = await WorkspaceService.createWorkspace({
           ctx,
-          name: userPrompt,
           prompt: userPrompt,
         });
 

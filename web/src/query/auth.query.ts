@@ -17,6 +17,7 @@ export const useUserData = (params?: { shouldRedirect?: boolean }) => {
             createdAt: string;
             email: string;
             name: string;
+            imageUrl: string | null;
           };
         } else {
           // if status is 401 or 403, redirect to login

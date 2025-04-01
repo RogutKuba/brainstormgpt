@@ -77,6 +77,7 @@ export const authRouter = new OpenAPIHono<AppContext>()
         createdAt: userData.createdAt,
         email: userData.email,
         name: userData.name,
+        imageUrl: userData.imageUrl,
       },
       200
     );

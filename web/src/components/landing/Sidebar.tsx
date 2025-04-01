@@ -3,13 +3,9 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  RiArrowRightLine,
   RiAddLine,
-  RiUserSharedLine,
   RiBrain2Fill,
-  RiCloseLine,
   RiMore2Fill,
-  RiMenuFoldLine,
   RiContractLeftLine,
 } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +15,7 @@ import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDia
 import { cn } from '@/components/ui/lib/utils';
 import { SITE_ROUTES } from '@/lib/siteConfig';
 import Link from 'next/link';
-import { Tooltip } from '@/components/ui/tooltip';
+import { SidebarProfile } from '@/components/landing/SidebarProfile';
 
 interface SidebarContextType {
   isOpen: boolean;
@@ -31,6 +27,7 @@ export const Sidebar = () => {
 
   const router = useRouter();
   const { workspaces, isLoading } = useWorkspaces();
+
   const [isMobile, setIsMobile] = useState(false);
 
   // Check if we're on mobile for responsive behavior
@@ -111,8 +108,16 @@ export const Sidebar = () => {
                   className='w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50'
                   onClick={() => router.push(SITE_ROUTES.CHAT(workspace.code))}
                 >
-                  <span className='truncate'>{workspace.name}</span>
-                  <RiMore2Fill className='w-4 h-4 text-gray-400' />
+                  <span className='truncate flex-grow'>{workspace.name}</span>
+                  <RiMore2Fill
+                    className='w-4 h-4 text-gray-400 flex-shrink-0 hover:text-gray-700 transition-colors duration-200'
+                    onClick={(e) => {
+                      // TODO: dropdown menu to edit / delete workspace
+                      console.log('clicked');
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                  />
                 </Button>
               ))
             ) : (
@@ -132,6 +137,8 @@ export const Sidebar = () => {
             )}
           </div>
         </div>
+
+        <SidebarProfile />
       </aside>
     </>
   );

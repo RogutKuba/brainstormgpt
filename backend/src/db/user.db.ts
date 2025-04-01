@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { InferSelectModel } from 'drizzle-orm';
 import { baseProperties, baseSchema } from './base';
 import { z } from '@hono/zod-openapi';
@@ -7,6 +7,7 @@ export const userTable = pgTable('users', {
   ...baseProperties,
   name: text('name').notNull(),
   email: text('email').notNull(),
+  imageUrl: text('image_url'),
 });
 
 export const sessionTable = pgTable('sessions', {
@@ -26,4 +27,5 @@ export type SessionEntity = InferSelectModel<typeof sessionTable>;
 export const UserSchema = baseSchema.extend({
   name: z.string(),
   email: z.string(),
+  imageUrl: z.string().nullable(),
 });

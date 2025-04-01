@@ -67,7 +67,7 @@ export const GoogleOauthService = {
       ctx.set('user', existingUser);
       ctx.set('session', session);
 
-      return `${ctx.env.WEB_APP_URL}/app`;
+      return `${ctx.env.WEB_APP_URL}`;
     }
 
     // check if user with email already exists
@@ -105,7 +105,7 @@ export const GoogleOauthService = {
 
       ctx.set('user', user);
       ctx.set('session', session);
-      return `${ctx.env.WEB_APP_URL}/app`;
+      return `${ctx.env.WEB_APP_URL}`;
     }
 
     // need to create a new user
@@ -117,6 +117,7 @@ export const GoogleOauthService = {
         createdAt: new Date().toISOString(),
         email,
         name: googleUser.name,
+        imageUrl: googleUser.picture,
       };
 
       await tx.insert(userTable).values(newUser);
@@ -147,6 +148,6 @@ export const GoogleOauthService = {
     ctx.set('user', user);
     ctx.set('session', session);
 
-    return `${ctx.env.WEB_APP_URL}/app`;
+    return `${ctx.env.WEB_APP_URL}`;
   },
 };
