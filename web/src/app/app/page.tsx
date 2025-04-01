@@ -160,13 +160,13 @@ export default function DashboardPage() {
                       {workspace.name}
                     </TableCell>
                     <TableCell className='font-mono text-sm text-gray-600'>
-                      {workspace.id}
+                      {workspace.code}
                     </TableCell>
                     <TableCell className='text-right'>
                       <Button
                         variant='secondary'
                         onClick={() =>
-                          router.push(`/app/workspace/${workspace.id}`)
+                          router.push(`/app/workspace/${workspace.code}`)
                         }
                         className='text-xs sm:text-sm'
                       >

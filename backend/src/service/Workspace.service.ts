@@ -8,6 +8,7 @@ import { RoomSnapshot } from '@tldraw/sync-core';
 import { getSession } from '../lib/session';
 import { eq, desc } from 'drizzle-orm';
 import { generateId } from '../lib/id';
+import { CrawlerService } from './Crawler.service';
 
 export class WorkspaceService {
   /**
@@ -48,6 +49,25 @@ export class WorkspaceService {
     const rootShape = shapeService.createRootShape(prompt, predictions);
 
     await workspaceDo.addRecords([rootShape]);
+
+    if (rootShape.type === 'link') {
+      // start crawling
+      ctx.executionCtx.waitUntil(
+        new Promise(async (resolve) => {
+          const crawlerService = new CrawlerService({
+            workspaceCode,
+            ctx,
+          });
+          await crawlerService.updateLinkShapes({
+            shapes: [{ shapeId: rootShape.id, url: rootShape.props.url }],
+            context: '',
+            ctx,
+          });
+
+          resolve(true);
+        })
+      );
+    }
 
     // Create workspace in database
     const newWorkspace: WorkspaceEntity = {
@@ -101,6 +121,25 @@ export class WorkspaceService {
     const rootShape = shapeService.createRootShape(prompt, predictions);
 
     await workspaceDo.addRecords([rootShape]);
+
+    if (rootShape.type === 'link') {
+      // start crawling
+      ctx.executionCtx.waitUntil(
+        new Promise(async (resolve) => {
+          const crawlerService = new CrawlerService({
+            workspaceCode,
+            ctx,
+          });
+          await crawlerService.updateLinkShapes({
+            shapes: [{ shapeId: rootShape.id, url: rootShape.props.url }],
+            context: '',
+            ctx,
+          });
+
+          resolve(true);
+        })
+      );
+    }
 
     // Create workspace in database with anonymous owner
     const newWorkspace: WorkspaceEntity = {

@@ -10,6 +10,7 @@ import { getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import { GoogleOauthService, GoogleUser } from '../service/GoogleOauth.service';
 import { decodeIdToken } from 'arctic';
+import { WorkspaceService } from '../service/Workspace.service';
 
 // LOGIN ROUTE
 const loginRoute = createRoute({
@@ -123,7 +124,15 @@ export const googleAuthRouter = new OpenAPIHono<AppContext>()
       });
 
       if (userPrompt) {
-        console.log('userPrompt', userPrompt);
+        // create new user and workspace
+        const workspace = await WorkspaceService.createWorkspace({
+          ctx,
+          name: userPrompt,
+          prompt: userPrompt,
+        });
+
+        // redirect to workspace
+        return ctx.redirect(`${redirectUrl}/workspace/${workspace.code}`, 302);
       }
 
       return ctx.redirect(redirectUrl, 302);

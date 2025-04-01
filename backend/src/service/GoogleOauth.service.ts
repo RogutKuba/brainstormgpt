@@ -64,6 +64,9 @@ export const GoogleOauthService = {
       });
       SessionService.setSessionTokenCookie(token, session.expiresAt, ctx);
 
+      ctx.set('user', existingUser);
+      ctx.set('session', session);
+
       return `${ctx.env.WEB_APP_URL}/app`;
     }
 
@@ -76,7 +79,7 @@ export const GoogleOauthService = {
 
     if (existingEmail) {
       // need to create oauth account
-      await db.transaction(async (tx) => {
+      const { user, session } = await db.transaction(async (tx) => {
         const oauthAccount: OauthAccountEntity = {
           providerId: 'google',
           providerUserId: googleUser.sub,
@@ -93,13 +96,20 @@ export const GoogleOauthService = {
           db: tx,
         });
         SessionService.setSessionTokenCookie(token, session.expiresAt, ctx);
+
+        return {
+          user: existingEmail,
+          session,
+        };
       });
 
+      ctx.set('user', user);
+      ctx.set('session', session);
       return `${ctx.env.WEB_APP_URL}/app`;
     }
 
     // need to create a new user
-    await db.transaction(async (tx) => {
+    const { user, session } = await db.transaction(async (tx) => {
       const email = googleUser.email;
 
       const newUser: UserEntity = {
@@ -127,7 +137,15 @@ export const GoogleOauthService = {
         db: tx,
       });
       SessionService.setSessionTokenCookie(token, session.expiresAt, ctx);
+
+      return {
+        user: newUser,
+        session,
+      };
     });
+
+    ctx.set('user', user);
+    ctx.set('session', session);
 
     return `${ctx.env.WEB_APP_URL}/app`;
   },
