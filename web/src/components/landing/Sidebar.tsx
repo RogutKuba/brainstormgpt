@@ -1,19 +1,24 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import {
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+  useRef,
+  RefObject,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import {
   RiAddLine,
   RiBrain2Fill,
   RiMore2Fill,
   RiContractLeftLine,
-  RiUserSharedLine,
 } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
 import { useWorkspaces } from '@/query/workspace.query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
-import { JoinWorkspaceDialog } from '@/components/workspace/JoinWorkspaceDialog';
 import { cn } from '@/components/ui/lib/utils';
 import { SITE_ROUTES } from '@/lib/siteConfig';
 import Link from 'next/link';
@@ -22,10 +27,11 @@ import { SidebarProfile } from '@/components/landing/SidebarProfile';
 interface SidebarContextType {
   isOpen: boolean;
   toggleSidebar: () => void;
+  sideBarRef: RefObject<HTMLDivElement | null>;
 }
 
 export const Sidebar = () => {
-  const { isOpen, toggleSidebar } = useSidebar();
+  const { isOpen, toggleSidebar, sideBarRef } = useSidebar();
 
   const router = useRouter();
   const { workspaces, isLoading } = useWorkspaces();
@@ -59,10 +65,11 @@ export const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 h-full bg-white border-r border-gray-200 shadow-sm z-[301] transition-all duration-300 ease-in-out',
+          'h-screen bg-white border-r border-gray-200 shadow-sm z-[301] transition-all duration-300 ease-in-out',
           isOpen ? 'w-64' : 'w-0',
           'flex flex-col overflow-hidden'
         )}
+        ref={sideBarRef}
       >
         {/* Sidebar Header */}
         <div className='flex items-center justify-between p-4 pr-2 border-b border-gray-200'>
@@ -79,7 +86,9 @@ export const Sidebar = () => {
         <div className='flex-1 overflow-y-auto py-4'>
           {/* Workspace Header */}
           <div className='px-4 mb-2 flex items-center justify-between'>
-            <h2 className='text-sm font-semibold text-gray-500'>History</h2>
+            <h2 className='text-sm font-semibold text-gray-500'>
+              Chat History
+            </h2>
 
             <div className='flex gap-1'>
               <CreateWorkspaceDialog>
@@ -149,6 +158,7 @@ export const Sidebar = () => {
 export const SidebarContext = createContext<SidebarContextType>({
   isOpen: false,
   toggleSidebar: () => {},
+  sideBarRef: { current: null } as RefObject<HTMLDivElement | null>,
 });
 
 export const useSidebar = () => {
@@ -166,8 +176,10 @@ export const SidebarProvider = ({
     setIsOpen(!isOpen);
   };
 
+  const sideBarRef = useRef<HTMLDivElement>(null);
+
   return (
-    <SidebarContext.Provider value={{ isOpen, toggleSidebar }}>
+    <SidebarContext.Provider value={{ isOpen, toggleSidebar, sideBarRef }}>
       {children}
     </SidebarContext.Provider>
   );

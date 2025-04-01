@@ -23,10 +23,12 @@ import { LinkShape } from '@/components/shape/link/LinkShape';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { useChat } from './ChatContext';
 import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
+import { useSidebar } from '@/components/landing/Sidebar';
 
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();
   const workspaceCode = useCurrentWorkspaceCode();
+  const { isOpen: isSidebarOpen, sideBarRef } = useSidebar();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -118,6 +120,44 @@ export const ChatWindow: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Adjust position when sidebar opens/closes
+  useEffect(() => {
+    if (cardRef.current) {
+      const cardWidth = cardRef.current.offsetWidth;
+      const maxX = window.innerWidth - cardWidth;
+
+      // If chat window is off-screen after sidebar toggle, reposition it
+      if (position.x > maxX) {
+        setPosition((prev) => ({
+          ...prev,
+          x: maxX - 20, // Add some margin
+        }));
+      }
+    }
+  }, [isSidebarOpen]);
+
+  // Ensure window stays in bounds when browser resizes
+  useEffect(() => {
+    const handleResize = () => {
+      if (cardRef.current) {
+        const cardWidth = cardRef.current.offsetWidth;
+        const cardHeight = cardRef.current.offsetHeight;
+        const maxX = window.innerWidth - cardWidth;
+        const maxY = window.innerHeight - cardHeight;
+
+        const sideBarWidth = sideBarRef.current?.offsetWidth ?? 0;
+
+        setPosition((prev) => ({
+          x: Math.max(0, Math.min(prev.x, maxX - sideBarWidth)),
+          y: Math.max(0, Math.min(prev.y, maxY)),
+        }));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -125,8 +165,10 @@ export const ChatWindow: React.FC = () => {
   const handleDragStart = (e: React.MouseEvent) => {
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
+      const sideBarWidth = sideBarRef.current?.offsetWidth ?? 0;
+
       setDragOffset({
-        x: e.clientX - rect.left,
+        x: e.clientX - rect.left + sideBarWidth,
         y: e.clientY - rect.top,
       });
       setIsDragging(true);
