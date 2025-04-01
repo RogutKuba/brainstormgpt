@@ -22,6 +22,11 @@ export default function Home() {
 
   // Need to create either anon or user workspace depending on if user is logged in and depending if custom prompt or not
   const { user } = useUserData();
+  const firstName = user?.name
+    ? user.name.split(' ')[0].charAt(0).toUpperCase() +
+      user.name.split(' ')[0].slice(1)
+    : '';
+
   const { createWorkspace, isPending: isCreatingUserWorkspace } =
     useCreateWorkspace();
   const { createAnonWorkspace, isPending: isCreatingAnonWorkspace } =
@@ -91,7 +96,6 @@ export default function Home() {
 
   // Handle topic click to create an anonymous workspace
   const handleTopicClick = async (topic: (typeof trendingTopics)[0]) => {
-    console.log('handleTopicClick', topic);
     if (isCreatingWorkspace || loadingTopicId !== null) return;
 
     try {
@@ -126,7 +130,7 @@ export default function Home() {
           transition={{ duration: 0.6 }}
         >
           <h1 className='text-4xl sm:text-5xl md:text-6xl font-medium mb-2 tracking-tight'>
-            Follow your curiosity
+            Follow your curiosity{firstName ? `, ${firstName}` : ''}
           </h1>
           <p className='text-lg max-w-2xl mx-auto text-white/90 mb-8'>
             A single question can open a world of discovery

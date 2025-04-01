@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { clientFetch } from './client';
+import { SITE_ROUTES } from '@/lib/siteConfig';
 
 export const useUserData = (params?: { shouldRedirect?: boolean }) => {
   const router = useRouter();
@@ -25,14 +26,14 @@ export const useUserData = (params?: { shouldRedirect?: boolean }) => {
             params?.shouldRedirect !== false &&
             (res.status === 401 || res.status === 403)
           ) {
-            router.push('/app/login');
+            router.push(SITE_ROUTES.LOGIN);
           }
 
           return null;
         }
       } catch (error) {
         console.error(error);
-        router.push('/app/login');
+        router.push(SITE_ROUTES.HOME);
         return null;
       }
     },
@@ -54,7 +55,7 @@ export const useLogout = () => {
 
       if (res.ok) {
         queryClient.clear();
-        router.push('/app/login');
+        router.push(SITE_ROUTES.HOME);
       } else {
         return null;
       }

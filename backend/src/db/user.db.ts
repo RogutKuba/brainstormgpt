@@ -6,6 +6,8 @@ import { z } from '@hono/zod-openapi';
 export const userTable = pgTable('users', {
   ...baseProperties,
   name: text('name').notNull(),
+  // firstName: text('first_name').notNull().default(''),
+  // lastName: text('last_name').notNull().default(''),
   email: text('email').notNull(),
   imageUrl: text('image_url'),
 });
@@ -26,6 +28,8 @@ export type SessionEntity = InferSelectModel<typeof sessionTable>;
 
 export const UserSchema = baseSchema.extend({
   name: z.string(),
+  // firstName: z.string(),
+  // lastName: z.string(),
   email: z.string(),
   imageUrl: z.string().nullable(),
 });

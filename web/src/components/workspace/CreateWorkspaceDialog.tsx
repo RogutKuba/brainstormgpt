@@ -10,20 +10,17 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useCreateWorkspace } from '@/query/workspace.query';
 import { useForm } from 'react-hook-form';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { RiAddLine, RiLoader2Line } from '@remixicon/react';
+import { RiAddLine, RiLoader2Line, RiSendPlaneFill } from '@remixicon/react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
@@ -34,7 +31,6 @@ interface CreateWorkspaceDialogProps {
 }
 
 const workspaceFormSchema = z.object({
-  name: z.string().min(3).max(50),
   prompt: z.string().min(3).max(1000),
 });
 
@@ -50,7 +46,6 @@ export function CreateWorkspaceDialog({
   const form = useForm<FormValues>({
     resolver: zodResolver(workspaceFormSchema),
     defaultValues: {
-      name: '',
       prompt: '',
     },
   });
@@ -59,7 +54,10 @@ export function CreateWorkspaceDialog({
     setLoading(true);
 
     try {
-      const workspace = await createWorkspace(values);
+      // Use the prompt as the workspace name too
+      const workspace = await createWorkspace({
+        prompt: values.prompt,
+      });
 
       router.push(`/app/workspace/${workspace.id}`);
     } finally {
@@ -76,37 +74,40 @@ export function CreateWorkspaceDialog({
             <DialogHeader>
               <DialogTitle>Create a New Workspace</DialogTitle>
               <DialogDescription>
-                Set a name and optional goal for your workspace. This will help
-                guide the conversation.
+                What would you like to explore? Your question will help guide
+                the conversation.
               </DialogDescription>
             </DialogHeader>
 
-            <div className='my-6 space-y-4'>
-              <FormField
-                control={form.control}
-                name='name'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Workspace Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder='My Workspace' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className='my-6'>
               <FormField
                 control={form.control}
                 name='prompt'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prompt</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder='My Workspace'
-                        {...field}
-                        rows={3}
-                      />
+                      <div className='relative'>
+                        <Textarea
+                          placeholder='Ask anything or share a link...'
+                          className='pr-12 resize-none min-h-[100px]'
+                          {...field}
+                        />
+                        <Button
+                          type='submit'
+                          className='absolute right-2 bottom-2 p-1.5 bg-transparent hover:bg-gray-100 text-gray-600 rounded-md'
+                          disabled={
+                            loading ||
+                            !field.value.trim() ||
+                            field.value.trim().length < 3
+                          }
+                        >
+                          {loading ? (
+                            <RiLoader2Line className='h-4 w-4 animate-spin' />
+                          ) : (
+                            <RiSendPlaneFill className='h-4 w-4' />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -133,11 +134,11 @@ export function CreateWorkspaceDialog({
                 </DialogClose>
                 <Button type='submit' disabled={loading}>
                   {loading ? (
-                    <RiLoader2Line className='h-4 w-4 animate-spin' />
+                    <RiLoader2Line className='h-4 w-4 animate-spin mr-2' />
                   ) : (
-                    <RiAddLine className='h-4 w-4' />
+                    <RiAddLine className='h-4 w-4 mr-2' />
                   )}
-                  Create
+                  Create Workspace
                 </Button>
               </div>
             </DialogFooter>

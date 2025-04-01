@@ -118,6 +118,8 @@ export const GoogleOauthService = {
         email,
         name: googleUser.name,
         imageUrl: googleUser.picture,
+        // firstName: googleUser.given_name,
+        // lastName: googleUser.family_name,
       };
 
       await tx.insert(userTable).values(newUser);

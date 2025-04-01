@@ -7,11 +7,13 @@ import {
   RiBrain2Fill,
   RiMore2Fill,
   RiContractLeftLine,
+  RiUserSharedLine,
 } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
 import { useWorkspaces } from '@/query/workspace.query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
+import { JoinWorkspaceDialog } from '@/components/workspace/JoinWorkspaceDialog';
 import { cn } from '@/components/ui/lib/utils';
 import { SITE_ROUTES } from '@/lib/siteConfig';
 import Link from 'next/link';
@@ -80,11 +82,11 @@ export const Sidebar = () => {
             <h2 className='text-sm font-semibold text-gray-500'>History</h2>
 
             <div className='flex gap-1'>
-              <Link href={SITE_ROUTES.NEW_CHAT}>
+              <CreateWorkspaceDialog>
                 <Button variant='icon' className='h-7 w-7'>
                   <RiAddLine className='w-4 h-4' />
                 </Button>
-              </Link>
+              </CreateWorkspaceDialog>
             </div>
           </div>
 
