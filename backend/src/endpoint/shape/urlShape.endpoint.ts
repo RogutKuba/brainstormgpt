@@ -10,7 +10,7 @@ const urlShapeRoute = createRoute({
   path: '/',
   request: {
     params: z.object({
-      workspaceId: z.string().openapi({
+      workspaceCode: z.string().openapi({
         description: 'ID of the workspace',
       }),
     }),
@@ -47,13 +47,13 @@ const urlShapeRoute = createRoute({
 export const urlShapeRouter = new OpenAPIHono<AppContext>().openapi(
   urlShapeRoute,
   async (ctx) => {
-    const { workspaceId } = ctx.req.valid('param');
+    const { workspaceCode } = ctx.req.valid('param');
     const { shapeId, url } = await ctx.req.json();
 
     try {
       // Initialize the crawler service
       const crawlerService = new CrawlerService({
-        workspaceId,
+        workspaceCode,
         ctx,
       });
 

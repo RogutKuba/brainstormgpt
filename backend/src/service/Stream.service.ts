@@ -190,15 +190,16 @@ export class StreamService {
     context: string;
     bindings: TLArrowBinding[];
     searchType: 'text' | 'web' | 'image';
-    workspaceId: string;
+    workspaceCode: string;
     ctx: Context<AppContext>;
   }) => {
-    const { shapes, bindings, workspaceId, searchType, ctx, context } = params;
+    const { shapes, bindings, workspaceCode, searchType, ctx, context } =
+      params;
 
     // in this case, we add the nodes to the editor if they dont already exist, to make sure the writes are durable in
     // case client disconnects before the nodes are fully streamed.
 
-    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceCode);
     const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
 
     if (searchType === 'text') {
@@ -225,7 +226,7 @@ export class StreamService {
       ) as LinkShape[];
 
       const crawlerService = new CrawlerService({
-        workspaceId,
+        workspaceCode,
         ctx,
       });
 

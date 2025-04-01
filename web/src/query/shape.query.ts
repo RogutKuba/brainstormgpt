@@ -1,16 +1,16 @@
 import { clientFetch } from '@/query/client';
-import { useCurrentWorkspaceId } from '@/lib/pathUtils';
+import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
 import { useMutation } from '@tanstack/react-query';
 
 export const useUpdateLinkShape = () => {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceCode = useCurrentWorkspaceCode();
 
   const mutation = useMutation({
     mutationFn: async (json: { shapeId: string; url: string }) => {
       return refreshLinkShape({
         shapeId: json.shapeId,
         url: json.url,
-        workspaceId,
+        workspaceCode,
       });
     },
   });
@@ -24,15 +24,18 @@ export const useUpdateLinkShape = () => {
 const refreshLinkShape = async (params: {
   shapeId: string;
   url: string;
-  workspaceId: string;
+  workspaceCode: string;
 }) => {
-  const res = await clientFetch(`/workspace/${params.workspaceId}/shape/url`, {
-    method: 'POST',
-    body: JSON.stringify({
-      shapeId: params.shapeId,
-      url: params.url,
-    }),
-  });
+  const res = await clientFetch(
+    `/workspace/${params.workspaceCode}/shape/url`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        shapeId: params.shapeId,
+        url: params.url,
+      }),
+    }
+  );
 
   if (!res.ok) {
     throw new Error('Failed to refresh link shape');

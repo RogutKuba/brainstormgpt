@@ -22,7 +22,7 @@ import { IndexKey, TLArrowBinding, TLArrowShape } from 'tldraw';
 export type ChunkWorkflowParams = {
   crawledPageId: string;
   shapeId: string;
-  workspaceId: string;
+  workspaceCode: string;
   context: string;
 };
 
@@ -43,7 +43,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
   ChunkWorkflowParams
 > {
   async run(event: WorkflowEvent<ChunkWorkflowParams>, step: WorkflowStep) {
-    const { crawledPageId, shapeId, workspaceId, context } = event.payload;
+    const { crawledPageId, shapeId, workspaceCode, context } = event.payload;
 
     try {
       const existingCrawledPage = await step.do(
@@ -113,7 +113,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
         const chunkEntities: PageChunkEntity[] = chunks.map((chunk, index) => ({
           id: generateId('pageChunk'),
           createdAt: new Date().toISOString(),
-          workspaceId,
+          workspaceCode,
           url: crawledPage.url,
           content: chunk.content,
           type: chunk.type,
@@ -149,7 +149,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
       await step.do('update-shape-with-predictions', async () => {
         // Get the durable object for this workspace
         const workspaceDoId =
-          this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+          this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceCode);
         const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
 
         // Get the original shape
@@ -175,7 +175,7 @@ export class ChunkWorkflow extends WorkflowEntrypoint<
       console.error('Error in ChunkWorkflow:', error);
 
       const workspaceDoId =
-        this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+        this.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceCode);
       const workspaceDo = this.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
 
       // @ts-ignore

@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -14,8 +13,6 @@ import {
   RiArrowDownSLine,
   RiArrowUpSLine,
   RiSendPlaneFill,
-  RiCloseLine,
-  RiChat1Line,
   RiText,
   RiLink,
   RiAddLine,
@@ -25,10 +22,11 @@ import { useEditor, useValue } from 'tldraw';
 import { LinkShape } from '@/components/shape/link/LinkShape';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { useChat } from './ChatContext';
-import { useCurrentWorkspaceId } from '@/lib/pathUtils';
+import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
+
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceCode = useCurrentWorkspaceCode();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -187,7 +185,7 @@ export const ChatWindow: React.FC = () => {
         message,
         searchType: 'text',
         selectedItemIds: selectedItems.map((item) => item.id),
-        workspaceId,
+        workspaceCode,
         editor,
       });
     }

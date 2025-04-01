@@ -23,7 +23,7 @@ export class VisitedService {
       return;
     }
 
-    const workspaceId = ctx.req.param('workspaceId');
+    const workspaceCode = ctx.req.param('workspaceCode');
 
     const user = await this.getUserIfExists(ctx);
 
@@ -32,13 +32,13 @@ export class VisitedService {
       .values({
         browserId,
         createdAt: new Date().toISOString(),
-        workspaceId,
+        workspaceCode,
         userId: user?.id,
       })
       .onConflictDoNothing({
         target: [
           visitedWorkspaceTable.browserId,
-          visitedWorkspaceTable.workspaceId,
+          visitedWorkspaceTable.workspaceCode,
         ],
       });
   }

@@ -13,10 +13,10 @@ export class CrawlerService {
   private firecrawl: FirecrawlApp;
   private db: PostgresJsDatabase;
 
-  private workspaceId: string;
+  private workspaceCode: string;
 
-  constructor(params: { workspaceId: string; ctx: Context<AppContext> }) {
-    this.workspaceId = params.workspaceId;
+  constructor(params: { workspaceCode: string; ctx: Context<AppContext> }) {
+    this.workspaceCode = params.workspaceCode;
 
     this.firecrawl = new FirecrawlApp({
       apiKey: params.ctx.env.FIRECRAWL_API_KEY,
@@ -42,7 +42,7 @@ export class CrawlerService {
       // insert the crawled page into the database
       const crawledPage: CrawledPageEntity = {
         id: generateId('crawledPage'),
-        workspaceId: this.workspaceId,
+        workspaceCode: this.workspaceCode,
         createdAt: new Date().toISOString(),
         status: 'success',
         previewImageUrl: existingPage.previewImageUrl,
@@ -69,7 +69,7 @@ export class CrawlerService {
           id: generateId('crawledPage'),
           url,
           error: scrapeResult.error ?? 'Unknown error!',
-          workspaceId: this.workspaceId,
+          workspaceCode: this.workspaceCode,
           title: '',
           description: '',
           markdown: '',
@@ -87,7 +87,7 @@ export class CrawlerService {
       // insert the crawled page into the database
       const crawledPage: CrawledPageEntity = {
         id: generateId('crawledPage'),
-        workspaceId: this.workspaceId,
+        workspaceCode: this.workspaceCode,
         createdAt: new Date().toISOString(),
         status: 'success',
         markdown: scrapeResult.markdown ?? '',
@@ -106,7 +106,7 @@ export class CrawlerService {
         id: generateId('crawledPage'),
         url,
         error: error instanceof Error ? error.message : 'Unknown error!',
-        workspaceId: this.workspaceId,
+        workspaceCode: this.workspaceCode,
         title: '',
         description: '',
         markdown: '',
@@ -135,7 +135,7 @@ export class CrawlerService {
 
     // Get the durable object for this workspace
     const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(
-      this.workspaceId
+      this.workspaceCode
     );
     const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
 
@@ -191,7 +191,7 @@ export class CrawlerService {
           // Spawn a workflow to crawl the page and create a summary
           const workflow = await ctx.env.ChunkWorkflow.create({
             params: {
-              workspaceId: this.workspaceId,
+              workspaceCode: this.workspaceCode,
               shapeId,
               crawledPageId: crawlResult.id,
               context,

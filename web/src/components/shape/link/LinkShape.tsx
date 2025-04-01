@@ -32,7 +32,7 @@ import { Input } from '@/components/ui/input';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { useCurrentWorkspaceId } from '@/lib/pathUtils';
+import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
 import {
   useContentShape,
   ANIMATION_DURATION,
@@ -174,7 +174,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     const [editing, setEditing] = useState(false);
     const { updateLinkShape } = useUpdateLinkShape();
     const { handleSendMessage } = useChat();
-    const workspaceId = useCurrentWorkspaceId();
+    const workspaceCode = useCurrentWorkspaceCode();
     const inputRef = useRef<HTMLInputElement>(null);
     const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
 
@@ -218,7 +218,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         {
           searchType: prediction.type,
           selectedItemIds: [shape.id],
-          workspaceId,
+          workspaceCode,
           editor: this.editor,
         }
       );

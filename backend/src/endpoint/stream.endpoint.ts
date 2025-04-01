@@ -19,7 +19,7 @@ const sendMessageRoute = createRoute({
   path: '/',
   request: {
     params: z.object({
-      workspaceId: z.string().openapi({
+      workspaceCode: z.string().openapi({
         description: 'Workspace ID',
       }),
     }),
@@ -71,7 +71,7 @@ const sendMessageRoute = createRoute({
 export const streamRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
-    const { workspaceId } = ctx.req.valid('param');
+    const { workspaceCode } = ctx.req.valid('param');
     const { message, chatHistory, searchType, selectedItems } =
       ctx.req.valid('json');
     // const searchType = 'web';
@@ -96,7 +96,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           );
 
           // Get the workspace snapshot
-          const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+          const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceCode);
           const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
           const snapshot =
             (await workspace.getCurrentSnapshot()) as unknown as RoomSnapshot;
@@ -154,7 +154,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
             bindings,
             context: formattedShapes,
             searchType,
-            workspaceId,
+            workspaceCode,
             ctx,
           });
 

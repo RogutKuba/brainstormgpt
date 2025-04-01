@@ -47,7 +47,7 @@ export const SummaryService = {
         title: crawledPageTable.title,
         description: crawledPageTable.description,
         markdown: crawledPageTable.markdown,
-        workspaceId: crawledPageTable.workspaceId,
+        workspaceCode: crawledPageTable.workspaceCode,
       })
       .from(crawledPageTable)
       .where(

@@ -23,7 +23,7 @@ interface ChatContextValue {
     message: string;
     searchType: 'text' | 'web' | 'image';
     selectedItemIds: string[];
-    workspaceId: string;
+    workspaceCode: string;
     editor: Editor;
   }) => Promise<void>;
   clearMessages: () => void;
@@ -48,7 +48,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     message: string;
     searchType: 'text' | 'web' | 'image';
     selectedItemIds: string[];
-    workspaceId: string;
+    workspaceCode: string;
     editor: Editor;
   }) => {
     // Check if input has more than 2 characters
@@ -90,7 +90,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
           searchType: params.searchType,
           chatHistory: formattedChatHistory,
           selectedItems: params.selectedItemIds,
-          workspaceId: params.workspaceId,
+          workspaceCode: params.workspaceCode,
           onChunk: (chunk) => {
             // Update the AI message with each new chunk
             setMessages((prev) => {

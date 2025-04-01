@@ -5,7 +5,7 @@ export const crawledPageTable = pgTable(
   'crawled_pages',
   {
     ...baseProperties,
-    workspaceId: text('workspace_id').notNull(),
+    workspaceCode: text('workspace_code').notNull(),
     url: text('url').notNull(),
     title: text('title').notNull(),
     description: text('description').notNull(),

@@ -16,7 +16,7 @@ const sendMessageRoute = createRoute({
   path: '/',
   request: {
     params: z.object({
-      workspaceId: z.string().openapi({
+      workspaceCode: z.string().openapi({
         description: 'Workspace ID',
       }),
     }),
@@ -68,11 +68,11 @@ const sendMessageRoute = createRoute({
 export const chatRouter = new OpenAPIHono<AppContext>().openapi(
   sendMessageRoute,
   async (ctx) => {
-    const { workspaceId } = ctx.req.valid('param');
+    const { workspaceCode } = ctx.req.valid('param');
     const { message, chatHistory, selectedItems, predictionId } =
       ctx.req.valid('json');
 
-    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceId);
+    const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(workspaceCode);
     const workspace = ctx.env.TLDRAW_DURABLE_OBJECT.get(id);
 
     const snapshot =

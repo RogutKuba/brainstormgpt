@@ -43,7 +43,7 @@ export const useStreamMessage = () => {
       searchType: 'text' | 'web' | 'image';
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
-      workspaceId: string;
+      workspaceCode: string;
       editor: Editor;
       onChunk?: (chunk: string) => void;
       onStatus?: (status: string) => void;
@@ -61,7 +61,7 @@ export const useStreamMessage = () => {
         });
 
         // Create the request URL
-        const url = `/workspace/${params.workspaceId}/stream`;
+        const url = `/workspace/${params.workspaceCode}/stream`;
 
         // Prepare the request
         const response = await fetch(

@@ -10,16 +10,16 @@ export const visitedWorkspaceTable = pgTable(
     createdAt: timestamp('created_at', { mode: 'string' })
       .notNull()
       .default(sql`now()`),
-    workspaceId: text('workspace_id').notNull(),
+    workspaceCode: text('workspace_code').notNull(),
     userId: text('user_id'),
   },
-  (t) => [primaryKey({ columns: [t.browserId, t.workspaceId] })]
+  (t) => [primaryKey({ columns: [t.browserId, t.workspaceCode] })]
 );
 
 export type VisitedWorkspaceEntity = typeof visitedWorkspaceTable.$inferSelect;
 
 export const visitedWorkspaceSchema = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceCode: z.string().uuid(),
   userId: z.string().uuid(),
   isAnonymous: z.boolean().default(false),
   visitedAt: z.date().default(() => new Date()),
