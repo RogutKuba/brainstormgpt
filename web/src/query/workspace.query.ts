@@ -9,6 +9,7 @@ type WorkspaceEntity = {
   ownerId: string;
   name: string;
   goalPrompt: string | null;
+  code: string;
 };
 
 export const useWorkspaces = () => {

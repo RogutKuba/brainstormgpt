@@ -207,7 +207,7 @@ export const ChatWindow: React.FC = () => {
         className='py-2 px-4 cursor-grab flex flex-row justify-between items-center bg-primary text-white shrink-0'
         onMouseDown={handleDragStart}
       >
-        <CardTitle className='text-base font-medium'>AI Assistant</CardTitle>
+        <CardTitle className='text-base font-medium'>Assistant</CardTitle>
         <div className='flex gap-1'>
           <Button
             variant='icon'

@@ -99,12 +99,13 @@ export default function Home() {
 
   // Handle topic click to create an anonymous workspace
   const handleTopicClick = async (topic: (typeof trendingTopics)[0]) => {
+    console.log('handleTopicClick', topic);
     if (isCreatingWorkspace || loadingTopicId !== null) return;
 
     try {
       setLoadingTopicId(topic.id);
       const workspace = await createAnonWorkspace({ prompt: topic.title });
-      router.push(`/app/workspace/${workspace.id}`);
+      router.push(`/app/workspace/${workspace.code}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
       setLoadingTopicId(null);

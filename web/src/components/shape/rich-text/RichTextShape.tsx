@@ -271,13 +271,6 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     this.editor.setEditingShape(shape.id);
   }
 
-  canResize(_shape: RichTextShape): boolean {
-    if (_shape.props.isRoot) {
-      return false;
-    }
-    return true;
-  }
-
   override onResize(shape: RichTextShape, info: TLResizeInfo<RichTextShape>) {
     const resized = resizeBox(shape, info);
 

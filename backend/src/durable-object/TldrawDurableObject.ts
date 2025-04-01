@@ -64,7 +64,7 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     },
   })
     // when we get a connection request, we stash the room id if needed and handle the connection
-    .get('/connect/:workspaceCode', async (request) => {
+    .get('/workspace/:workspaceCode/connect', async (request) => {
       if (!this.workspaceCode) {
         await this.ctx.blockConcurrencyWhile(async () => {
           await this.ctx.storage.put(
@@ -304,7 +304,6 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     const room = await this.getRoom();
     room.updateStore((store) => {
       records.forEach((record) => {
-        console.log('adding record', record);
         store.put(record);
       });
     });

@@ -2,14 +2,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { AppContext } from '..';
 import { ErrorResponses } from './errors.js';
 import { HTTPException } from 'hono/http-exception';
-import { getDbConnection, takeUnique } from '../db/client';
-import {
-  WorkspaceEntity,
-  workspaceSchema,
-  workspaceTable,
-} from '../db/workspace.db';
+import { workspaceSchema } from '../db/workspace.db';
 import { getSession } from '../lib/session';
-import { desc, eq } from 'drizzle-orm';
 import { WorkspaceService } from '../service/Workspace.service';
 
 // CREATE WORKSPACE ROUTE

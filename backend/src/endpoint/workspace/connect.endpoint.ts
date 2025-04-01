@@ -50,17 +50,17 @@ const connectAuthMiddleware = createMiddleware<AppContext>(
 );
 
 export const connectWorkspaceRouter = new Hono<AppContext>()
-  .use('*', connectAuthMiddleware)
+  // .use('*', connectAuthMiddleware)
   .get('/', async (ctx) => {
-    const code = ctx.req.param('code');
+    const code = ctx.req.param('workspaceCode');
     if (!code) {
       throw new HTTPException(400, { message: 'Workspace code is required' });
     }
 
-    // Record the visit for analytics
-    ctx.executionCtx.waitUntil(
-      new VisitedService(ctx).handleVisitedWorkspace(ctx)
-    );
+    // // Record the visit for analytics
+    // ctx.executionCtx.waitUntil(
+    //   new VisitedService(ctx).handleVisitedWorkspace(ctx)
+    // );
 
     // Connect to the durable object
     const id = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(code);
