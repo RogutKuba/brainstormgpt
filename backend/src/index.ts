@@ -1,20 +1,15 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { handleAssetDownload, handleAssetUpload } from './assetUploads';
-import { BrainstormService } from './service/Brainstorm.service';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { googleAuthRouter } from './endpoint/oauth.endpoint';
 import { UserEntity, SessionEntity } from './db/user.db';
 import { authMiddleware } from './middleware/auth.middleware';
 import { workspaceRouter } from './endpoint/workspace.endpoint';
 import { authRouter } from './endpoint/auth.endpoint';
-import { VisitedService } from './service/Visited.service';
 import { TldrawDurableObject } from './durable-object/TldrawDurableObject';
-import { chatRouter } from './endpoint/chat.endpoint';
 import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
 import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 import { streamRouter } from './endpoint/stream.endpoint';
-import { LLMService } from './service/LLM.service';
 import { anonWorkspaceRouter } from './endpoint/workspace/anon.endpoint';
 import { connectWorkspaceRouter } from './endpoint/workspace/connect.endpoint';
 
@@ -73,7 +68,6 @@ app
   //   await waitlistService.addEmail(email);
   //   return ctx.json({ message: 'Email added to waitlist' }, 200);
   // })
-  .route('/workspace/:workspaceCode/chat', chatRouter)
   .route('/workspace/:workspaceCode/stream', streamRouter)
   .route('/workspace/:workspaceCode/shape/url', urlShapeRouter)
   .route('/workspace/anonymous', anonWorkspaceRouter)
