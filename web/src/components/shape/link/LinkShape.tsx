@@ -68,6 +68,7 @@ export type LinkShapeProps = {
   }>;
   isDefault: boolean;
   contentType: 'website' | 'youtube' | 'pdf' | 'other';
+  isRoot?: boolean;
 };
 
 // Define the shape type by extending TLBaseShape with our props
@@ -75,10 +76,6 @@ export type LinkShape = TLBaseShape<'link', LinkShapeProps>;
 
 export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
   static override type = 'link' as const;
-
-  override canEdit() {
-    return true;
-  }
 
   getDefaultProps(): LinkShape['props'] {
     return {
@@ -98,6 +95,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       predictions: [],
       isDefault: true,
       contentType: 'website',
+      isRoot: false,
     };
   }
 
@@ -400,7 +398,9 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     return (
       <HTMLContainer
         className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white border border-2 ${
-          isLocked
+          shape.props.isRoot
+            ? 'border-primary shadow-[0_0_0_3px_rgba(59,130,246,0.3),0_0_15px_rgba(59,130,246,0.25)]'
+            : isLocked
             ? 'border-primary/30 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]'
             : 'border-gray-200'
         }`}
@@ -413,11 +413,15 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           <div
             className={`flex items-center justify-center ${
               !isSelected && !isLocked && 'hidden'
-            } ${isSelected && 'cursor-pointer hover:bg-gray-100 rounded-full'}`}
+            } ${
+              isSelected &&
+              !shape.props.isRoot &&
+              'cursor-pointer hover:bg-gray-100 rounded-full'
+            }`}
             onClick={(e) => toggleLock(shape, e)}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {isLocked ? (
+            {shape.props.isRoot ? null : isLocked ? (
               <Tooltip content='Position locked'>
                 <RiLock2Line className='text-primary/80 h-5 w-5' />
               </Tooltip>
