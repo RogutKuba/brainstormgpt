@@ -50,7 +50,7 @@ const connectAuthMiddleware = createMiddleware<AppContext>(
 );
 
 export const connectWorkspaceRouter = new Hono<AppContext>()
-  // .use('*', connectAuthMiddleware)
+  .use('*', connectAuthMiddleware)
   .get('/', async (ctx) => {
     const code = ctx.req.param('workspaceCode');
     if (!code) {
@@ -69,5 +69,13 @@ export const connectWorkspaceRouter = new Hono<AppContext>()
     return room.fetch(ctx.req.url, {
       headers: ctx.req.raw.headers,
       body: ctx.req.raw.body,
+    });
+  })
+  // TODO: simplify this
+  .get('/status', async (ctx) => {
+    // this is just used to check auth since have to query this seaprately from the websocket endpoint
+    return ctx.json({
+      status: 'ok',
+      error: null,
     });
   });

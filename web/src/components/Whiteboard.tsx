@@ -38,7 +38,13 @@ import { LinkTool } from '@/components/shape/link/LinkTool';
 import { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
-import { RiShare2Line } from '@remixicon/react';
+import {
+  RiShare2Line,
+  RiErrorWarningLine,
+  RiArrowLeftLine,
+  RiRefreshLine,
+  RiAlertFill,
+} from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
 import { Collection } from '@/components/collection/base/CollectionProvider';
@@ -49,6 +55,8 @@ import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
 import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3ForceGraphLayoutCollection';
 import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useWorkspaceStatus } from '@/query/workspace.query';
+import { Button } from '@/components/ui/button';
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
 const collections: Collection[] = [D3ForceGraphLayoutCollection];
@@ -336,10 +344,11 @@ const customComponents: TLComponents = {
   StylePanel: null,
 };
 
-export const Whiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
+const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
   const [editor, setEditor] = useState<Editor | null>(null);
   const shapeUtils = useMemo(() => [...customShapes, ...defaultShapeUtils], []);
   const { updateLinkShape } = useUpdateLinkShape();
+  const { workspaceStatus } = useWorkspaceStatus();
 
   // Create a store connected to multiplayer.
   const store = useSync({
@@ -411,4 +420,56 @@ export const Whiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
       )}
     </Tldraw>
   );
+};
+
+const ErrorWhiteboard = ({ error }: { error: string }) => {
+  const router = useRouter();
+
+  return (
+    <div className='min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-12'>
+      <div className='max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100'>
+        <div className='flex flex-col items-center text-center'>
+          <div className='relative w-20 h-20'>
+            <div
+              className='absolute inset-0 bg-red-100 rounded-full animate-pulse'
+              style={{ animationDuration: '3s' }}
+            ></div>
+            <RiAlertFill className='absolute inset-0 w-20 h-20 text-red-500 p-5' />
+          </div>
+
+          <h2 className='mt-2 text-2xl font-bold text-gray-900'>Error</h2>
+          <p className='mt-2 text-gray-600'>
+            We encountered a problem loading this workspace.
+          </p>
+
+          <div className='mt-4 p-4 bg-red-50 border border-red-100 rounded-lg text-left w-full'>
+            <p className='text-sm text-red-700 font-medium'>Error details:</p>
+            <p className='text-sm text-red-600 mt-1 break-words'>{error}</p>
+          </div>
+
+          <div className='mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 w-full'>
+            <Button onClick={() => router.push('/')} variant='light'>
+              <RiArrowLeftLine className='w-4 h-4' />
+              Go Home
+            </Button>
+
+            <Button variant='light' onClick={() => window.location.reload()}>
+              Try Again
+              <RiRefreshLine className='w-4 h-4' />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const Whiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
+  const { workspaceStatus } = useWorkspaceStatus();
+
+  if (workspaceStatus?.status === 'error') {
+    return <ErrorWhiteboard error={workspaceStatus.error} />;
+  }
+
+  return <RawWhiteboard workspaceCode={workspaceCode} />;
 };

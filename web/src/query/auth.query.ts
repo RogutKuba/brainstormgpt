@@ -20,16 +20,19 @@ export const useUserData = (params?: { shouldRedirect?: boolean }) => {
           };
         } else {
           // if status is 401 or 403, redirect to login
-          if (res.status === 401 || res.status === 403) {
+          if (
+            params?.shouldRedirect !== false &&
+            (res.status === 401 || res.status === 403)
+          ) {
             router.push('/app/login');
           }
 
-          return undefined;
+          return null;
         }
       } catch (error) {
         console.error(error);
         router.push('/app/login');
-        return undefined;
+        return null;
       }
     },
   });

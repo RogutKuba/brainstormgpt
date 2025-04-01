@@ -1,3 +1,4 @@
+import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
 import { clientFetch } from '@/query/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
@@ -144,5 +145,50 @@ export const useSendMessage = () => {
   return {
     sendMessage: mutation.mutateAsync,
     ...mutation,
+  };
+};
+
+export const useWorkspaceStatus = () => {
+  const workspaceCode = useCurrentWorkspaceCode();
+
+  const query = useQuery({
+    queryKey: ['workspaceStatus'],
+    queryFn: async () => {
+      const response = await clientFetch(`/workspace/${workspaceCode}/status`);
+
+      if (!response.ok) {
+        // handle different 400 errors
+        if (response.status === 401 || response.status === 403) {
+          return {
+            status: 'error',
+            error: 'Unauthorized to access workspace',
+          };
+        } else if (response.status === 404) {
+          return {
+            status: 'error',
+            error: 'Workspace not found',
+          };
+        }
+
+        return {
+          status: 'error',
+          error: 'Failed to fetch workspace status',
+        };
+      }
+
+      return response.json() as Promise<{ status: 'ok'; error: null }>;
+    },
+    retry: (failureCount, _) => {
+      if (failureCount >= 2) {
+        return false;
+      }
+
+      return true;
+    },
+  });
+
+  return {
+    workspaceStatus: query.data,
+    ...query,
   };
 };

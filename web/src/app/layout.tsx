@@ -1,6 +1,10 @@
-import type { Metadata } from 'next';
+'use client';
+
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { TanstackQueryClient } from '@/query/client';
+import { Toaster } from 'sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -12,11 +16,6 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'BrainstormGPT',
-  description: 'BrainstormGPT',
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +26,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}
       >
-        {children}
+        <QueryClientProvider client={TanstackQueryClient}>
+          {children}
+          <Toaster richColors theme='light' duration={2500} />
+        </QueryClientProvider>
       </body>
     </html>
   );
