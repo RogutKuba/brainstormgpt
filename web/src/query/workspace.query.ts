@@ -11,6 +11,7 @@ type WorkspaceEntity = {
   name: string;
   goalPrompt: string | null;
   code: string;
+  isPublic: boolean;
 };
 
 export const useWorkspaces = () => {
@@ -199,5 +200,109 @@ export const useWorkspaceStatus = () => {
   return {
     workspaceStatus: query.data,
     ...query,
+  };
+};
+
+export const useDeleteWorkspace = () => {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: async (workspaceCode: string) => {
+      const response = await clientFetch(`/workspace/${workspaceCode}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete workspace');
+      }
+
+      return response.json() as Promise<WorkspaceEntity>;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ['workspaces'],
+        (old: WorkspaceEntity[] | undefined) =>
+          old?.filter((workspace) => workspace.id !== data.id)
+      );
+    },
+    meta: {
+      SUCCESS_MESSAGE: 'Workspace deleted successfully',
+    },
+  });
+
+  return {
+    deleteWorkspace: mutation.mutateAsync,
+    ...mutation,
+  };
+};
+
+export const useUpdateWorkspace = () => {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (params: {
+      workspaceCode: string;
+      name?: string;
+      isPublic?: boolean;
+    }) => {
+      const response = await clientFetch(`/workspace/${params.workspaceCode}`, {
+        method: 'PUT',
+        body: JSON.stringify(params),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update workspace');
+      }
+
+      return response.json() as Promise<WorkspaceEntity>;
+    },
+    onMutate: async (params) => {
+      // Cancel any outgoing refetches to avoid overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['workspaces'] });
+
+      // Snapshot the previous value
+      const previousWorkspaces = queryClient.getQueryData<WorkspaceEntity[]>([
+        'workspaces',
+      ]);
+
+      // Optimistically update the cache
+      if (previousWorkspaces) {
+        queryClient.setQueryData<WorkspaceEntity[]>(
+          ['workspaces'],
+          previousWorkspaces.map((workspace) =>
+            workspace.code === params.workspaceCode
+              ? {
+                  ...workspace,
+                  name: params.name ?? workspace.name,
+                  isPublic: params.isPublic ?? workspace.isPublic,
+                }
+              : workspace
+          )
+        );
+      }
+
+      // Return context with the snapshotted value
+      return { previousWorkspaces };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context we returned above to roll back
+      if (context?.previousWorkspaces) {
+        queryClient.setQueryData(['workspaces'], context.previousWorkspaces);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure cache is in sync with server
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+    meta: {
+      SUCCESS_MESSAGE: 'Workspace updated successfully',
+    },
+  });
+
+  return {
+    updateWorkspace: mutation.mutateAsync,
+    ...mutation,
   };
 };

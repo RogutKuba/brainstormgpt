@@ -199,4 +199,48 @@ export class WorkspaceService {
 
     return workspaces;
   }
+
+  /**
+   * Deletes a workspace by ID
+   * @param params Parameters for deleting a workspace
+   * @returns The deleted workspace entity
+   */
+  static async deleteWorkspace(params: {
+    code: string;
+    ctx: Context<AppContext>;
+  }): Promise<WorkspaceEntity> {
+    const { code, ctx } = params;
+    const db = getDbConnection(ctx);
+
+    const workspace = await db
+      .delete(workspaceTable)
+      .where(eq(workspaceTable.code, code))
+      .returning()
+      .then(takeUniqueOrThrow);
+
+    return workspace;
+  }
+
+  /**
+   * Updates a workspace by ID
+   * @param params Parameters for updating a workspace
+   * @returns The updated workspace entity
+   */
+  static async updateWorkspace(params: {
+    code: string;
+    update: Partial<Pick<WorkspaceEntity, 'name' | 'isPublic'>>;
+    ctx: Context<AppContext>;
+  }): Promise<WorkspaceEntity> {
+    const { code, update, ctx } = params;
+    const db = getDbConnection(ctx);
+
+    const workspace = await db
+      .update(workspaceTable)
+      .set(update)
+      .where(eq(workspaceTable.code, code))
+      .returning()
+      .then(takeUniqueOrThrow);
+
+    return workspace;
+  }
 }

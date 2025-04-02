@@ -33,7 +33,7 @@ export const ChatWindow: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState({
-    x: window.innerWidth - 400,
+    x: window.innerWidth - 400 - (sideBarRef.current?.offsetWidth ?? 0),
     y: 20,
   });
   const [isDragging, setIsDragging] = useState(false);

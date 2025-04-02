@@ -14,15 +14,29 @@ import {
   RiBrain2Fill,
   RiMore2Fill,
   RiContractLeftLine,
+  RiDeleteBinLine,
+  RiPencilLine,
+  RiShareLine,
 } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
-import { useWorkspaces } from '@/query/workspace.query';
+import { useUpdateWorkspace, useWorkspaces } from '@/query/workspace.query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 import { cn } from '@/components/ui/lib/utils';
 import { SITE_ROUTES } from '@/lib/siteConfig';
 import Link from 'next/link';
 import { SidebarProfile } from '@/components/landing/SidebarProfile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown';
+import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
+import { DeleteWorkspaceDialog } from '@/components/workspace/DeleteWorkspaceDialog';
+import { Input } from '@/components/ui/input';
 
 interface SidebarContextType {
   isOpen: boolean;
@@ -35,8 +49,18 @@ export const Sidebar = () => {
 
   const router = useRouter();
   const { workspaces, isLoading } = useWorkspaces();
+  const { updateWorkspace } = useUpdateWorkspace();
 
   const [isMobile, setIsMobile] = useState(false);
+
+  // State for editing workspace
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(
+    null
+  );
+  const [editingWorkspaceName, setEditingWorkspaceName] = useState<string>('');
+
+  // state for deleting workspace
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<string | null>(null);
 
   // Check if we're on mobile for responsive behavior
   useEffect(() => {
@@ -106,8 +130,8 @@ export const Sidebar = () => {
               Array(5)
                 .fill(0)
                 .map((_, i) => (
-                  <div key={i} className='px-2 py-2'>
-                    <Skeleton className='h-8 w-full' />
+                  <div key={i} className='px-2 py-1'>
+                    <Skeleton className='h-6 w-full' />
                   </div>
                 ))
             ) : workspaces && workspaces.length > 0 ? (
@@ -117,18 +141,84 @@ export const Sidebar = () => {
                   key={index}
                   variant='ghost'
                   className='w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50'
-                  onClick={() => router.push(SITE_ROUTES.CHAT(workspace.code))}
                 >
-                  <span className='truncate flex-grow'>{workspace.name}</span>
-                  <RiMore2Fill
-                    className='w-4 h-4 text-gray-400 flex-shrink-0 hover:text-gray-700 transition-colors duration-200'
-                    onClick={(e) => {
-                      // TODO: dropdown menu to edit / delete workspace
-                      console.log('clicked');
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                  />
+                  {editingWorkspaceId === workspace.id ? (
+                    <Input
+                      value={editingWorkspaceName}
+                      onChange={(e) => setEditingWorkspaceName(e.target.value)}
+                      onBlur={async () => {
+                        setEditingWorkspaceId(null);
+                        await updateWorkspace({
+                          workspaceCode: workspace.code,
+                          name: editingWorkspaceName,
+                        });
+                      }}
+                      inputClassName='py-0 px-0'
+                    />
+                  ) : (
+                    <span
+                      className='truncate flex-grow'
+                      onClick={() =>
+                        router.push(SITE_ROUTES.CHAT(workspace.code))
+                      }
+                    >
+                      {workspace.name}
+                    </span>
+                  )}
+
+                  <Dialog
+                    open={deleteDialogOpen === workspace.id}
+                    onOpenChange={(open) =>
+                      setDeleteDialogOpen(open ? workspace.id : null)
+                    }
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        asChild
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <RiMore2Fill className='w-5 h-5 p-0.5 text-gray-400 flex-shrink-0 hover:text-gray-700 hover:bg-blue-50 rounded transition-colors duration-200' />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingWorkspaceName(workspace.name);
+                              setEditingWorkspaceId(workspace.id);
+                            }}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <RiPencilLine className='w-4 h-4' />
+                              Rename
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <span className='flex items-center gap-2'>
+                              <RiShareLine className='w-4 h-4' />
+                              Share
+                            </span>
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DialogTrigger asChild>
+                          <DropdownMenuItem className='text-red-500'>
+                            <span className='flex items-center gap-2'>
+                              <RiDeleteBinLine className='w-4 h-4' />
+                              Delete
+                            </span>
+                          </DropdownMenuItem>
+                        </DialogTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DeleteWorkspaceDialog
+                      workspaceId={workspace.id}
+                      workspaceName={workspace.name}
+                      setOpen={(open) =>
+                        setDeleteDialogOpen(open ? workspace.id : null)
+                      }
+                    />
+                  </Dialog>
                 </Button>
               ))
             ) : (

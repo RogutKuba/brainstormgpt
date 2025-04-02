@@ -77,6 +77,61 @@ const getAllWorkspacesRoute = createRoute({
   },
 });
 
+// UPDATE WORKSPACE ROUTE
+const updateWorkspaceRoute = createRoute({
+  method: 'put',
+  path: '/:code',
+  request: {
+    params: z.object({
+      code: z.string().openapi({
+        description: 'Workspace Code',
+      }),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: workspaceSchema.pick({ name: true, isPublic: true }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Workspace updated successfully',
+      content: {
+        'application/json': {
+          schema: workspaceSchema,
+        },
+      },
+    },
+    ...ErrorResponses,
+  },
+});
+
+// DELETE WORKSPACE ROUTE
+const deleteWorkspaceRoute = createRoute({
+  method: 'delete',
+  path: '/:code',
+  request: {
+    params: z.object({
+      code: z.string().openapi({
+        description: 'Workspace Code',
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Workspace deleted successfully',
+      content: {
+        'application/json': {
+          schema: workspaceSchema,
+        },
+      },
+    },
+    ...ErrorResponses,
+  },
+});
+
 export const workspaceRouter = new OpenAPIHono<AppContext>()
   .openapi(createWorkspaceRoute, async (ctx) => {
     const { prompt } = ctx.req.valid('json');
@@ -115,4 +170,26 @@ export const workspaceRouter = new OpenAPIHono<AppContext>()
     });
 
     return ctx.json(workspaces, 200);
+  })
+  .openapi(updateWorkspaceRoute, async (ctx) => {
+    const { code } = ctx.req.valid('param');
+    const { name, isPublic } = ctx.req.valid('json');
+
+    const updatedWorkspace = await WorkspaceService.updateWorkspace({
+      code,
+      update: { name, isPublic },
+      ctx,
+    });
+
+    return ctx.json(updatedWorkspace, 200);
+  })
+  .openapi(deleteWorkspaceRoute, async (ctx) => {
+    const { code } = ctx.req.valid('param');
+
+    const deletedWorkspace = await WorkspaceService.deleteWorkspace({
+      code,
+      ctx,
+    });
+
+    return ctx.json(deletedWorkspace, 200);
   });

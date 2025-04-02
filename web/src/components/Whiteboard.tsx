@@ -28,6 +28,7 @@ import {
   TLUiTranslationKey,
   TLUiEventSource,
   Editor,
+  DefaultMinimap,
 } from 'tldraw';
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/components/brainstorm-tool/BrainstormTool';
