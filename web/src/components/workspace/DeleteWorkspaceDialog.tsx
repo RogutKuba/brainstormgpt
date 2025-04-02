@@ -11,13 +11,13 @@ import { useDeleteWorkspace } from '@/query/workspace.query';
 import { RiDeleteBin7Line, RiLoader2Line } from '@remixicon/react';
 
 interface DeleteWorkspaceDialogProps {
-  workspaceId: string;
+  workspaceCode: string;
   workspaceName: string;
   setOpen: (open: boolean) => void;
 }
 
 export function DeleteWorkspaceDialog({
-  workspaceId,
+  workspaceCode,
   workspaceName,
   setOpen,
 }: DeleteWorkspaceDialogProps) {
@@ -29,7 +29,7 @@ export function DeleteWorkspaceDialog({
     setLoading(true);
 
     try {
-      await deleteWorkspace(workspaceId);
+      await deleteWorkspace(workspaceCode);
       setOpen(false);
     } finally {
       setLoading(false);

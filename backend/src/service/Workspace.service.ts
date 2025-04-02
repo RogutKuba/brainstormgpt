@@ -201,7 +201,7 @@ export class WorkspaceService {
   }
 
   /**
-   * Deletes a workspace by ID
+   * Deletes a workspace by ID and the durable object associated with it
    * @param params Parameters for deleting a workspace
    * @returns The deleted workspace entity
    */
@@ -211,6 +211,10 @@ export class WorkspaceService {
   }): Promise<WorkspaceEntity> {
     const { code, ctx } = params;
     const db = getDbConnection(ctx);
+
+    const workspaceDoId = ctx.env.TLDRAW_DURABLE_OBJECT.idFromName(code);
+    const workspaceDo = ctx.env.TLDRAW_DURABLE_OBJECT.get(workspaceDoId);
+    await workspaceDo.cleanup();
 
     const workspace = await db
       .delete(workspaceTable)

@@ -8,7 +8,7 @@ import {
   useRef,
   RefObject,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   RiAddLine,
   RiBrain2Fill,
@@ -46,8 +46,12 @@ interface SidebarContextType {
 
 export const Sidebar = () => {
   const { isOpen, toggleSidebar, sideBarRef } = useSidebar();
-
   const router = useRouter();
+  const params = useParams();
+
+  // Get the current workspace code from URL params
+  const currentWorkspaceCode = params?.workspaceCode as string;
+
   const { workspaces, isLoading } = useWorkspaces();
   const { updateWorkspace } = useUpdateWorkspace();
 
@@ -140,7 +144,11 @@ export const Sidebar = () => {
                 <Button
                   key={index}
                   variant='ghost'
-                  className='w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50'
+                  className={cn(
+                    'w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50',
+                    workspace.code === currentWorkspaceCode &&
+                      'bg-blue-50 text-blue-600 font-medium'
+                  )}
                 >
                   {editingWorkspaceId === workspace.id ? (
                     <Input
@@ -148,6 +156,11 @@ export const Sidebar = () => {
                       onChange={(e) => setEditingWorkspaceName(e.target.value)}
                       onBlur={async () => {
                         setEditingWorkspaceId(null);
+
+                        if (editingWorkspaceName === workspace.name) {
+                          return;
+                        }
+
                         await updateWorkspace({
                           workspaceCode: workspace.code,
                           name: editingWorkspaceName,
@@ -212,7 +225,7 @@ export const Sidebar = () => {
                     </DropdownMenu>
 
                     <DeleteWorkspaceDialog
-                      workspaceId={workspace.id}
+                      workspaceCode={workspace.code}
                       workspaceName={workspace.name}
                       setOpen={(open) =>
                         setDeleteDialogOpen(open ? workspace.id : null)

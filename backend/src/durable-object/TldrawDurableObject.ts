@@ -1,21 +1,14 @@
-import {
-  RoomSnapshot,
-  RoomStoreMethods,
-  TLSocketRoom,
-} from '@tldraw/sync-core';
+import { RoomSnapshot, TLSocketRoom } from '@tldraw/sync-core';
 import {
   TLRecord,
   TLShape,
-  TLTextShape,
   createTLSchema,
   defaultShapeSchemas,
-  TLBaseShape,
 } from '@tldraw/tlschema';
 import { AutoRouter, IRequest, error } from 'itty-router';
 import throttle from 'lodash.throttle';
 import { Environment } from '../types';
 import { DurableObject } from 'cloudflare:workers';
-import { ShapeService } from '../service/Shape.service';
 import { PredictionShape } from '../shapes/Prediction.shape';
 
 // add custom shapes and bindings here if needed:
@@ -38,6 +31,8 @@ export class TldrawDurableObject extends DurableObject<Environment> {
   // load it once.
   private roomPromise: Promise<TLSocketRoom<TLRecord, void>> | null = null;
 
+  private static CODE_STORAGE_KEY = 'workspaceCode';
+
   constructor(ctx: DurableObjectState, env: Environment) {
     super(ctx, env);
     this.ctx = ctx;
@@ -46,15 +41,28 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     this.r2 = env.TLDRAW_BUCKET;
 
     ctx.blockConcurrencyWhile(async () => {
-      this.workspaceCode = ((await this.ctx.storage.get('workspaceCode')) ??
-        null) as string | null;
+      this.workspaceCode = ((await this.ctx.storage.get(
+        TldrawDurableObject.CODE_STORAGE_KEY
+      )) ?? null) as string | null;
     });
   }
 
   public async init(params: { code: string }) {
     const { code } = params;
     this.workspaceCode = code;
-    await this.ctx.storage.put('workspaceCode', code);
+    await this.ctx.storage.put(TldrawDurableObject.CODE_STORAGE_KEY, code);
+
+    console.log('init', code, 'put', TldrawDurableObject.CODE_STORAGE_KEY);
+  }
+
+  /**
+   * Cleans up the durable object. Deletes the workspace from R2 and the storage.
+   */
+  public async cleanup() {
+    await Promise.all([
+      this.deleteWorkspaceFromR2(),
+      this.ctx.storage.deleteAll(),
+    ]);
   }
 
   private readonly router = AutoRouter({
@@ -68,7 +76,7 @@ export class TldrawDurableObject extends DurableObject<Environment> {
       if (!this.workspaceCode) {
         await this.ctx.blockConcurrencyWhile(async () => {
           await this.ctx.storage.put(
-            'workspaceCode',
+            TldrawDurableObject.CODE_STORAGE_KEY,
             request.params.workspaceCode
           );
           this.workspaceCode = request.params.workspaceCode;
@@ -109,7 +117,7 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     if (!this.roomPromise) {
       this.roomPromise = (async () => {
         // fetch the room from R2
-        const roomFromBucket = await this.r2.get(`rooms/${workspaceCode}`);
+        const roomFromBucket = await this.getWorkspaceFromR2();
 
         // if it doesn't exist, we'll just create a new empty room
         const initialSnapshot = roomFromBucket
@@ -267,16 +275,6 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     });
   }
 
-  // we throttle persistance so it only happens every 10 seconds
-  private schedulePersistToR2 = throttle(async () => {
-    if (!this.roomPromise || !this.workspaceCode) return;
-    const room = await this.getRoom();
-
-    // convert the room to JSON and upload it to R2
-    const snapshot = JSON.stringify(room.getCurrentSnapshot());
-    await this.r2.put(`rooms/${this.workspaceCode}`, snapshot);
-  }, 10_000);
-
   // EXTERNAL METHODS
   /**
    * Gets the current snapshot of the room.
@@ -308,4 +306,35 @@ export class TldrawDurableObject extends DurableObject<Environment> {
       });
     });
   }
+
+  // ##################
+  // ##################
+  // ##################
+  // #### R2 Stuff ####
+  // ##################
+  // ##################
+  // ##################
+  private getR2Key() {
+    if (!this.workspaceCode) throw new Error('Missing workspaceCode');
+    return `workspace/${this.workspaceCode}`;
+  }
+
+  private async getWorkspaceFromR2() {
+    const workspaceFromBucket = await this.r2.get(this.getR2Key());
+    return workspaceFromBucket;
+  }
+
+  private async deleteWorkspaceFromR2() {
+    await this.r2.delete(this.getR2Key());
+  }
+
+  // we throttle persistance so it only happens every 10 seconds
+  private schedulePersistToR2 = throttle(async () => {
+    if (!this.roomPromise || !this.workspaceCode) return;
+    const room = await this.getRoom();
+
+    // convert the room to JSON and upload it to R2
+    const snapshot = JSON.stringify(room.getCurrentSnapshot());
+    await this.r2.put(this.getR2Key(), snapshot);
+  }, 10_000);
 }
