@@ -59,6 +59,10 @@ export class TldrawDurableObject extends DurableObject<Environment> {
    * Cleans up the durable object. Deletes the workspace from R2 and the storage.
    */
   public async cleanup() {
+    // close the room
+    const room = await this.getRoom();
+    room.close();
+
     await Promise.all([
       this.deleteWorkspaceFromR2(),
       this.ctx.storage.deleteAll(),

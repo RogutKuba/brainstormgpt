@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RiArrowRightLine } from '@remixicon/react';
 import { useRouter } from 'next/navigation';
+import { SITE_ROUTES } from '@/lib/siteConfig';
+
 interface JoinWorkspaceDialogProps {
   children: React.ReactNode;
 }
@@ -24,7 +26,7 @@ export function JoinWorkspaceDialog({ children }: JoinWorkspaceDialogProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // onCreateWorkspace(goalPrompt);
-    router.push(`/app/workspace/${workspaceCode}?isNew=true`);
+    router.push(SITE_ROUTES.CHAT(workspaceCode));
   };
 
   return (

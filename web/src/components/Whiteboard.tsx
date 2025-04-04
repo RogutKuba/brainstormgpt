@@ -351,6 +351,9 @@ const customComponents: TLComponents = {
   ActionsMenu: null,
   MenuPanel: CustomMenuPanel,
   StylePanel: null,
+  CursorChatBubble: null,
+  Cursor: null,
+  SharePanel: null,
 };
 
 const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {

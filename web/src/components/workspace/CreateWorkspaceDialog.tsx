@@ -25,6 +25,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import { SITE_ROUTES } from '@/lib/siteConfig';
 
 interface CreateWorkspaceDialogProps {
   children: React.ReactNode;
@@ -59,7 +60,7 @@ export function CreateWorkspaceDialog({
         prompt: values.prompt,
       });
 
-      router.push(`/app/workspace/${workspace.id}`);
+      router.push(SITE_ROUTES.CHAT(workspace.code));
     } finally {
       setLoading(false);
     }

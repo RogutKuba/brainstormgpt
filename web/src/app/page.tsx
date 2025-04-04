@@ -80,7 +80,7 @@ export default function Home() {
       try {
         if (user) {
           const workspace = await createWorkspace({ prompt: inputValue });
-          router.push(`/app/workspace/${workspace.code}`);
+          router.push(SITE_ROUTES.CHAT(workspace.code));
         } else {
           // TODO: replace with dialog to login
           router.push(
@@ -103,7 +103,7 @@ export default function Home() {
       const workspace = user
         ? await createWorkspace({ prompt: topic.title })
         : await createAnonWorkspace({ prompt: topic.title });
-      router.push(`/app/workspace/${workspace.code}`);
+      router.push(SITE_ROUTES.CHAT(workspace.code));
     } catch (error) {
       console.error('Error creating workspace:', error);
       setLoadingTopicId(null);
