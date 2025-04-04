@@ -1,8 +1,16 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from 'react';
 import { useStreamMessage } from '@/query/stream.query';
 import { Editor } from 'tldraw';
+import { useParams } from 'next/navigation';
+import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
 
 // Define the Message type
 export type Message = {
@@ -39,6 +47,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { streamMessage } = useStreamMessage();
+  const currentWorkspaceCode = useCurrentWorkspaceCode();
+
+  // Reset messages when workspace code changes
+  useEffect(() => {
+    setMessages([]);
+  }, [currentWorkspaceCode]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
