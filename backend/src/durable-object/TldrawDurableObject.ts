@@ -51,8 +51,6 @@ export class TldrawDurableObject extends DurableObject<Environment> {
     const { code } = params;
     this.workspaceCode = code;
     await this.ctx.storage.put(TldrawDurableObject.CODE_STORAGE_KEY, code);
-
-    console.log('init', code, 'put', TldrawDurableObject.CODE_STORAGE_KEY);
   }
 
   /**

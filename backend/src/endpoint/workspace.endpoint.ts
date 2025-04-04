@@ -90,7 +90,9 @@ const updateWorkspaceRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: workspaceSchema.pick({ name: true, isPublic: true }),
+          schema: workspaceSchema
+            .pick({ name: true, isPublic: true })
+            .partial(),
         },
       },
     },

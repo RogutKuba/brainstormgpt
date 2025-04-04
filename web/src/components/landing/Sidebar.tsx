@@ -17,6 +17,8 @@ import {
   RiDeleteBinLine,
   RiPencilLine,
   RiShareLine,
+  RiLockLine,
+  RiGlobalLine,
 } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
 import { useUpdateWorkspace, useWorkspaces } from '@/query/workspace.query';
@@ -37,6 +39,7 @@ import {
 import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import { DeleteWorkspaceDialog } from '@/components/workspace/DeleteWorkspaceDialog';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 interface SidebarContextType {
   isOpen: boolean;
@@ -79,6 +82,25 @@ export const Sidebar = () => {
       window.removeEventListener('resize', checkIfMobile);
     };
   }, []);
+
+  const handleShareWorkspace = (workspaceCode: string) => {
+    try {
+      navigator.clipboard.writeText(SITE_ROUTES.CHAT(workspaceCode));
+      toast.success('Copied link to clipboard');
+    } catch (error) {
+      toast.error('Failed to copy link to clipboard');
+    }
+  };
+
+  const toggleWorkspaceVisibility = async (
+    workspaceCode: string,
+    isPublic: boolean
+  ) => {
+    await updateWorkspace({
+      workspaceCode,
+      isPublic: !isPublic,
+    });
+  };
 
   return (
     <>
@@ -205,12 +227,40 @@ export const Sidebar = () => {
                               Rename
                             </span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              toggleWorkspaceVisibility(
+                                workspace.code,
+                                workspace.isPublic
+                              )
+                            }
+                          >
                             <span className='flex items-center gap-2'>
-                              <RiShareLine className='w-4 h-4' />
-                              Share
+                              {workspace.isPublic ? (
+                                <>
+                                  <RiLockLine className='w-4 h-4' />
+                                  Make Private
+                                </>
+                              ) : (
+                                <>
+                                  <RiGlobalLine className='w-4 h-4' />
+                                  Make Public
+                                </>
+                              )}
                             </span>
                           </DropdownMenuItem>
+                          {workspace.isPublic && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleShareWorkspace(workspace.code)
+                              }
+                            >
+                              <span className='flex items-center gap-2'>
+                                <RiShareLine className='w-4 h-4' />
+                                Share
+                              </span>
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DialogTrigger asChild>
