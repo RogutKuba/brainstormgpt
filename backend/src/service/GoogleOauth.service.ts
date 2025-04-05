@@ -7,6 +7,7 @@ import { AppContext } from '..';
 import { UserEntity, userTable } from '../db/user.db';
 import { SessionService } from './Session.service.js';
 import { generateId } from '../lib/id';
+import { RedirectService } from './Redirect.service';
 
 export type GoogleUser = {
   iss: string;
@@ -67,7 +68,7 @@ export const GoogleOauthService = {
       ctx.set('user', existingUser);
       ctx.set('session', session);
 
-      return `${ctx.env.WEB_APP_URL}`;
+      return RedirectService.baseUrl(ctx);
     }
 
     // check if user with email already exists
@@ -105,7 +106,7 @@ export const GoogleOauthService = {
 
       ctx.set('user', user);
       ctx.set('session', session);
-      return `${ctx.env.WEB_APP_URL}`;
+      return RedirectService.baseUrl(ctx);
     }
 
     // need to create a new user
@@ -150,6 +151,6 @@ export const GoogleOauthService = {
     ctx.set('user', user);
     ctx.set('session', session);
 
-    return `${ctx.env.WEB_APP_URL}`;
+    return RedirectService.baseUrl(ctx);
   },
 };

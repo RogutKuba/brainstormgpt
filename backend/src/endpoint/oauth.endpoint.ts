@@ -11,6 +11,7 @@ import { HTTPException } from 'hono/http-exception';
 import { GoogleOauthService, GoogleUser } from '../service/GoogleOauth.service';
 import { decodeIdToken } from 'arctic';
 import { WorkspaceService } from '../service/Workspace.service';
+import { RedirectService } from '../service/Redirect.service';
 
 // LOGIN ROUTE
 const loginRoute = createRoute({
@@ -131,7 +132,13 @@ export const googleAuthRouter = new OpenAPIHono<AppContext>()
         });
 
         // redirect to workspace
-        return ctx.redirect(`${redirectUrl}/workspace/${workspace.code}`, 302);
+        return ctx.redirect(
+          RedirectService.redirectToWorkspace({
+            workspaceCode: workspace.code,
+            ctx,
+          }),
+          302
+        );
       }
 
       return ctx.redirect(redirectUrl, 302);

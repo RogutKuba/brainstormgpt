@@ -29,6 +29,8 @@ import {
   TLUiEventSource,
   Editor,
   DefaultMinimap,
+  UndoRedoGroup,
+  DefaultQuickActions,
 } from 'tldraw';
 import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/components/brainstorm-tool/BrainstormTool';
@@ -46,6 +48,7 @@ import {
   RiRefreshLine,
   RiAlertFill,
   RiMenu5Line,
+  RiMenuLine,
 } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
 import { RichTextTool } from '@/components/shape/rich-text/RichTextTool';
@@ -283,8 +286,7 @@ function AiBrainstormBox() {
 
 const CustomMenuPanel = memo(function MenuPanel() {
   const breakpoint = useBreakpoint();
-
-  const { toggleSidebar } = useSidebar();
+  const { isOpen: isSidebarOpen, toggleSidebar } = useSidebar();
 
   const ref = useRef<HTMLDivElement>(null);
   usePassThroughWheelEvents(ref as React.RefObject<HTMLElement>);
@@ -300,35 +302,25 @@ const CustomMenuPanel = memo(function MenuPanel() {
       ? false
       : breakpoint >= PORTRAIT_BREAKPOINT.TABLET;
 
-  if (!MainMenu && !PageMenu && !showQuickActions) return null;
+  // Don't render the menu panel at all if sidebar is open or if there are no menu items
+  if (isSidebarOpen || (!MainMenu && !PageMenu && !showQuickActions))
+    return null;
 
   return (
     <div ref={ref} className='tlui-menu-zone'>
       <div className='tlui-buttons__horizontal'>
-        {MainMenu && <MainMenu />}
-        {showQuickActions ? (
-          <>
-            {QuickActions && <QuickActions />}
-            {ActionsMenu && <ActionsMenu />}
-          </>
-        ) : null}
+        {/* {MainMenu && <MainMenu />} */}
 
         <TldrawUiButton
           type='normal'
-          onClick={() => {
-            // copy current page url
-            const url = window.location.href;
-            navigator.clipboard.writeText(url);
-
-            toast.success('Link copied to clipboard. Share it with your team!');
-          }}
+          onClick={toggleSidebar}
+          aria-label='Open sidebar'
         >
-          <RiShare2Line className='w-[15px] h-[15px]' />
+          <RiMenuLine className='w-[15px] h-[15px]' />
         </TldrawUiButton>
-
-        <TldrawUiButton type='normal' onClick={toggleSidebar}>
-          <RiMenu5Line className='w-[15px] h-[15px]' />
-        </TldrawUiButton>
+        <DefaultQuickActions>
+          {showQuickActions ? <UndoRedoGroup /> : null}
+        </DefaultQuickActions>
       </div>
     </div>
   );

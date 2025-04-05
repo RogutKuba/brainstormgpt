@@ -15,6 +15,8 @@ import {
 } from '@/query/workspace.query';
 import { useUserData } from '@/query/auth.query';
 import { Sidebar } from '@/components/landing/Sidebar';
+import { LoginDialog } from '@/components/login/LoginDialog';
+
 export default function Home() {
   const router = useRouter();
   const [inputValue, setInputValue] = useState('');
@@ -73,25 +75,33 @@ export default function Home() {
     },
   ];
 
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [pendingPrompt, setPendingPrompt] = useState('');
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (inputValue.trim()) {
-      setIsLoading(true);
-      try {
-        if (user) {
+      if (user) {
+        setIsLoading(true);
+        try {
           const workspace = await createWorkspace({ prompt: inputValue });
           router.push(SITE_ROUTES.CHAT(workspace.code));
-        } else {
-          // TODO: replace with dialog to login
-          router.push(
-            `${SITE_ROUTES.LOGIN}?prompt=${encodeURIComponent(inputValue)}`
-          );
+        } catch (error) {
+          console.error('Navigation error:', error);
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Navigation error:', error);
+      } else {
+        // Show login dialog instead of redirecting
+        setPendingPrompt(inputValue);
+        setShowLoginDialog(true);
         setIsLoading(false);
       }
     }
+  };
+
+  const handleCloseLoginDialog = () => {
+    setShowLoginDialog(false);
+    setPendingPrompt('');
   };
 
   // Handle topic click to create an anonymous workspace
@@ -100,10 +110,15 @@ export default function Home() {
 
     try {
       setLoadingTopicId(topic.id);
-      const workspace = user
-        ? await createWorkspace({ prompt: topic.title })
-        : await createAnonWorkspace({ prompt: topic.title });
-      router.push(SITE_ROUTES.CHAT(workspace.code));
+      if (user) {
+        const workspace = await createWorkspace({ prompt: topic.title });
+        router.push(SITE_ROUTES.CHAT(workspace.code));
+      } else {
+        // Show login dialog instead of creating anonymous workspace
+        setPendingPrompt(topic.title);
+        setShowLoginDialog(true);
+        setLoadingTopicId(null);
+      }
     } catch (error) {
       console.error('Error creating workspace:', error);
       setLoadingTopicId(null);
@@ -213,6 +228,12 @@ export default function Home() {
 
         <LandingPricing />
       </div>
+
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={handleCloseLoginDialog}
+        prompt={pendingPrompt}
+      />
     </div>
   );
 }
