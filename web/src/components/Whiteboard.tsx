@@ -28,7 +28,6 @@ import {
   TLUiTranslationKey,
   TLUiEventSource,
   Editor,
-  DefaultMinimap,
   UndoRedoGroup,
   DefaultQuickActions,
 } from 'tldraw';
@@ -38,16 +37,13 @@ import { BrainstormDragging } from '@/components/brainstorm-tool/child-states/Dr
 import { API_URL } from '@/lib/constants';
 import { LinkShapeUtil } from '@/components/shape/link/LinkShape';
 import { LinkTool } from '@/components/shape/link/LinkTool';
-import { memo, useMemo, useRef, useState, useEffect } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { ChatWindowPlugin } from '@/components/chat/ChatWindow';
 import { handleCustomUrlPaste } from '@/components/handleUrlPaste';
 import {
-  RiShare2Line,
-  RiErrorWarningLine,
   RiArrowLeftLine,
   RiRefreshLine,
   RiAlertFill,
-  RiMenu5Line,
   RiMenuLine,
 } from '@remixicon/react';
 import { useUpdateLinkShape } from '@/query/shape.query';
@@ -58,15 +54,19 @@ import { useRouter } from 'next/navigation';
 import { CollectionProvider } from '@/components/collection/base/CollectionProvider';
 import { GraphLayout } from '@/components/collection/graph/useGraphLayout';
 import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3ForceGraphLayoutCollection';
-import { toast } from 'sonner';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useWorkspaceStatus } from '@/query/workspace.query';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/components/landing/Sidebar';
+import { TreeCollection } from '@/components/collection/tree/TreeCollection';
+import { TreeHighlight } from '@/components/collection/tree/useTreeHighlight';
+
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
-const collections: Collection[] = [D3ForceGraphLayoutCollection];
-// const collections: Collection[] = [ConstraintGraphLayoutCollection];
+const collections: Collection[] = [
+  D3ForceGraphLayoutCollection,
+  TreeCollection,
+];
 
 const customUiOverrides: TLUiOverrides = {
   tools: (editor, tools) => {
@@ -420,6 +420,7 @@ const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
       {editor && (
         <CollectionProvider editor={editor} collections={collections}>
           <GraphLayout />
+          <TreeHighlight />
         </CollectionProvider>
       )}
     </Tldraw>

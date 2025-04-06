@@ -71,6 +71,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       minCollapsedHeight: 250,
       prevCollapsedHeight: 250,
       isRoot: true,
+      isHighlighted: false,
     };
   }
 

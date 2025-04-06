@@ -15,6 +15,7 @@ export interface ContentShapeProps {
   }>;
   minCollapsedHeight: number;
   prevCollapsedHeight: number;
+  isHighlighted?: boolean;
   isRoot?: boolean;
 }
 

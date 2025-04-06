@@ -69,6 +69,7 @@ export type LinkShapeProps = {
   isDefault: boolean;
   contentType: 'website' | 'youtube' | 'pdf' | 'other';
   isRoot?: boolean;
+  isHighlighted?: boolean;
 };
 
 // Define the shape type by extending TLBaseShape with our props
@@ -96,6 +97,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       isDefault: true,
       contentType: 'website',
       isRoot: false,
+      isHighlighted: false,
     };
   }
 

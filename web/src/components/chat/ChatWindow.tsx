@@ -16,6 +16,8 @@ import {
   RiText,
   RiLink,
   RiAddLine,
+  RiChatDeleteLine,
+  RiRefreshLine,
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
 import { useEditor, useValue } from 'tldraw';
@@ -24,6 +26,7 @@ import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { useChat } from './ChatContext';
 import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
 import { useSidebar } from '@/components/landing/Sidebar';
+import { Tooltip } from '@/components/ui/tooltip';
 
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();
@@ -251,6 +254,7 @@ export const ChatWindow: React.FC = () => {
       >
         <CardTitle className='text-base font-medium'>Assistant</CardTitle>
         <div className='flex gap-1'>
+          {/* <Tooltip content='Clear chat history' className='z-[501]' asChild> */}
           <Button
             variant='icon'
             className='p-0 text-gray-200 hover:text-white hover:bg-white/10 rounded transition-colors duration-200'
@@ -259,8 +263,9 @@ export const ChatWindow: React.FC = () => {
               clearMessages();
             }}
           >
-            <RiAddLine className='h-5 w-5' />
+            <RiRefreshLine className='h-4 w-4' />
           </Button>
+          {/* </Tooltip> */}
 
           <Button
             variant='icon'

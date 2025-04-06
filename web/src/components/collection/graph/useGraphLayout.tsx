@@ -10,7 +10,7 @@ const DEBOUNCE_TIME = 50;
 
 export const GraphLayout = () => {
   const editor = useEditor();
-  const { collection, size } = useCollection<GraphLayoutCollection>('graph');
+  const { collection } = useCollection<GraphLayoutCollection>('graph');
   const handlersRegistered = useRef(false);
   // Add refs to store debounced functions per shape
   const shapeHandlers = useRef(
