@@ -15,6 +15,7 @@ import {
   connectAuthRouter,
   connectWorkspaceRouter,
 } from './endpoint/workspace/connect.endpoint';
+import { accountRouter } from './endpoint/account.endpoint';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -80,6 +81,7 @@ app
   .route('/auth', authRouter)
   .route('/auth/google', googleAuthRouter)
   .use(authMiddleware)
+  .route('/account', accountRouter)
   .route('/workspace', workspaceRouter);
 
 // export our app for cloudflare
