@@ -19,6 +19,15 @@ export class BillingService {
   }
 
   /**
+   * Create a stripe customer for a user
+   * @param email
+   * @returns
+   */
+  async createStripeCustomer(email: string) {
+    return this.stripe.customers.create({ email });
+  }
+
+  /**
    * Construct event from stripe webhooks
    * @param body
    * @param signature

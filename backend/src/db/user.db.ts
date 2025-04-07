@@ -33,5 +33,4 @@ export const UserSchema = baseSchema.extend({
   // lastName: z.string(),
   email: z.string(),
   imageUrl: z.string().nullable(),
-  stripeCustomerId: z.string(),
 });

@@ -8,6 +8,7 @@ import { UserEntity, userTable } from '../db/user.db';
 import { SessionService } from './Session.service.js';
 import { generateId } from '../lib/id';
 import { RedirectService } from './Redirect.service';
+import { BillingService } from './Billing.service';
 
 export type GoogleUser = {
   iss: string;
@@ -39,6 +40,7 @@ export const GoogleOauthService = {
   }): Promise<string> => {
     const { googleUser, ctx } = params;
     const db = getDbConnection(ctx);
+    const billingService = new BillingService(ctx);
 
     // check if google oauth account already exists
     const existing = await db
@@ -112,6 +114,7 @@ export const GoogleOauthService = {
     // need to create a new user
     const { user, session } = await db.transaction(async (tx) => {
       const email = googleUser.email;
+      const stripeCustomer = await billingService.createStripeCustomer(email);
 
       const newUser: UserEntity = {
         id: generateId('user'),
@@ -119,6 +122,7 @@ export const GoogleOauthService = {
         email,
         name: googleUser.name,
         imageUrl: googleUser.picture,
+        stripeCustomerId: stripeCustomer.id,
         // firstName: googleUser.given_name,
         // lastName: googleUser.family_name,
       };
