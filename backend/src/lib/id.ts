@@ -1,6 +1,7 @@
 import { TLBindingId, TLShapeId } from 'tldraw';
 
 const Entities = {
+  chat: 'c_',
   user: 'u_',
   session: 's_',
   crawledPage: 'cp_',

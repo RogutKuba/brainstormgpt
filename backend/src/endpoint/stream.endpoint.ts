@@ -12,7 +12,8 @@ import { RoomSnapshot } from '@tldraw/sync-core';
 import { StreamService } from '../service/Stream.service';
 import { HTTPException } from 'hono/http-exception';
 import { TLShapeId } from '@tldraw/tlschema';
-
+import { AnalyticsService } from '../service/Analytics.service';
+import { getSession } from '../lib/session';
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
   method: 'post',
@@ -74,7 +75,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
     const { workspaceCode } = ctx.req.valid('param');
     const { message, chatHistory, searchType, selectedItems } =
       ctx.req.valid('json');
-    // const searchType = 'web';
+    const { user } = getSession(ctx);
 
     if (searchType === 'web' && selectedItems.length !== 1) {
       throw new HTTPException(400, {
@@ -158,6 +159,21 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
             ctx,
           });
 
+          // save the chat to db
+          ctx.executionCtx.waitUntil(
+            new Promise(async () => {
+              const analyticsService = new AnalyticsService(ctx);
+              await analyticsService.trackChat({
+                prompt: message,
+                response: JSON.stringify(finalResult),
+                workspaceCode,
+                status: 'success',
+                userId: user.id,
+                error: null,
+              });
+            })
+          );
+
           controller.close();
         } catch (error) {
           console.error('Stream error:', error);
@@ -172,6 +188,21 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
             )
           );
           controller.close();
+
+          // save the chat to db
+          ctx.executionCtx.waitUntil(
+            new Promise(async () => {
+              const analyticsService = new AnalyticsService(ctx);
+              await analyticsService.trackChat({
+                prompt: message,
+                response: '',
+                workspaceCode,
+                status: 'error',
+                userId: user.id,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              });
+            })
+          );
         }
       },
     });
