@@ -4,6 +4,29 @@ import { ErrorResponses } from './errors.js';
 import { getSession } from '../lib/session';
 import { BillingService } from '../service/Billing.service';
 import { HTTPException } from 'hono/http-exception';
+import { AnalyticsService } from '../service/Analytics.service';
+import { getDbConnection } from '../db/client';
+import { sql } from 'drizzle-orm';
+
+// TODO: this route should prob just be part of auth/user endpoint eventually
+// GET SUBSCRIPTION STATUS ROUTE
+const getSubscriptionStatusRoute = createRoute({
+  method: 'get',
+  path: '/subscription',
+  responses: {
+    200: {
+      description: 'Returns subscription status',
+      content: {
+        'application/json': {
+          schema: z.object({
+            status: z.enum(['pro', 'free']),
+          }),
+        },
+      },
+    },
+    ...ErrorResponses,
+  },
+});
 
 // CREATE SUBSCRIPTION ROUTE
 const createSubscriptionRoute = createRoute({
@@ -63,6 +86,44 @@ const deleteAccountRoute = createRoute({
 });
 
 export const accountRouter = new OpenAPIHono<AppContext>()
+  // GET SUBSCRIPTION STATUS ROUTE
+  .openapi(getSubscriptionStatusRoute, async (ctx) => {
+    const { user } = getSession(ctx);
+    const billingService = new BillingService(ctx);
+    const analyticsService = new AnalyticsService(ctx);
+
+    // if subscription is null, user is on free plan
+
+    let start = performance.now();
+    const subscription = await billingService.getSubscription(
+      user.stripeCustomerId
+    );
+    let end = performance.now();
+    console.log(`getSubscription took ${end - start}ms`);
+
+    const status: 'pro' | 'free' = subscription ? 'pro' : 'free';
+
+    start = performance.now();
+    const premiumUsage = await (async () => {
+      if (status === 'free') {
+        return await analyticsService.getDailyPremiumSearches(user.id);
+      }
+
+      // pro users get unlimited premium searches, marked by -1
+      return -1;
+    })();
+    end = performance.now();
+    console.log(`getDailyPremiumSearches took ${end - start}ms`);
+
+    const db = getDbConnection(ctx);
+    start = performance.now();
+    const chats = await db.execute(sql`SELECT * FROM chats`);
+    end = performance.now();
+    console.log(`getChats took ${end - start}ms`);
+
+    return ctx.json({ status, premiumUsage, chats }, 200);
+  })
+
   // CREATE SUBSCRIPTION ROUTE
   .openapi(createSubscriptionRoute, async (ctx) => {
     const { user } = getSession(ctx);

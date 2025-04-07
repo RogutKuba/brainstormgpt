@@ -16,8 +16,6 @@ import {
 import { useLogout, useUserData } from '@/query/auth.query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
-import { SITE_ROUTES } from '@/lib/siteConfig';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +28,11 @@ import {
   useDeleteAccount,
   useOpenBillingPortal,
   useOpenNewSubscription,
+  useSubscriptionStatus,
 } from '@/query/account.query';
 
 export default function AccountPage() {
-  const router = useRouter();
-  const { user, isLoading } = useUserData();
+  const { user, isLoading: isUserLoading } = useUserData();
   const { logout } = useLogout();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -44,9 +42,18 @@ export default function AccountPage() {
     useOpenBillingPortal();
   const { deleteAccount, isPending: isDeleting } = useDeleteAccount();
 
-  // Mock data - in a real app, this would come from an API
-  const premiumSearchesLeft = 3;
-  const isPro = false; // This would be determined by checking user subscription status
+  // Get subscription status from the API
+  const { subscription, isLoading: isSubscriptionLoading } =
+    useSubscriptionStatus();
+
+  // Determine if user is on pro plan
+  const isPro = subscription?.status === 'pro';
+
+  // Get premium searches left (will be -1 for pro users, indicating unlimited)
+  const premiumSearchesLeft = 5 - (subscription?.premiumUsage ?? 0);
+
+  // Show loading state if either user or subscription data is loading
+  const isLoading = isUserLoading || isSubscriptionLoading;
 
   if (isLoading) {
     return (
@@ -108,7 +115,7 @@ export default function AccountPage() {
               >
                 {isPro ? 'Pro Plan' : 'Free Plan'}
               </div>
-              {!isPro && (
+              {!isPro && premiumSearchesLeft >= 0 && (
                 <div className='text-sm text-gray-500 flex items-center gap-1'>
                   <span className='inline-block w-2 h-2 rounded-full bg-green-500'></span>
                   {premiumSearchesLeft} premium searches left today
@@ -122,7 +129,7 @@ export default function AccountPage() {
                   variant='secondary'
                   className='flex items-center justify-center'
                   onClick={() => openBillingPortal()}
-                  isLoading={isBillingPortalOpen}
+                  disabled={isBillingPortalOpen}
                 >
                   <RiSettings4Line className='mr-2 h-5 w-5' />
                   Manage Subscription
@@ -151,7 +158,7 @@ export default function AccountPage() {
                 <Button
                   className='bg-blue-500 hover:bg-blue-600 text-white'
                   onClick={() => openNewSubscription()}
-                  isLoading={isNewSubscriptionOpen}
+                  disabled={isNewSubscriptionOpen}
                 >
                   Upgrade to Pro
                   <RiArrowRightLine className='ml-2 h-4 w-4' />
@@ -222,7 +229,7 @@ export default function AccountPage() {
             <Button
               variant='destructive'
               onClick={() => deleteAccount()}
-              isLoading={isDeleting}
+              disabled={isDeleting}
             >
               Delete Account
             </Button>

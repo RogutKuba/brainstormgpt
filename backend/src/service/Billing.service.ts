@@ -1,10 +1,10 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { AppContext } from '..';
-import { getDbConnection, takeUniqueOrThrow } from '../db/client';
+import { getDbConnection, takeUnique } from '../db/client';
 import { Context } from 'hono';
 import Stripe from 'stripe';
 import { SubscriptionEntity, subscriptionTable } from '../db/subscription.db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Redirect } from '../lib/redirect';
 
 export class BillingService {
@@ -111,8 +111,13 @@ export class BillingService {
     return this.db
       .select()
       .from(subscriptionTable)
-      .where(eq(subscriptionTable.stripeCustomerId, stripeCustomerId))
-      .then(takeUniqueOrThrow);
+      .where(
+        and(
+          eq(subscriptionTable.stripeCustomerId, stripeCustomerId),
+          eq(subscriptionTable.status, 'active')
+        )
+      )
+      .then(takeUnique);
   }
 
   /**

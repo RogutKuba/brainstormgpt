@@ -13,7 +13,8 @@ export const getDbConnection = (ctx: Context<AppContext>) => {
   }
 
   // init db
-  const DATABASE_URL = ctx.env.DATABASE_URL;
+  const DATABASE_URL =
+    ctx.env.HYPERDRIVE.connectionString ?? ctx.env.DATABASE_URL;
   const client = postgres(DATABASE_URL, { prepare: false });
   const db = drizzle(client);
   return db;

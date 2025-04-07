@@ -26,6 +26,7 @@ export type AppContext = {
   Bindings: {
     TLDRAW_BUCKET: R2Bucket;
     TLDRAW_DURABLE_OBJECT: DurableObjectNamespace<TldrawDurableObject>;
+    HYPERDRIVE: Hyperdrive;
 
     // WORKFLOWS
     ChunkWorkflow: Workflow<ChunkWorkflowParams>;
