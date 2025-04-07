@@ -17,7 +17,7 @@ import { sha256 } from '@oslojs/crypto/sha2';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { HTTPException } from 'hono/http-exception';
 
-export const SESSION_COOKIE_NAME = 'brainstormgpt-session';
+export const SESSION_COOKIE_NAME = 'curiosity-session';
 
 export type SessionValidationResult =
   | { session: SessionEntity; user: UserEntity }

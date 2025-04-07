@@ -5,6 +5,8 @@ import './globals.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { TanstackQueryClient } from '@/query/client';
 import { Toaster } from 'sonner';
+import { SidebarProvider } from '@/components/sidebar/SideBarContext';
+import { Sidebar } from '@/components/sidebar/Sidebar';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -27,7 +29,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-primary`}
       >
         <QueryClientProvider client={TanstackQueryClient}>
-          {children}
+          <SidebarProvider>
+            <div className='flex h-screen'>
+              <Sidebar />
+              <div className='flex-1 overflow-y-auto bg-gray-50'>
+                {children}
+              </div>
+            </div>
+          </SidebarProvider>
           <Toaster richColors theme='light' duration={2500} />
         </QueryClientProvider>
       </body>

@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  useState,
-  useEffect,
-  createContext,
-  useContext,
-  useRef,
-  RefObject,
-} from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
   RiAddLine,
@@ -27,7 +20,7 @@ import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDia
 import { cn } from '@/components/ui/lib/utils';
 import { SITE_ROUTES } from '@/lib/siteConfig';
 import Link from 'next/link';
-import { SidebarProfile } from '@/components/landing/SidebarProfile';
+import { SidebarProfile } from '@/components/sidebar/SidebarProfile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,14 +33,9 @@ import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import { DeleteWorkspaceDialog } from '@/components/workspace/DeleteWorkspaceDialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useSidebar } from '@/components/sidebar/SideBarContext';
 
-interface SidebarContextType {
-  isOpen: boolean;
-  toggleSidebar: () => void;
-  sideBarRef: RefObject<HTMLDivElement | null>;
-}
-
-export const Sidebar = () => {
+export const LoggedInSidebar = () => {
   const { isOpen, toggleSidebar, sideBarRef } = useSidebar();
   const router = useRouter();
   const params = useParams();
@@ -125,13 +113,17 @@ export const Sidebar = () => {
           // Full sidebar content when open
           <>
             {/* Sidebar Header */}
-            <div className='flex items-center justify-between p-4 pr-2 border-b border-gray-200'>
+            <div className='flex items-center justify-between p-4 pr-2'>
               <Link href={SITE_ROUTES.HOME} className='flex items-center gap-2'>
-                <RiBrain2Fill className='w-6 h-6 text-blue-500' />
-                <span className='font-bold'>Curiosity</span>
+                <RiBrain2Fill className='w-6 h-6 text-blue-400' />
+                <span className='font-bold text-gray-100'>Curiosity</span>
               </Link>
-              <Button variant='icon' onClick={toggleSidebar}>
-                <RiContractLeftLine className='w-5 h-5 text-gray-500' />
+              <Button
+                variant='icon'
+                onClick={toggleSidebar}
+                className='text-gray-300 hover:text-gray-100 hover:bg-gray-800'
+              >
+                <RiContractLeftLine className='w-5 h-5' />
               </Button>
             </div>
 
@@ -139,13 +131,16 @@ export const Sidebar = () => {
             <div className='flex-1 overflow-y-auto py-4'>
               {/* Workspace Header */}
               <div className='px-4 mb-2 flex items-center justify-between'>
-                <h2 className='text-sm font-semibold text-gray-500'>
+                <h2 className='text-sm font-semibold text-gray-400'>
                   Chat History
                 </h2>
 
                 <div className='flex gap-1'>
                   <CreateWorkspaceDialog>
-                    <Button variant='icon' className='h-7 w-7'>
+                    <Button
+                      variant='icon'
+                      className='h-7 w-7 text-gray-300 hover:text-gray-100 hover:bg-gray-800'
+                    >
                       <RiAddLine className='w-4 h-4' />
                     </Button>
                   </CreateWorkspaceDialog>
@@ -160,7 +155,7 @@ export const Sidebar = () => {
                     .fill(0)
                     .map((_, i) => (
                       <div key={i} className='px-2 py-1'>
-                        <Skeleton className='h-6 w-full' />
+                        <Skeleton className='h-6 w-full bg-gray-800' />
                       </div>
                     ))
                 ) : workspaces && workspaces.length > 0 ? (
@@ -170,9 +165,9 @@ export const Sidebar = () => {
                       key={index}
                       variant='ghost'
                       className={cn(
-                        'w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50',
+                        'w-full justify-between gap-2 px-3 py-2 text-left text-gray-300 hover:bg-gray-800/70',
                         workspace.code === currentWorkspaceCode &&
-                          'bg-blue-50 text-blue-600 font-medium'
+                          'bg-gray-800 text-blue-400 font-medium'
                       )}
                     >
                       {editingWorkspaceId === workspace.id ? (
@@ -193,7 +188,7 @@ export const Sidebar = () => {
                               name: editingWorkspaceName,
                             });
                           }}
-                          inputClassName='py-0 px-0'
+                          inputClassName='py-0 px-0 bg-gray-800 text-gray-100 border-gray-700'
                         />
                       ) : (
                         <span
@@ -217,15 +212,16 @@ export const Sidebar = () => {
                             asChild
                             onMouseDown={(e) => e.stopPropagation()}
                           >
-                            <RiMore2Fill className='w-5 h-5 p-0.5 text-gray-400 flex-shrink-0 hover:text-gray-700 hover:bg-blue-50 rounded transition-colors duration-200' />
+                            <RiMore2Fill className='w-5 h-5 p-0.5 text-gray-500 flex-shrink-0 hover:text-gray-300 hover:bg-gray-700 rounded transition-colors duration-200' />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent>
+                          <DropdownMenuContent className='bg-gray-800 border-gray-700 text-gray-200'>
                             <DropdownMenuGroup>
                               <DropdownMenuItem
                                 onClick={() => {
                                   setEditingWorkspaceName(workspace.name);
                                   setEditingWorkspaceId(workspace.id);
                                 }}
+                                className='hover:bg-gray-700'
                               >
                                 <span className='flex items-center gap-2'>
                                   <RiPencilLine className='w-4 h-4' />
@@ -239,6 +235,7 @@ export const Sidebar = () => {
                                     workspace.isPublic
                                   )
                                 }
+                                className='hover:bg-gray-700'
                               >
                                 <span className='flex items-center gap-2'>
                                   {workspace.isPublic ? (
@@ -259,6 +256,7 @@ export const Sidebar = () => {
                                   onClick={() =>
                                     handleShareWorkspace(workspace.code)
                                   }
+                                  className='hover:bg-gray-700'
                                 >
                                   <span className='flex items-center gap-2'>
                                     <RiShareLine className='w-4 h-4' />
@@ -267,9 +265,9 @@ export const Sidebar = () => {
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuGroup>
-                            <DropdownMenuSeparator />
+                            <DropdownMenuSeparator className='bg-gray-700' />
                             <DialogTrigger asChild>
-                              <DropdownMenuItem className='text-red-500'>
+                              <DropdownMenuItem className='text-red-400 hover:bg-gray-700'>
                                 <span className='flex items-center gap-2'>
                                   <RiDeleteBinLine className='w-4 h-4' />
                                   Delete
@@ -292,11 +290,10 @@ export const Sidebar = () => {
                 ) : (
                   // Empty state
                   <div className='text-center py-8 px-4'>
-                    <RiBrain2Fill className='w-10 h-10 text-gray-300 mx-auto mb-2' />
-                    <p className='text-sm text-gray-500'>No workspaces yet</p>
+                    <p className='text-sm text-gray-400'>No workspaces yet</p>
                     <div className='mt-4 flex flex-col gap-2'>
                       <CreateWorkspaceDialog>
-                        <Button className='w-full'>
+                        <Button className='w-full bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700'>
                           <RiAddLine className='w-4 h-4 mr-1' />
                           Create Workspace
                         </Button>
@@ -314,18 +311,25 @@ export const Sidebar = () => {
           <div className='flex flex-col items-center h-full py-4'>
             {/* Logo icon */}
             <Link href={SITE_ROUTES.HOME} className='mb-8'>
-              <RiBrain2Fill className='w-6 h-6 text-blue-500' />
+              <RiBrain2Fill className='w-6 h-6 text-blue-400' />
             </Link>
 
             {/* Expand button */}
-            <Button variant='icon' onClick={toggleSidebar} className='mb-6'>
-              <RiContractLeftLine className='w-5 h-5 text-gray-500 rotate-180' />
+            <Button
+              variant='icon'
+              onClick={toggleSidebar}
+              className='mb-6 text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+            >
+              <RiContractLeftLine className='w-5 h-5 rotate-180' />
             </Button>
 
             {/* Add workspace button */}
             <CreateWorkspaceDialog>
-              <Button variant='icon' className='mb-6'>
-                <RiAddLine className='w-5 h-5 text-gray-500' />
+              <Button
+                variant='icon'
+                className='mb-6 text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              >
+                <RiAddLine className='w-5 h-5' />
               </Button>
             </CreateWorkspaceDialog>
 
@@ -338,8 +342,8 @@ export const Sidebar = () => {
                     className={cn(
                       'w-8 h-8 rounded-md flex items-center justify-center cursor-pointer',
                       workspace.code === currentWorkspaceCode
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'hover:bg-gray-100 text-gray-500'
+                        ? 'bg-gray-800 text-blue-400'
+                        : 'hover:bg-gray-800 text-gray-400'
                     )}
                     onClick={() =>
                       router.push(SITE_ROUTES.CHAT(workspace.code))
@@ -351,52 +355,9 @@ export const Sidebar = () => {
                 ))}
               </div>
             )}
-
-            {/* User profile icon at bottom */}
-            {/* <div
-              className='mt-auto w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white cursor-pointer'
-              onClick={() => router.push(SITE_ROUTES.ACCOUNT)}
-              title={user?.name || user?.email || 'Account'}
-            >
-              <span className='text-sm'>
-                {user?.name?.charAt(0).toUpperCase() ||
-                  user?.email?.charAt(0).toUpperCase() ||
-                  '?'}
-              </span>
-            </div> */}
           </div>
         )}
       </aside>
     </>
-  );
-};
-
-export const SidebarContext = createContext<SidebarContextType>({
-  isOpen: false,
-  toggleSidebar: () => {},
-  sideBarRef: { current: null } as RefObject<HTMLDivElement | null>,
-});
-
-export const useSidebar = () => {
-  return useContext(SidebarContext);
-};
-
-export const SidebarProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  const [isOpen, setIsOpen] = useState(true);
-
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const sideBarRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <SidebarContext.Provider value={{ isOpen, toggleSidebar, sideBarRef }}>
-      {children}
-    </SidebarContext.Provider>
   );
 };
