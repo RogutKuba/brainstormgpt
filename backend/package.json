@@ -36,6 +36,7 @@
 		"lodash.throttle": "^4.1.1",
 		"openai": "^4.85.4",
 		"postgres": "^3.4.5",
+		"stripe": "^18.0.0",
 		"tldraw": "3.8.1",
 		"webcola": "^3.4.0",
 		"zod": "^3.24.2"

@@ -10,6 +10,7 @@ export const userTable = pgTable('users', {
   // lastName: text('last_name').notNull().default(''),
   email: text('email').notNull(),
   imageUrl: text('image_url'),
+  stripeCustomerId: text('stripe_customer_id').notNull().default('not-set'),
 });
 
 export const sessionTable = pgTable('sessions', {
@@ -32,4 +33,5 @@ export const UserSchema = baseSchema.extend({
   // lastName: z.string(),
   email: z.string(),
   imageUrl: z.string().nullable(),
+  stripeCustomerId: z.string(),
 });

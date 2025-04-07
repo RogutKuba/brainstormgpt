@@ -37,6 +37,10 @@ export type AppContext = {
     GOOGLE_CLIENT_SECRET: string;
     GOOGLE_REDIRECT_URI: string;
 
+    // STRIPE
+    STRIPE_SECRET_KEY: string;
+    STRIPE_WEBHOOK_SECRET: string;
+
     DATABASE_URL: string;
     WEB_APP_URL: string;
 
