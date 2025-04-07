@@ -26,12 +26,23 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  useDeleteAccount,
+  useOpenBillingPortal,
+  useOpenNewSubscription,
+} from '@/query/account.query';
 
 export default function AccountPage() {
   const router = useRouter();
   const { user, isLoading } = useUserData();
   const { logout } = useLogout();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { openNewSubscription, isPending: isNewSubscriptionOpen } =
+    useOpenNewSubscription();
+  const { openBillingPortal, isPending: isBillingPortalOpen } =
+    useOpenBillingPortal();
+  const { deleteAccount, isPending: isDeleting } = useDeleteAccount();
 
   // Mock data - in a real app, this would come from an API
   const premiumSearchesLeft = 3;
@@ -105,7 +116,19 @@ export default function AccountPage() {
               )}
             </div>
 
-            {!isPro && (
+            {isPro ? (
+              <div className='flex justify-start mt-4'>
+                <Button
+                  variant='secondary'
+                  className='flex items-center justify-center'
+                  onClick={() => openBillingPortal()}
+                  isLoading={isBillingPortalOpen}
+                >
+                  <RiSettings4Line className='mr-2 h-5 w-5' />
+                  Manage Subscription
+                </Button>
+              </div>
+            ) : (
               <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-4 mb-4'>
                 <div className='flex items-center gap-2 mb-3'>
                   <RiBrain2Fill className='h-5 w-5 text-blue-500' />
@@ -127,7 +150,8 @@ export default function AccountPage() {
                 </ul>
                 <Button
                   className='bg-blue-500 hover:bg-blue-600 text-white'
-                  onClick={() => router.push(SITE_ROUTES.HOME)}
+                  onClick={() => openNewSubscription()}
+                  isLoading={isNewSubscriptionOpen}
                 >
                   Upgrade to Pro
                   <RiArrowRightLine className='ml-2 h-4 w-4' />
@@ -195,7 +219,13 @@ export default function AccountPage() {
             >
               Cancel
             </Button>
-            <Button variant='destructive'>Delete Account</Button>
+            <Button
+              variant='destructive'
+              onClick={() => deleteAccount()}
+              isLoading={isDeleting}
+            >
+              Delete Account
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

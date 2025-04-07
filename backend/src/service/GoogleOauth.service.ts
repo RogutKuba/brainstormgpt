@@ -7,8 +7,8 @@ import { AppContext } from '..';
 import { UserEntity, userTable } from '../db/user.db';
 import { SessionService } from './Session.service.js';
 import { generateId } from '../lib/id';
-import { RedirectService } from './Redirect.service';
 import { BillingService } from './Billing.service';
+import { Redirect } from '../lib/redirect';
 
 export type GoogleUser = {
   iss: string;
@@ -40,7 +40,6 @@ export const GoogleOauthService = {
   }): Promise<string> => {
     const { googleUser, ctx } = params;
     const db = getDbConnection(ctx);
-    const billingService = new BillingService(ctx);
 
     // check if google oauth account already exists
     const existing = await db
@@ -70,7 +69,7 @@ export const GoogleOauthService = {
       ctx.set('user', existingUser);
       ctx.set('session', session);
 
-      return RedirectService.baseUrl(ctx);
+      return ctx.env.WEB_APP_URL;
     }
 
     // check if user with email already exists
@@ -108,11 +107,13 @@ export const GoogleOauthService = {
 
       ctx.set('user', user);
       ctx.set('session', session);
-      return RedirectService.baseUrl(ctx);
+      return Redirect.home(ctx.env.WEB_APP_URL);
     }
 
     // need to create a new user
     const { user, session } = await db.transaction(async (tx) => {
+      const billingService = new BillingService(ctx);
+
       const email = googleUser.email;
       const stripeCustomer = await billingService.createStripeCustomer(email);
 
@@ -155,6 +156,6 @@ export const GoogleOauthService = {
     ctx.set('user', user);
     ctx.set('session', session);
 
-    return RedirectService.baseUrl(ctx);
+    return Redirect.home(ctx.env.WEB_APP_URL);
   },
 };

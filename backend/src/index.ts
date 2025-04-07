@@ -16,6 +16,7 @@ import {
   connectWorkspaceRouter,
 } from './endpoint/workspace/connect.endpoint';
 import { accountRouter } from './endpoint/account.endpoint';
+import { stripeRouter } from './endpoint/webhook/stripe.endpoint';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -41,6 +42,7 @@ export type AppContext = {
     // STRIPE
     STRIPE_SECRET_KEY: string;
     STRIPE_WEBHOOK_SECRET: string;
+    STRIPE_PRO_PLAN_ID: string;
 
     DATABASE_URL: string;
     WEB_APP_URL: string;
@@ -61,8 +63,12 @@ const app = new Hono<AppContext>();
 
 // Add CORS middleware
 app
+  .get('/health', async (ctx) => {
+    return ctx.text('ok');
+  })
   // this route not part of cors middleware sine websocket connection fails with cors middleware
   .route('/workspace/:workspaceCode/connect', connectWorkspaceRouter)
+  .route('/webhook/stripe', stripeRouter)
   .use(
     '*',
     cors({
@@ -70,9 +76,6 @@ app
       credentials: true,
     })
   )
-  .get('/health', async (ctx) => {
-    return ctx.text('ok');
-  })
   // TODO: refactor to combine into one router for all this workspace stuff
   .route('/workspace/:workspaceCode/connect/status', connectAuthRouter)
   .route('/workspace/:workspaceCode/stream', streamRouter)

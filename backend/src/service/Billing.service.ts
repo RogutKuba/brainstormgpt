@@ -5,17 +5,19 @@ import { Context } from 'hono';
 import Stripe from 'stripe';
 import { SubscriptionEntity, subscriptionTable } from '../db/subscription.db';
 import { eq } from 'drizzle-orm';
+import { Redirect } from '../lib/redirect';
 
 export class BillingService {
   private readonly db: PostgresJsDatabase;
   private readonly stripe: Stripe;
-  private readonly webhookSecret: string;
+
+  private env: AppContext['Bindings'];
 
   constructor(ctx: Context<AppContext>) {
     this.db = getDbConnection(ctx);
 
     this.stripe = new Stripe(ctx.env.STRIPE_SECRET_KEY);
-    this.webhookSecret = ctx.env.STRIPE_WEBHOOK_SECRET;
+    this.env = ctx.env;
   }
 
   /**
@@ -34,10 +36,10 @@ export class BillingService {
    * @returns
    */
   async constructEvent(body: string, signature: string) {
-    return this.stripe.webhooks.constructEvent(
+    return this.stripe.webhooks.constructEventAsync(
       body,
       signature,
-      this.webhookSecret
+      this.env.STRIPE_WEBHOOK_SECRET
     );
   }
 
@@ -123,26 +125,32 @@ export class BillingService {
   /**
    * Create subscription link for a user
    * @param stripeCustomerId
-   * @param returnUrl
    * @returns
    */
-  async createSubscriptionLink(stripeCustomerId: string, returnUrl: string) {
-    return this.stripe.billingPortal.sessions.create({
+  async createSubscriptionLink(stripeCustomerId: string) {
+    return this.stripe.checkout.sessions.create({
       customer: stripeCustomerId,
-      return_url: returnUrl,
+      line_items: [
+        {
+          price: this.env.STRIPE_PRO_PLAN_ID,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: Redirect.account(this.env.WEB_APP_URL),
+      cancel_url: Redirect.account(this.env.WEB_APP_URL),
     });
   }
 
   /**
    * Create billing portal link for a user
    * @param stripeCustomerId
-   * @param returnUrl
    * @returns
    */
-  async createBillingPortalLink(stripeCustomerId: string, returnUrl: string) {
+  async createBillingPortalLink(stripeCustomerId: string) {
     return this.stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
-      return_url: returnUrl,
+      return_url: Redirect.account(this.env.WEB_APP_URL),
     });
   }
 }

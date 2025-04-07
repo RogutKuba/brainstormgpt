@@ -5,7 +5,7 @@ import { BillingService } from '../../service/Billing.service';
 
 const webhookRoute = createRoute({
   method: 'post',
-  path: '/stripe-webhook',
+  path: '/',
   responses: {
     200: {
       description: 'Returns successuflly handled webhook',

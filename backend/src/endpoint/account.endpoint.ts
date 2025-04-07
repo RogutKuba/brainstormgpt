@@ -8,7 +8,7 @@ import { HTTPException } from 'hono/http-exception';
 // CREATE SUBSCRIPTION ROUTE
 const createSubscriptionRoute = createRoute({
   method: 'get',
-  path: '/subscription',
+  path: '/subscribe',
   responses: {
     200: {
       description: 'Returns checkout URL',
@@ -71,9 +71,14 @@ export const accountRouter = new OpenAPIHono<AppContext>()
     try {
       // Create checkout session
       const checkoutSession = await billingService.createSubscriptionLink(
-        user.stripeCustomerId,
-        ctx.env.WEB_APP_URL
+        user.stripeCustomerId
       );
+
+      if (!checkoutSession.url) {
+        throw new HTTPException(500, {
+          message: 'Failed to create subscription link',
+        });
+      }
 
       return ctx.json({ url: checkoutSession.url }, 200);
     } catch (error) {
@@ -91,8 +96,7 @@ export const accountRouter = new OpenAPIHono<AppContext>()
 
     try {
       const portalSession = await billingService.createBillingPortalLink(
-        user.stripeCustomerId,
-        ctx.env.WEB_APP_URL
+        user.stripeCustomerId
       );
 
       return ctx.json({ url: portalSession.url }, 200);
