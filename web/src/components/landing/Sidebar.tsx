@@ -115,194 +115,257 @@ export const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-screen bg-white border-r border-gray-200 shadow-sm z-[301] transition-all duration-300 ease-in-out',
-          isOpen ? 'w-64' : 'w-0',
+          'h-screen bg-primary shadow-sm z-[301] transition-all duration-300 ease-in-out',
+          isOpen ? 'w-64' : 'w-16',
           'flex flex-col overflow-hidden'
         )}
         ref={sideBarRef}
       >
-        {/* Sidebar Header */}
-        <div className='flex items-center justify-between p-4 pr-2 border-b border-gray-200'>
-          <Link href={SITE_ROUTES.HOME} className='flex items-center gap-2'>
-            <RiBrain2Fill className='w-6 h-6 text-blue-500' />
-            <span className='font-bold'>Curiosity</span>
-          </Link>
-          <Button variant='icon' onClick={toggleSidebar}>
-            <RiContractLeftLine className='w-5 h-5 text-gray-500' />
-          </Button>
-        </div>
-
-        {/* Sidebar Content */}
-        <div className='flex-1 overflow-y-auto py-4'>
-          {/* Workspace Header */}
-          <div className='px-4 mb-2 flex items-center justify-between'>
-            <h2 className='text-sm font-semibold text-gray-500'>
-              Chat History
-            </h2>
-
-            <div className='flex gap-1'>
-              <CreateWorkspaceDialog>
-                <Button variant='icon' className='h-7 w-7'>
-                  <RiAddLine className='w-4 h-4' />
-                </Button>
-              </CreateWorkspaceDialog>
+        {isOpen ? (
+          // Full sidebar content when open
+          <>
+            {/* Sidebar Header */}
+            <div className='flex items-center justify-between p-4 pr-2 border-b border-gray-200'>
+              <Link href={SITE_ROUTES.HOME} className='flex items-center gap-2'>
+                <RiBrain2Fill className='w-6 h-6 text-blue-500' />
+                <span className='font-bold'>Curiosity</span>
+              </Link>
+              <Button variant='icon' onClick={toggleSidebar}>
+                <RiContractLeftLine className='w-5 h-5 text-gray-500' />
+              </Button>
             </div>
-          </div>
 
-          {/* Workspace List */}
-          <div className='space-y-1 px-2'>
-            {isLoading ? (
-              // Loading skeletons
-              Array(5)
-                .fill(0)
-                .map((_, i) => (
-                  <div key={i} className='px-2 py-1'>
-                    <Skeleton className='h-6 w-full' />
-                  </div>
-                ))
-            ) : workspaces && workspaces.length > 0 ? (
-              // Workspace items
-              workspaces.map((workspace, index) => (
-                <Button
-                  key={index}
-                  variant='ghost'
-                  className={cn(
-                    'w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50',
-                    workspace.code === currentWorkspaceCode &&
-                      'bg-blue-50 text-blue-600 font-medium'
-                  )}
-                >
-                  {editingWorkspaceId === workspace.id ? (
-                    <Input
-                      value={editingWorkspaceName}
-                      onChange={(e) => setEditingWorkspaceName(e.target.value)}
-                      onBlur={async () => {
-                        setEditingWorkspaceId(null);
+            {/* Sidebar Content */}
+            <div className='flex-1 overflow-y-auto py-4'>
+              {/* Workspace Header */}
+              <div className='px-4 mb-2 flex items-center justify-between'>
+                <h2 className='text-sm font-semibold text-gray-500'>
+                  Chat History
+                </h2>
 
-                        if (editingWorkspaceName === workspace.name) {
-                          return;
-                        }
-
-                        await updateWorkspace({
-                          workspaceCode: workspace.code,
-                          name: editingWorkspaceName,
-                        });
-                      }}
-                      inputClassName='py-0 px-0'
-                    />
-                  ) : (
-                    <span
-                      className='truncate flex-grow'
-                      onClick={() =>
-                        router.push(SITE_ROUTES.CHAT(workspace.code))
-                      }
-                    >
-                      {workspace.name}
-                    </span>
-                  )}
-
-                  <Dialog
-                    open={deleteDialogOpen === workspace.id}
-                    onOpenChange={(open) =>
-                      setDeleteDialogOpen(open ? workspace.id : null)
-                    }
-                  >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        asChild
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        <RiMore2Fill className='w-5 h-5 p-0.5 text-gray-400 flex-shrink-0 hover:text-gray-700 hover:bg-blue-50 rounded transition-colors duration-200' />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingWorkspaceName(workspace.name);
-                              setEditingWorkspaceId(workspace.id);
-                            }}
-                          >
-                            <span className='flex items-center gap-2'>
-                              <RiPencilLine className='w-4 h-4' />
-                              Rename
-                            </span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              toggleWorkspaceVisibility(
-                                workspace.code,
-                                workspace.isPublic
-                              )
-                            }
-                          >
-                            <span className='flex items-center gap-2'>
-                              {workspace.isPublic ? (
-                                <>
-                                  <RiLockLine className='w-4 h-4' />
-                                  Make Private
-                                </>
-                              ) : (
-                                <>
-                                  <RiGlobalLine className='w-4 h-4' />
-                                  Make Public
-                                </>
-                              )}
-                            </span>
-                          </DropdownMenuItem>
-                          {workspace.isPublic && (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleShareWorkspace(workspace.code)
-                              }
-                            >
-                              <span className='flex items-center gap-2'>
-                                <RiShareLine className='w-4 h-4' />
-                                Share
-                              </span>
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DialogTrigger asChild>
-                          <DropdownMenuItem className='text-red-500'>
-                            <span className='flex items-center gap-2'>
-                              <RiDeleteBinLine className='w-4 h-4' />
-                              Delete
-                            </span>
-                          </DropdownMenuItem>
-                        </DialogTrigger>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <DeleteWorkspaceDialog
-                      workspaceCode={workspace.code}
-                      workspaceName={workspace.name}
-                      setOpen={(open) =>
-                        setDeleteDialogOpen(open ? workspace.id : null)
-                      }
-                    />
-                  </Dialog>
-                </Button>
-              ))
-            ) : (
-              // Empty state
-              <div className='text-center py-8 px-4'>
-                <RiBrain2Fill className='w-10 h-10 text-gray-300 mx-auto mb-2' />
-                <p className='text-sm text-gray-500'>No workspaces yet</p>
-                <div className='mt-4 flex flex-col gap-2'>
+                <div className='flex gap-1'>
                   <CreateWorkspaceDialog>
-                    <Button className='w-full'>
-                      <RiAddLine className='w-4 h-4 mr-1' />
-                      Create Workspace
+                    <Button variant='icon' className='h-7 w-7'>
+                      <RiAddLine className='w-4 h-4' />
                     </Button>
                   </CreateWorkspaceDialog>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        <SidebarProfile />
+              {/* Workspace List */}
+              <div className='space-y-1 px-2'>
+                {isLoading ? (
+                  // Loading skeletons
+                  Array(5)
+                    .fill(0)
+                    .map((_, i) => (
+                      <div key={i} className='px-2 py-1'>
+                        <Skeleton className='h-6 w-full' />
+                      </div>
+                    ))
+                ) : workspaces && workspaces.length > 0 ? (
+                  // Workspace items
+                  workspaces.map((workspace, index) => (
+                    <Button
+                      key={index}
+                      variant='ghost'
+                      className={cn(
+                        'w-full justify-between gap-2 px-3 py-2 text-left hover:bg-blue-50/50',
+                        workspace.code === currentWorkspaceCode &&
+                          'bg-blue-50 text-blue-600 font-medium'
+                      )}
+                    >
+                      {editingWorkspaceId === workspace.id ? (
+                        <Input
+                          value={editingWorkspaceName}
+                          onChange={(e) =>
+                            setEditingWorkspaceName(e.target.value)
+                          }
+                          onBlur={async () => {
+                            setEditingWorkspaceId(null);
+
+                            if (editingWorkspaceName === workspace.name) {
+                              return;
+                            }
+
+                            await updateWorkspace({
+                              workspaceCode: workspace.code,
+                              name: editingWorkspaceName,
+                            });
+                          }}
+                          inputClassName='py-0 px-0'
+                        />
+                      ) : (
+                        <span
+                          className='truncate flex-grow'
+                          onClick={() =>
+                            router.push(SITE_ROUTES.CHAT(workspace.code))
+                          }
+                        >
+                          {workspace.name}
+                        </span>
+                      )}
+
+                      <Dialog
+                        open={deleteDialogOpen === workspace.id}
+                        onOpenChange={(open) =>
+                          setDeleteDialogOpen(open ? workspace.id : null)
+                        }
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            asChild
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <RiMore2Fill className='w-5 h-5 p-0.5 text-gray-400 flex-shrink-0 hover:text-gray-700 hover:bg-blue-50 rounded transition-colors duration-200' />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingWorkspaceName(workspace.name);
+                                  setEditingWorkspaceId(workspace.id);
+                                }}
+                              >
+                                <span className='flex items-center gap-2'>
+                                  <RiPencilLine className='w-4 h-4' />
+                                  Rename
+                                </span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  toggleWorkspaceVisibility(
+                                    workspace.code,
+                                    workspace.isPublic
+                                  )
+                                }
+                              >
+                                <span className='flex items-center gap-2'>
+                                  {workspace.isPublic ? (
+                                    <>
+                                      <RiLockLine className='w-4 h-4' />
+                                      Make Private
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RiGlobalLine className='w-4 h-4' />
+                                      Make Public
+                                    </>
+                                  )}
+                                </span>
+                              </DropdownMenuItem>
+                              {workspace.isPublic && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleShareWorkspace(workspace.code)
+                                  }
+                                >
+                                  <span className='flex items-center gap-2'>
+                                    <RiShareLine className='w-4 h-4' />
+                                    Share
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator />
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem className='text-red-500'>
+                                <span className='flex items-center gap-2'>
+                                  <RiDeleteBinLine className='w-4 h-4' />
+                                  Delete
+                                </span>
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <DeleteWorkspaceDialog
+                          workspaceCode={workspace.code}
+                          workspaceName={workspace.name}
+                          setOpen={(open) =>
+                            setDeleteDialogOpen(open ? workspace.id : null)
+                          }
+                        />
+                      </Dialog>
+                    </Button>
+                  ))
+                ) : (
+                  // Empty state
+                  <div className='text-center py-8 px-4'>
+                    <RiBrain2Fill className='w-10 h-10 text-gray-300 mx-auto mb-2' />
+                    <p className='text-sm text-gray-500'>No workspaces yet</p>
+                    <div className='mt-4 flex flex-col gap-2'>
+                      <CreateWorkspaceDialog>
+                        <Button className='w-full'>
+                          <RiAddLine className='w-4 h-4 mr-1' />
+                          Create Workspace
+                        </Button>
+                      </CreateWorkspaceDialog>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <SidebarProfile />
+          </>
+        ) : (
+          // Collapsed sidebar with icons only
+          <div className='flex flex-col items-center h-full py-4'>
+            {/* Logo icon */}
+            <Link href={SITE_ROUTES.HOME} className='mb-8'>
+              <RiBrain2Fill className='w-6 h-6 text-blue-500' />
+            </Link>
+
+            {/* Expand button */}
+            <Button variant='icon' onClick={toggleSidebar} className='mb-6'>
+              <RiContractLeftLine className='w-5 h-5 text-gray-500 rotate-180' />
+            </Button>
+
+            {/* Add workspace button */}
+            <CreateWorkspaceDialog>
+              <Button variant='icon' className='mb-6'>
+                <RiAddLine className='w-5 h-5 text-gray-500' />
+              </Button>
+            </CreateWorkspaceDialog>
+
+            {/* Current workspace indicator (if any) */}
+            {currentWorkspaceCode && workspaces && workspaces.length > 0 && (
+              <div className='flex-1 flex flex-col items-center gap-2 overflow-y-auto max-h-[60vh] w-full'>
+                {workspaces.map((workspace, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      'w-8 h-8 rounded-md flex items-center justify-center cursor-pointer',
+                      workspace.code === currentWorkspaceCode
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'hover:bg-gray-100 text-gray-500'
+                    )}
+                    onClick={() =>
+                      router.push(SITE_ROUTES.CHAT(workspace.code))
+                    }
+                    title={workspace.name}
+                  >
+                    {workspace.name.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* User profile icon at bottom */}
+            {/* <div
+              className='mt-auto w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white cursor-pointer'
+              onClick={() => router.push(SITE_ROUTES.ACCOUNT)}
+              title={user?.name || user?.email || 'Account'}
+            >
+              <span className='text-sm'>
+                {user?.name?.charAt(0).toUpperCase() ||
+                  user?.email?.charAt(0).toUpperCase() ||
+                  '?'}
+              </span>
+            </div> */}
+          </div>
+        )}
       </aside>
     </>
   );
