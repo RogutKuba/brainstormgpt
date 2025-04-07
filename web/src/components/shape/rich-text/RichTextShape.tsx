@@ -84,7 +84,8 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   }
 
   component(shape: RichTextShape) {
-    const { text, isLocked, predictions, isExpanded } = shape.props;
+    const { text, isLocked, predictions, isExpanded, isHighlighted } =
+      shape.props;
     const { handleSendMessage } = useChat();
     const workspaceCode = useCurrentWorkspaceCode();
 
@@ -140,12 +141,16 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
     return (
       <HTMLContainer
-        className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 ${
+        className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 transition-all duration-200 ${
           isRoot
             ? 'border-primary shadow-[0_0_0_3px_rgba(59,130,246,0.3),0_0_15px_rgba(59,130,246,0.25)]'
             : isLocked
             ? 'border-primary/30 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]'
             : 'border-gray-200'
+        } ${
+          isHighlighted
+            ? 'border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.4),0_0_30px_rgba(59,130,246,0.35)]'
+            : ''
         } pointer-events-auto`}
       >
         {/* Lock/Unlock button - fixed positioning */}
