@@ -9,13 +9,9 @@ import {
   RiCheckLine,
   RiAlertLine,
   RiBrain2Fill,
-  RiUser3Line,
-  RiVipCrownLine,
-  RiSettings4Line,
 } from '@remixicon/react';
 import { useLogout, useUserData } from '@/query/auth.query';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +26,8 @@ import {
   useOpenNewSubscription,
   useSubscriptionStatus,
 } from '@/query/account.query';
+import { Divider } from '@/components/ui/divider';
+import { ProgressCircle } from '@/components/ui/progresscircle';
 
 export default function AccountPage() {
   const { user, isLoading: isUserLoading } = useUserData();
@@ -47,165 +45,163 @@ export default function AccountPage() {
     useSubscriptionStatus();
 
   // Determine if user is on pro plan
-  const isPro = subscription?.status === 'pro';
+  const isPro = false;
 
   // Get premium searches left (will be -1 for pro users, indicating unlimited)
-  const premiumSearchesLeft = 5 - (subscription?.premiumUsage ?? 0);
+  const premiumSearchesLimit = 5;
+  const premiumSearchesLeft =
+    premiumSearchesLimit - (subscription?.premiumUsage ?? 0);
+  const percentage = Math.round(
+    (premiumSearchesLeft / premiumSearchesLimit) * 100
+  );
+  const variant = (() => {
+    if (premiumSearchesLeft <= 0) return 'error';
+    if (premiumSearchesLeft <= 2) return 'warning';
+    return 'success';
+  })();
 
   // Show loading state if either user or subscription data is loading
   const isLoading = isUserLoading || isSubscriptionLoading;
 
   if (isLoading) {
     return (
-      <div className='min-h-screen bg-gray-50 dark:bg-gray-950'>
+      <div className='min-h-screen bg-neutral-50 dark:bg-neutral-950'>
         <div className='max-w-3xl mx-auto p-4 md:p-8'>
           <Skeleton className='h-12 w-48 mb-6' />
-          <Skeleton className='h-64 w-full rounded-lg mb-6' />
-          <Skeleton className='h-64 w-full rounded-lg' />
+          <Skeleton className='h-64 w-full mb-6' />
+          <Skeleton className='h-64 w-full' />
         </div>
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen bg-gray-50 dark:bg-gray-950'>
+    <div className='min-h-screen bg-neutral-50 dark:bg-neutral-950'>
       <div className='max-w-3xl mx-auto p-4 md:p-8'>
-        <div className='flex items-center gap-3 mb-8'>
-          <RiSettings4Line className='h-6 w-6 text-blue-500' />
-          <h1 className='text-2xl font-bold'>Account Settings</h1>
+        {/* Header Section */}
+        <h1 className='text-2xl font-medium mb-6'>Account Settings</h1>
+
+        <Divider />
+
+        {/* Profile Information */}
+        <div>
+          <h2 className='text-lg font-medium mb-4'>Profile</h2>
+          <div className='flex items-center gap-5'>
+            <div className='w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-semibold shadow-md'>
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div>
+              <h3 className='font-medium text-xl mb-1'>
+                {user?.name || 'User'}
+              </h3>
+              <p className='text-neutral-500 dark:text-neutral-400'>
+                {user?.email}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Profile Card */}
-        <Card className='mb-6 border border-gray-200 shadow-sm'>
-          <CardHeader className='border-b border-gray-200 bg-gray-50 dark:bg-gray-900 dark:border-gray-800'>
-            <div className='flex items-center gap-2'>
-              <RiUser3Line className='h-5 w-5 text-gray-500' />
-              <CardTitle className='text-lg'>Profile Information</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className='p-6'>
-            <div className='flex items-center gap-4'>
-              <div className='w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white text-xl font-semibold'>
-                {user?.name?.charAt(0).toUpperCase() || 'U'}
-              </div>
-              <div>
-                <h3 className='font-medium text-lg'>{user?.name || 'User'}</h3>
-                <p className='text-gray-500'>{user?.email}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Divider />
 
-        {/* Subscription Card */}
-        <Card className='mb-6 border border-gray-200 shadow-sm'>
-          <CardHeader className='border-b border-gray-200 bg-gray-50 dark:bg-gray-900 dark:border-gray-800'>
-            <div className='flex items-center gap-2'>
-              <RiVipCrownLine className='h-5 w-5 text-gray-500' />
-              <CardTitle className='text-lg'>Subscription</CardTitle>
+        {/* Subscription */}
+        <div>
+          <h2 className='text-lg font-medium mb-4'>Subscription</h2>
+          <div className='flex items-center gap-3 mb-4'>
+            <div
+              className={`rounded-full px-4 py-1.5 text-sm font-medium ${
+                isPro
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-neutral-200 text-neutral-900'
+              }`}
+            >
+              {isPro ? 'Pro Plan' : 'Free Plan'}
             </div>
-          </CardHeader>
-          <CardContent className='p-6'>
-            <div className='flex items-center gap-3 mb-4'>
-              <div
-                className={`rounded-full px-3 py-1 text-sm font-medium ${
-                  isPro
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {isPro ? 'Pro Plan' : 'Free Plan'}
+            {!isPro ? (
+              <div className='text-sm text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5'>
+                <ProgressCircle
+                  value={percentage}
+                  variant={variant}
+                  strokeWidth={10}
+                  className='w-4 h-4'
+                />
+                {premiumSearchesLeft} premium searches left today
               </div>
-              {!isPro && premiumSearchesLeft >= 0 && (
-                <div className='text-sm text-gray-500 flex items-center gap-1'>
-                  <span className='inline-block w-2 h-2 rounded-full bg-green-500'></span>
-                  {premiumSearchesLeft} premium searches left today
-                </div>
-              )}
-            </div>
+            ) : null}
+          </div>
 
-            {isPro ? (
-              <div className='flex justify-start mt-4'>
-                <Button
-                  variant='secondary'
-                  className='flex items-center justify-center'
-                  onClick={() => openBillingPortal()}
-                  disabled={isBillingPortalOpen}
-                >
-                  <RiSettings4Line className='mr-2 h-5 w-5' />
-                  Manage Subscription
-                </Button>
-              </div>
-            ) : (
-              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-4 mb-4'>
-                <div className='flex items-center gap-2 mb-3'>
-                  <RiBrain2Fill className='h-5 w-5 text-blue-500' />
-                  <h4 className='font-medium'>Upgrade to Pro</h4>
-                </div>
-                <ul className='space-y-2 mb-4 pl-7'>
-                  <li className='flex items-start -ml-7'>
-                    <RiCheckLine className='mr-2 h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
-                    <span>Unlimited premium searches (web & image)</span>
-                  </li>
-                  <li className='flex items-start -ml-7'>
-                    <RiCheckLine className='mr-2 h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
-                    <span>File uploads (Coming Soon)</span>
-                  </li>
-                  <li className='flex items-start -ml-7'>
-                    <RiCheckLine className='mr-2 h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
-                    <span>Chat with your mind map (Coming Soon)</span>
-                  </li>
-                </ul>
-                <Button
-                  className='bg-blue-500 hover:bg-blue-600 text-white'
-                  onClick={() => openNewSubscription()}
-                  disabled={isNewSubscriptionOpen}
-                >
-                  Upgrade to Pro
-                  <RiArrowRightLine className='ml-2 h-4 w-4' />
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Account Management Card */}
-        <Card className='border border-gray-200 shadow-sm'>
-          <CardHeader className='border-b border-gray-200 bg-gray-50 dark:bg-gray-900 dark:border-gray-800'>
-            <div className='flex items-center gap-2'>
-              <RiSettings4Line className='h-5 w-5 text-gray-500' />
-              <CardTitle className='text-lg'>Account Management</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className='p-6'>
-            <div className='flex flex-col sm:flex-row gap-3'>
+          {isPro ? (
+            <div className='mt-4'>
               <Button
                 variant='secondary'
-                className='flex items-center justify-center'
-                onClick={() => logout()}
+                className='flex items-center justify-center shadow-sm hover:shadow transition-all'
+                onClick={() => openBillingPortal()}
+                disabled={isBillingPortalOpen}
               >
-                <RiLogoutBoxLine className='mr-2 h-5 w-5' />
-                Log Out
-              </Button>
-
-              <Button
-                variant='destructive'
-                className='flex items-center justify-center'
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <RiDeleteBinLine className='mr-2 h-5 w-5' />
-                Delete Account
+                Manage Subscription
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            <div className='bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-100 dark:border-blue-800 rounded-lg p-6 mb-4'>
+              <div className='flex items-center gap-3 mb-4'>
+                <div className='rounded-full bg-blue-500 p-2 text-white'>
+                  <RiBrain2Fill className='h-5 w-5' />
+                </div>
+                <h4 className='font-medium text-lg'>Upgrade to Pro</h4>
+              </div>
+              <ul className='space-y-3 mb-5'>
+                <li className='flex items-start'>
+                  <RiCheckLine className='mr-2 h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
+                  <span>Unlimited premium searches (web & image)</span>
+                </li>
+                <li className='flex items-start'>
+                  <RiCheckLine className='mr-2 h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
+                  <span>File uploads (Coming Soon)</span>
+                </li>
+                <li className='flex items-start'>
+                  <RiCheckLine className='mr-2 h-5 w-5 text-green-500 flex-shrink-0 mt-0.5' />
+                  <span>Chat with your mind map (Coming Soon)</span>
+                </li>
+              </ul>
+              <Button
+                className='bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-all'
+                onClick={() => openNewSubscription()}
+                disabled={isNewSubscriptionOpen}
+              >
+                Upgrade to Pro
+                <RiArrowRightLine className='ml-2 h-4 w-4' />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <Divider />
+
+        {/* Account Management */}
+        <div>
+          <h2 className='text-lg font-medium mb-4'>Account Management</h2>
+          <div className='flex flex-col sm:flex-row gap-3'>
+            <Button variant='secondary' onClick={() => logout()}>
+              <RiLogoutBoxLine className='h-4 w-4' />
+              Log Out
+            </Button>
+
+            <Button
+              variant='destructive'
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <RiDeleteBinLine className='h-4 w-4' />
+              Delete Account
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Delete Account Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className='sm:max-w-md'>
           <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className='text-xl'>Delete Account</DialogTitle>
+            <DialogDescription className='text-neutral-500 dark:text-neutral-400 mt-2'>
               Are you sure you want to delete your account? This action cannot
               be undone and all your data will be permanently removed.
             </DialogDescription>
@@ -214,15 +210,16 @@ export default function AccountPage() {
             <div className='flex items-start'>
               <RiAlertLine className='h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5' />
               <p className='text-sm text-red-600 dark:text-red-400'>
-                Deleting your account will remove all your workspaces, searches,
-                and personal information.
+                Deleting your account will remove all your chats, searches, and
+                personal information.
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className='flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2'>
             <Button
               variant='secondary'
               onClick={() => setShowDeleteDialog(false)}
+              className='mt-3 sm:mt-0'
             >
               Cancel
             </Button>
@@ -230,8 +227,16 @@ export default function AccountPage() {
               variant='destructive'
               onClick={() => deleteAccount()}
               disabled={isDeleting}
+              className='bg-red-500 hover:bg-red-600'
             >
-              Delete Account
+              {isDeleting ? (
+                <>
+                  <span className='mr-2'>Deleting</span>
+                  <span className='animate-pulse'>...</span>
+                </>
+              ) : (
+                'Delete Account'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

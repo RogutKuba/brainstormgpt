@@ -20,7 +20,10 @@ import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDia
 import { cn } from '@/components/ui/lib/utils';
 import { SITE_ROUTES } from '@/lib/siteConfig';
 import Link from 'next/link';
-import { SidebarProfile } from '@/components/sidebar/SidebarProfile';
+import {
+  CollapsedSidebarProfile,
+  SidebarProfile,
+} from '@/components/sidebar/SidebarProfile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,7 +106,7 @@ export const LoggedInSidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-screen bg-primary shadow-sm z-[301] transition-all duration-300 ease-in-out',
+          'h-screen shadow-sm z-[301] transition-all duration-300 ease-in-out',
           isOpen ? 'w-64' : 'w-16',
           'flex flex-col overflow-hidden'
         )}
@@ -114,14 +117,14 @@ export const LoggedInSidebar = () => {
           <>
             {/* Sidebar Header */}
             <div className='flex items-center justify-between p-4 pr-2'>
-              <Link href={SITE_ROUTES.HOME} className='flex items-center gap-2'>
-                <RiBrain2Fill className='w-6 h-6 text-blue-400' />
-                <span className='font-bold text-gray-100'>Curiosity</span>
+              <Link href={SITE_ROUTES.HOME} className='flex items-center gap-1'>
+                <RiBrain2Fill className='w-6 h-6 text-accent' />
+                <span className='font-bold text-neutral-100'>Curiosity</span>
               </Link>
               <Button
                 variant='icon'
                 onClick={toggleSidebar}
-                className='text-gray-300 hover:text-gray-100 hover:bg-gray-800'
+                className='text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700'
               >
                 <RiContractLeftLine className='w-5 h-5' />
               </Button>
@@ -131,7 +134,7 @@ export const LoggedInSidebar = () => {
             <div className='flex-1 overflow-y-auto py-4'>
               {/* Workspace Header */}
               <div className='px-4 mb-2 flex items-center justify-between'>
-                <h2 className='text-sm font-semibold text-gray-400'>
+                <h2 className='text-sm font-semibold text-neutral-400'>
                   Chat History
                 </h2>
 
@@ -139,7 +142,7 @@ export const LoggedInSidebar = () => {
                   <CreateWorkspaceDialog>
                     <Button
                       variant='icon'
-                      className='h-7 w-7 text-gray-300 hover:text-gray-100 hover:bg-gray-800'
+                      className='h-7 w-7 text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700'
                     >
                       <RiAddLine className='w-4 h-4' />
                     </Button>
@@ -155,7 +158,7 @@ export const LoggedInSidebar = () => {
                     .fill(0)
                     .map((_, i) => (
                       <div key={i} className='px-2 py-1'>
-                        <Skeleton className='h-6 w-full bg-gray-800' />
+                        <Skeleton className='h-6 w-full bg-neutral-700' />
                       </div>
                     ))
                 ) : workspaces && workspaces.length > 0 ? (
@@ -165,9 +168,9 @@ export const LoggedInSidebar = () => {
                       key={index}
                       variant='ghost'
                       className={cn(
-                        'w-full justify-between gap-2 px-3 py-2 text-left text-gray-300 hover:bg-gray-800/70',
+                        'w-full justify-between gap-2 px-3 py-2 text-left text-neutral-300 hover:bg-neutral-700',
                         workspace.code === currentWorkspaceCode &&
-                          'bg-gray-800 text-blue-400 font-medium'
+                          'bg-neutral-700 text-blue-400 font-medium'
                       )}
                     >
                       {editingWorkspaceId === workspace.id ? (
@@ -188,7 +191,7 @@ export const LoggedInSidebar = () => {
                               name: editingWorkspaceName,
                             });
                           }}
-                          inputClassName='py-0 px-0 bg-gray-800 text-gray-100 border-gray-700'
+                          inputClassName='py-0 px-0 bg-neutral-700 text-neutral-100 border-neutral-600'
                         />
                       ) : (
                         <span
@@ -209,19 +212,20 @@ export const LoggedInSidebar = () => {
                       >
                         <DropdownMenu>
                           <DropdownMenuTrigger
+                            className='dark'
                             asChild
                             onMouseDown={(e) => e.stopPropagation()}
                           >
-                            <RiMore2Fill className='w-5 h-5 p-0.5 text-gray-500 flex-shrink-0 hover:text-gray-300 hover:bg-gray-700 rounded transition-colors duration-200' />
+                            <RiMore2Fill className='w-5 h-5 p-0.5 text-neutral-500 flex-shrink-0 hover:text-neutral-300 hover:bg-neutral-600 rounded transition-colors duration-200' />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className='bg-gray-800 border-gray-700 text-gray-200'>
+                          <DropdownMenuContent className='bg-primary border-neutral-600 text-neutral-200 border-neutral-700'>
                             <DropdownMenuGroup>
                               <DropdownMenuItem
                                 onClick={() => {
                                   setEditingWorkspaceName(workspace.name);
                                   setEditingWorkspaceId(workspace.id);
                                 }}
-                                className='hover:bg-gray-700'
+                                className='bg-primary text-neutral-100 hover:bg-neutral-700'
                               >
                                 <span className='flex items-center gap-2'>
                                   <RiPencilLine className='w-4 h-4' />
@@ -235,7 +239,7 @@ export const LoggedInSidebar = () => {
                                     workspace.isPublic
                                   )
                                 }
-                                className='hover:bg-gray-700'
+                                className='bg-primary text-neutral-100 hover:bg-neutral-700'
                               >
                                 <span className='flex items-center gap-2'>
                                   {workspace.isPublic ? (
@@ -256,7 +260,7 @@ export const LoggedInSidebar = () => {
                                   onClick={() =>
                                     handleShareWorkspace(workspace.code)
                                   }
-                                  className='hover:bg-gray-700'
+                                  className='bg-primary text-neutral-100 hover:bg-neutral-700'
                                 >
                                   <span className='flex items-center gap-2'>
                                     <RiShareLine className='w-4 h-4' />
@@ -265,9 +269,9 @@ export const LoggedInSidebar = () => {
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuGroup>
-                            <DropdownMenuSeparator className='bg-gray-700' />
+                            <DropdownMenuSeparator className='border-neutral-700' />
                             <DialogTrigger asChild>
-                              <DropdownMenuItem className='text-red-400 hover:bg-gray-700'>
+                              <DropdownMenuItem className='text-red-400 hover:bg-neutral-700'>
                                 <span className='flex items-center gap-2'>
                                   <RiDeleteBinLine className='w-4 h-4' />
                                   Delete
@@ -290,10 +294,12 @@ export const LoggedInSidebar = () => {
                 ) : (
                   // Empty state
                   <div className='text-center py-8 px-4'>
-                    <p className='text-sm text-gray-400'>No workspaces yet</p>
+                    <p className='text-sm text-neutral-400'>
+                      No workspaces yet
+                    </p>
                     <div className='mt-4 flex flex-col gap-2'>
                       <CreateWorkspaceDialog>
-                        <Button className='w-full bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700'>
+                        <Button className='w-full bg-neutral-700 text-neutral-200 hover:bg-neutral-600 border border-neutral-600'>
                           <RiAddLine className='w-4 h-4 mr-1' />
                           Create Workspace
                         </Button>
@@ -318,7 +324,7 @@ export const LoggedInSidebar = () => {
             <Button
               variant='icon'
               onClick={toggleSidebar}
-              className='mb-6 text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              className='mb-6 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
             >
               <RiContractLeftLine className='w-5 h-5 rotate-180' />
             </Button>
@@ -327,7 +333,7 @@ export const LoggedInSidebar = () => {
             <CreateWorkspaceDialog>
               <Button
                 variant='icon'
-                className='mb-6 text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                className='mb-6 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
               >
                 <RiAddLine className='w-5 h-5' />
               </Button>
@@ -342,8 +348,8 @@ export const LoggedInSidebar = () => {
                     className={cn(
                       'w-8 h-8 rounded-md flex items-center justify-center cursor-pointer',
                       workspace.code === currentWorkspaceCode
-                        ? 'bg-gray-800 text-blue-400'
-                        : 'hover:bg-gray-800 text-gray-400'
+                        ? 'bg-neutral-700 text-blue-400'
+                        : 'hover:bg-neutral-700 text-neutral-400'
                     )}
                     onClick={() =>
                       router.push(SITE_ROUTES.CHAT(workspace.code))
@@ -355,6 +361,8 @@ export const LoggedInSidebar = () => {
                 ))}
               </div>
             )}
+
+            <CollapsedSidebarProfile />
           </div>
         )}
       </aside>
