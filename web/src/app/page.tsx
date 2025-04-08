@@ -133,18 +133,14 @@ export default function NewChat() {
                 }
               }
             }}
-            placeholder='Ask anything...'
+            placeholder='Ask any topic or provide a link to begin exploring...'
             disabled={isLoading || isCreatingWorkspace}
             isLoading={isLoading || isCreatingWorkspace}
-            showActionButtons={true}
-            inputType='text'
-            rounded='full'
-            actionButtonPosition='inside'
           />
         </motion.div>
       </div>
 
-      {/* Mode selection buttons */}
+      {/* Mode selection buttons
       <motion.div
         className='w-full max-w-2xl mx-auto mb-12 px-4'
         initial={{ opacity: 0, y: 20 }}
@@ -237,7 +233,7 @@ export default function NewChat() {
             Holistic
           </Button>
         </div>
-      </motion.div>
+      </motion.div> */}
 
       {/* Login Dialog */}
       <LoginDialog

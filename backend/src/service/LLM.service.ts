@@ -26,7 +26,8 @@ export const LLMService = {
 
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: 'google/gemini-2.0-flash-001', // You can change this to other models like "gpt-4" if needed
+      // this model has better throughput so faster
+      model: 'google/gemini-flash-1.5-8b',
       messages: [
         ...chatHistory.map((message) => ({
           role: message.sender,
@@ -83,7 +84,7 @@ export const LLMService = {
 
     const stream = openrouter.beta.chat.completions
       .stream({
-        model: 'google/gemini-2.0-flash-001',
+        model: 'google/gemini-2.5-pro-preview-03-25',
         // 'google/gemini-2.5-pro-exp-03-25:free',
         messages: [
           ...chatHistory.map((message) => ({

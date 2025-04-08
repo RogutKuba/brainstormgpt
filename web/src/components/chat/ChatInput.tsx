@@ -2,17 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  RiSendPlaneFill,
-  RiLoader2Fill,
-  RiAttachment2,
-  RiSearchLine,
-  RiBrainLine,
-  RiSendPlane2Line,
-} from '@remixicon/react';
-import { useChat } from './ChatContext';
-import { Editor } from 'tldraw';
-import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
+import { RiLoader2Fill, RiSendPlane2Line } from '@remixicon/react';
 
 interface ChatInputProps {
   // Core functionality
@@ -22,33 +12,16 @@ interface ChatInputProps {
   placeholder?: string;
   disabled?: boolean;
   isLoading?: boolean;
-
-  // Chat-specific props
-  selectedItemIds?: string[];
-  editor?: Editor;
-
-  // UI customization
-  showActionButtons?: boolean;
-  inputType?: 'text' | 'textarea';
-  rounded?: 'full' | 'md';
-  actionButtonPosition?: 'inside' | 'outside';
-  className?: string;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   // Default values for props
   value: externalValue,
-  onChange: externalOnChange,
-  onSubmit: externalOnSubmit,
+  onChange,
+  onSubmit,
   placeholder = 'Ask anything...',
   disabled = false,
-  selectedItemIds = [],
-  editor,
-  showActionButtons = false,
-  inputType = 'text',
-  rounded = 'md',
-  actionButtonPosition = 'inside',
-  className = '',
+  isLoading = false,
 }) => {
   // Internal state for controlled or uncontrolled usage
   const [internalValue, setInternalValue] = useState('');
@@ -64,7 +37,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (!isControlled) {
       setInternalValue(e.target.value);
     }
-    externalOnChange?.(e.target.value);
+    onChange?.(e.target.value);
   };
 
   // Handle form submission
@@ -77,22 +50,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
 
     // If external submit handler is provided, use it
-    if (externalOnSubmit) {
-      await externalOnSubmit(value);
+    if (onSubmit) {
+      await onSubmit(value);
       if (!isControlled) {
         setInternalValue('');
       }
       return;
-    }
-  };
-
-  // Handle keyboard shortcuts
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    if (e.key === 'Enter' && !e.shiftKey && inputType !== 'textarea') {
-      e.preventDefault();
-      handleSubmit(e);
     }
   };
 
@@ -158,7 +121,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           className='rounded-full w-8 h-8 bg-blue-500 text-white hover:bg-blue-600 flex items-center justify-center'
           disabled={!value.trim() || value.trim().length < 3 || disabled}
         >
-          <RiSendPlane2Line className='w-4 h-4 shrink-0' />
+          {isLoading ? (
+            <RiLoader2Fill className='w-4 h-4 shrink-0 animate-spin' />
+          ) : (
+            <RiSendPlane2Line className='w-4 h-4 shrink-0' />
+          )}
         </Button>
       </div>
     </form>

@@ -15,8 +15,6 @@ import {
   RiSendPlaneFill,
   RiText,
   RiLink,
-  RiAddLine,
-  RiChatDeleteLine,
   RiRefreshLine,
 } from '@remixicon/react';
 import { cx } from '@/components/ui/lib/utils';
