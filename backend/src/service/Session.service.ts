@@ -121,6 +121,7 @@ export const SessionService = {
     ctx: Context<AppContext>
   ): Promise<SessionValidationResult> => {
     const sessionId = getCookie(ctx, SESSION_COOKIE_NAME) ?? null;
+    console.log('sessionId', sessionId);
 
     // return no auth if no session cookie
     if (!sessionId) {

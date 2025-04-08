@@ -13,6 +13,7 @@ import { BrainstormToolCalls } from '../components/brainstorm-tool/toolCalls';
 import { z } from 'zod';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { calculateNodeSize } from '@/components/chat/utils';
+import { clientFetch } from '@/query/client';
 
 export type StreamedNode = {
   id: TLShapeId;
@@ -64,21 +65,18 @@ export const useStreamMessage = () => {
         const url = `/workspace/${params.workspaceCode}/stream`;
 
         // Prepare the request
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || ''}${url}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: params.message,
-              searchType: params.searchType,
-              chatHistory: params.chatHistory,
-              selectedItems: params.selectedItems,
-            }),
-          }
-        );
+        const response = await clientFetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: params.message,
+            searchType: params.searchType,
+            chatHistory: params.chatHistory,
+            selectedItems: params.selectedItems,
+          }),
+        });
 
         if (!response.ok) {
           throw new Error(`Server responded with ${response.status}`);

@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-primary`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-sidebar`}
       >
         <QueryClientProvider client={TanstackQueryClient}>
           <SidebarProvider>

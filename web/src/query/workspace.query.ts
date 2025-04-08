@@ -56,7 +56,7 @@ export const useCreateWorkspace = () => {
     onSuccess: (newWorkspace) => {
       queryClient.setQueryData(
         ['workspaces'],
-        (old: WorkspaceEntity[] | undefined) => [...(old ?? []), newWorkspace]
+        (old: WorkspaceEntity[] | undefined) => [newWorkspace, ...(old ?? [])]
       );
     },
   });

@@ -9,6 +9,7 @@ import {
   RiCheckLine,
   RiAlertLine,
   RiBrain2Fill,
+  RiWalletLine,
 } from '@remixicon/react';
 import { useLogout, useUserData } from '@/query/auth.query';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,7 +46,7 @@ export default function AccountPage() {
     useSubscriptionStatus();
 
   // Determine if user is on pro plan
-  const isPro = false;
+  const isPro = subscription?.status === 'pro';
 
   // Get premium searches left (will be -1 for pro users, indicating unlimited)
   const premiumSearchesLimit = 5;
@@ -87,7 +88,7 @@ export default function AccountPage() {
         <div>
           <h2 className='text-lg font-medium mb-4'>Profile</h2>
           <div className='flex items-center gap-5'>
-            <div className='w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-semibold shadow-md'>
+            <div className='w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-semibold shadow-md'>
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div>
@@ -133,10 +134,10 @@ export default function AccountPage() {
             <div className='mt-4'>
               <Button
                 variant='secondary'
-                className='flex items-center justify-center shadow-sm hover:shadow transition-all'
                 onClick={() => openBillingPortal()}
                 disabled={isBillingPortalOpen}
               >
+                <RiWalletLine className='h-4 w-4' />
                 Manage Subscription
               </Button>
             </div>

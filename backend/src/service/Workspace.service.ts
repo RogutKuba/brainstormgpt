@@ -6,7 +6,7 @@ import { BrainstormService } from './Brainstorm.service';
 import { ShapeService } from './Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
 import { getSession } from '../lib/session';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, asc } from 'drizzle-orm';
 import { generateId } from '../lib/id';
 import { CrawlerService } from './Crawler.service';
 

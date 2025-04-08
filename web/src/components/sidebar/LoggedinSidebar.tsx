@@ -106,7 +106,7 @@ export const LoggedInSidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-screen shadow-sm z-[301] transition-all duration-300 ease-in-out',
+          'h-screen bg-sidebar shadow-sm z-[301] transition-all duration-300 ease-in-out',
           isOpen ? 'w-64' : 'w-16',
           'flex flex-col overflow-hidden'
         )}
@@ -118,7 +118,7 @@ export const LoggedInSidebar = () => {
             {/* Sidebar Header */}
             <div className='flex items-center justify-between p-4 pr-2'>
               <Link href={SITE_ROUTES.HOME} className='flex items-center gap-1'>
-                <RiBrain2Fill className='w-6 h-6 text-accent' />
+                <RiBrain2Fill className='w-6 h-6 text-primary' />
                 <span className='font-bold text-neutral-100'>Curiosity</span>
               </Link>
               <Button
@@ -139,14 +139,14 @@ export const LoggedInSidebar = () => {
                 </h2>
 
                 <div className='flex gap-1'>
-                  <CreateWorkspaceDialog>
+                  <Link href={SITE_ROUTES.HOME}>
                     <Button
                       variant='icon'
-                      className='h-7 w-7 text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700'
+                      className='text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700'
                     >
                       <RiAddLine className='w-4 h-4' />
                     </Button>
-                  </CreateWorkspaceDialog>
+                  </Link>
                 </div>
               </div>
 
@@ -218,14 +218,14 @@ export const LoggedInSidebar = () => {
                           >
                             <RiMore2Fill className='w-5 h-5 p-0.5 text-neutral-500 flex-shrink-0 hover:text-neutral-300 hover:bg-neutral-600 rounded transition-colors duration-200' />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className='bg-primary border-neutral-600 text-neutral-200 border-neutral-700'>
+                          <DropdownMenuContent className='bg-sidebar border-neutral-600 text-neutral-200 border-neutral-700'>
                             <DropdownMenuGroup>
                               <DropdownMenuItem
                                 onClick={() => {
                                   setEditingWorkspaceName(workspace.name);
                                   setEditingWorkspaceId(workspace.id);
                                 }}
-                                className='bg-primary text-neutral-100 hover:bg-neutral-700'
+                                className='bg-sidebar text-neutral-100 hover:bg-neutral-700'
                               >
                                 <span className='flex items-center gap-2'>
                                   <RiPencilLine className='w-4 h-4' />
@@ -239,7 +239,7 @@ export const LoggedInSidebar = () => {
                                     workspace.isPublic
                                   )
                                 }
-                                className='bg-primary text-neutral-100 hover:bg-neutral-700'
+                                className='bg-sidebar text-neutral-100 hover:bg-neutral-700'
                               >
                                 <span className='flex items-center gap-2'>
                                   {workspace.isPublic ? (
@@ -260,7 +260,7 @@ export const LoggedInSidebar = () => {
                                   onClick={() =>
                                     handleShareWorkspace(workspace.code)
                                   }
-                                  className='bg-primary text-neutral-100 hover:bg-neutral-700'
+                                  className='bg-sidebar text-neutral-100 hover:bg-neutral-700'
                                 >
                                   <span className='flex items-center gap-2'>
                                     <RiShareLine className='w-4 h-4' />
@@ -298,12 +298,12 @@ export const LoggedInSidebar = () => {
                       No workspaces yet
                     </p>
                     <div className='mt-4 flex flex-col gap-2'>
-                      <CreateWorkspaceDialog>
+                      <Link href={SITE_ROUTES.HOME}>
                         <Button className='w-full bg-neutral-700 text-neutral-200 hover:bg-neutral-600 border border-neutral-600'>
                           <RiAddLine className='w-4 h-4 mr-1' />
                           Create Workspace
                         </Button>
-                      </CreateWorkspaceDialog>
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -330,14 +330,14 @@ export const LoggedInSidebar = () => {
             </Button>
 
             {/* Add workspace button */}
-            <CreateWorkspaceDialog>
+            <Link href={SITE_ROUTES.HOME}>
               <Button
                 variant='icon'
                 className='mb-6 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
               >
                 <RiAddLine className='w-5 h-5' />
               </Button>
-            </CreateWorkspaceDialog>
+            </Link>
 
             {/* Current workspace indicator (if any) */}
             {currentWorkspaceCode && workspaces && workspaces.length > 0 && (

@@ -49,7 +49,7 @@ export const AnonSidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-screen bg-primary shadow-sm z-[301] transition-all duration-300 ease-in-out',
+          'h-screen bg-sidebar shadow-sm z-[301] transition-all duration-300 ease-in-out',
           isOpen ? 'w-64' : 'w-16',
           'flex flex-col overflow-hidden'
         )}

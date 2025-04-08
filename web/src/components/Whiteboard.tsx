@@ -30,8 +30,8 @@ import {
   Editor,
   UndoRedoGroup,
   DefaultQuickActions,
+  inlineBase64AssetStore,
 } from 'tldraw';
-import { multiplayerAssetStore } from './multiplayerAssetStore';
 import { BrainstormTool } from '@/components/brainstorm-tool/BrainstormTool';
 import { BrainstormDragging } from '@/components/brainstorm-tool/child-states/Dragging';
 import { API_URL } from '@/lib/constants';
@@ -360,7 +360,7 @@ const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
     // We need to know the websockets URI...
     uri: `${API_URL}/workspace/${workspaceCode}/connect`,
     // ...and how to handle static assets like images & videos
-    assets: multiplayerAssetStore,
+    assets: inlineBase64AssetStore,
   });
 
   return (

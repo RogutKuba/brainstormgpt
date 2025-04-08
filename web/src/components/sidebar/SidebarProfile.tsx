@@ -14,7 +14,7 @@ export const SidebarProfile = () => {
 
   return (
     <div
-      className='flex items-center justify-between gap-2 p-4 hover:bg-neutral-800 cursor-pointer transition-all duration-200'
+      className='flex items-center justify-between gap-2 p-4 cursor-pointer transition-all duration-200'
       onClick={() => {
         router.push(SITE_ROUTES.ACCOUNT);
       }}
@@ -23,7 +23,7 @@ export const SidebarProfile = () => {
         <Skeleton className='w-full h-6 rounded-full bg-neutral-800' />
       ) : (
         <div className='flex items-center gap-2'>
-          <div className='w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white bg-accent'>
+          <div className='w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white bg-primary'>
             <span className='text-sm'>{letter}</span>
           </div>
           <span className='text-sm truncate text-neutral-300'>
@@ -43,7 +43,7 @@ export const CollapsedSidebarProfile = () => {
   }, [user]);
 
   return (
-    <div className='w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white bg-accent'>
+    <div className='w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white bg-primary'>
       <span className='text-sm'>{letter}</span>
     </div>
   );
