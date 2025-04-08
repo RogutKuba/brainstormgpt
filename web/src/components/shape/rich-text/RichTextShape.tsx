@@ -10,7 +10,7 @@ import {
 } from 'tldraw';
 import ReactMarkdown from 'react-markdown';
 import { Textarea } from '@/components/ui/textarea';
-import { RiLock2Line, RiLockUnlockLine } from '@remixicon/react';
+import { RiLock2Line, RiLockUnlockLine, RiZoomInLine } from '@remixicon/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useEffect } from 'react';
 import { useChat } from '@/components/chat/ChatContext';
@@ -23,6 +23,7 @@ import {
 } from '@/components/shape/BaseContentShape';
 import { cx } from '@/components/ui/lib/utils';
 import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
+import { useZoomDialog } from '@/components/zoom-dialog/ZoomDialogContext';
 
 // Define the properties specific to our RichTextShape
 export type RichTextShapeProps = ContentShapeProps & {
@@ -88,6 +89,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       shape.props;
     const { handleSendMessage } = useChat();
     const workspaceCode = useCurrentWorkspaceCode();
+    const { openZoomDialog } = useZoomDialog();
 
     // Get the content shape utilities
     const {
@@ -137,6 +139,26 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
           searchType: prediction.type,
         }
       );
+    };
+
+    // Handle zoom dialog open
+    const handleOpenZoomDialog = (e: React.MouseEvent) => {
+      if (isEditing) return;
+      e.stopPropagation();
+
+      // Create zoomed content for the dialog
+      const zoomedContent = (
+        <div>
+          <h2 className='text-2xl font-bold mb-4'>
+            {isRoot ? text : 'Content Details'}
+          </h2>
+          <div className='markdown-content prose prose-lg max-w-none'>
+            <ReactMarkdown>{text}</ReactMarkdown>
+          </div>
+        </div>
+      );
+
+      openZoomDialog('', zoomedContent);
     };
 
     return (
@@ -206,11 +228,20 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
           ) : (
             <>
               {isRoot ? (
-                <div className='markdown-content max-w-none text-center py-4 text-4xl font-bold'>
+                <div
+                  className='markdown-content max-w-none text-center py-4 text-4xl font-bold cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto'
+                  onClick={handleOpenZoomDialog}
+                >
                   {text}
                 </div>
               ) : (
-                <div className='markdown-content prose prose-sm max-w-none text-xl mb-4'>
+                <div
+                  className='markdown-content prose prose-sm max-w-none text-xl mb-4 cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto'
+                  onClick={handleOpenZoomDialog}
+                  onPointerDown={stopEventPropagation}
+                  onTouchStart={stopEventPropagation}
+                  onTouchEnd={stopEventPropagation}
+                >
                   <ReactMarkdown>{text}</ReactMarkdown>
                 </div>
               )}

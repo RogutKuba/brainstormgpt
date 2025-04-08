@@ -60,6 +60,8 @@ import { Button } from '@/components/ui/button';
 import { TreeCollection } from '@/components/collection/tree/TreeCollection';
 import { TreeHighlight } from '@/components/collection/tree/useTreeHighlight';
 import { useSidebar } from '@/components/sidebar/SideBarContext';
+import { ZoomDialogProvider } from '@/components/zoom-dialog/ZoomDialogContext';
+import { ContentZoomDialog } from '@/components/zoom-dialog/ZoomDialog';
 
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
@@ -352,7 +354,6 @@ const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
   const [editor, setEditor] = useState<Editor | null>(null);
   const shapeUtils = useMemo(() => [...customShapes, ...defaultShapeUtils], []);
   const { updateLinkShape } = useUpdateLinkShape();
-  const { workspaceStatus } = useWorkspaceStatus();
 
   // Create a store connected to multiplayer.
   const store = useSync({
@@ -476,5 +477,10 @@ export const Whiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
     return <ErrorWhiteboard error={workspaceStatus.error} />;
   }
 
-  return <RawWhiteboard workspaceCode={workspaceCode} />;
+  return (
+    <ZoomDialogProvider>
+      <ContentZoomDialog />
+      <RawWhiteboard workspaceCode={workspaceCode} />
+    </ZoomDialogProvider>
+  );
 };
