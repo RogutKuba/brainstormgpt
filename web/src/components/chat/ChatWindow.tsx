@@ -25,8 +25,7 @@ import { LinkShape } from '@/components/shape/link/LinkShape';
 import { RichTextShape } from '@/components/shape/rich-text/RichTextShape';
 import { useChat } from './ChatContext';
 import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
-import { useSidebar } from '@/components/landing/Sidebar';
-import { Tooltip } from '@/components/ui/tooltip';
+import { useSidebar } from '@/components/sidebar/SideBarContext';
 
 export const ChatWindow: React.FC = () => {
   const editor = useEditor();

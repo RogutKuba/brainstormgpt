@@ -18,6 +18,7 @@ import {
 import { useUserData } from '@/query/auth.query';
 import { LoginDialog } from '@/components/login/LoginDialog';
 import { motion } from 'motion/react';
+import { ChatInput } from '@/components/chat/ChatInput';
 
 export default function NewChat() {
   const router = useRouter();
@@ -110,56 +111,36 @@ export default function NewChat() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <form onSubmit={handleSubmit} className='relative'>
-            <input
-              type='text'
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder='Ask anything...'
-              className='w-full p-4 pr-24 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              disabled={isLoading || isCreatingWorkspace}
-            />
-            <div className='absolute right-2 top-2 flex items-center gap-1'>
-              <Button
-                type='button'
-                variant='ghost'
-                className='rounded-full w-8 h-8 text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                disabled={isLoading || isCreatingWorkspace}
-              >
-                <RiAttachment2 className='w-5 h-5' />
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                className='rounded-full w-8 h-8 text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                disabled={isLoading || isCreatingWorkspace}
-              >
-                <RiSearchLine className='w-5 h-5' />
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                className='rounded-full w-8 h-8 text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                disabled={isLoading || isCreatingWorkspace}
-              >
-                <RiBrainLine className='w-5 h-5' />
-              </Button>
-              <Button
-                type='submit'
-                variant='primary'
-                className='rounded-full w-8 h-8 bg-blue-500 text-white hover:bg-blue-600'
-                disabled={
-                  !inputValue.trim() || isLoading || isCreatingWorkspace
+          <ChatInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSubmit={async (value) => {
+              if (value.trim()) {
+                if (user) {
+                  setIsLoading(true);
+                  try {
+                    const workspace = await createWorkspace({ prompt: value });
+                    router.push(SITE_ROUTES.CHAT(workspace.code));
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                    setIsLoading(false);
+                  }
+                } else {
+                  // Show login dialog instead of redirecting
+                  setPendingPrompt(value);
+                  setShowLoginDialog(true);
+                  setIsLoading(false);
                 }
-              >
-                {isLoading || isCreatingWorkspace ? (
-                  <RiLoader2Fill className='w-5 h-5 animate-spin' />
-                ) : (
-                  <RiSendPlaneFill className='w-5 h-5' />
-                )}
-              </Button>
-            </div>
-          </form>
+              }
+            }}
+            placeholder='Ask anything...'
+            disabled={isLoading || isCreatingWorkspace}
+            isLoading={isLoading || isCreatingWorkspace}
+            showActionButtons={true}
+            inputType='text'
+            rounded='full'
+            actionButtonPosition='inside'
+          />
         </motion.div>
       </div>
 
@@ -256,16 +237,6 @@ export default function NewChat() {
             Holistic
           </Button>
         </div>
-      </motion.div>
-
-      {/* Footer disclaimer */}
-      <motion.div
-        className='w-full text-center pb-4 text-gray-400 text-sm'
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        Curiosity can make mistakes. Check for important info.
       </motion.div>
 
       {/* Login Dialog */}

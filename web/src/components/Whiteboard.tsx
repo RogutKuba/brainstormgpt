@@ -57,9 +57,9 @@ import { D3ForceGraphLayoutCollection } from '@/components/collection/graph/D3Fo
 import { Tooltip } from '@/components/ui/tooltip';
 import { useWorkspaceStatus } from '@/query/workspace.query';
 import { Button } from '@/components/ui/button';
-import { useSidebar } from '@/components/landing/Sidebar';
 import { TreeCollection } from '@/components/collection/tree/TreeCollection';
 import { TreeHighlight } from '@/components/collection/tree/useTreeHighlight';
+import { useSidebar } from '@/components/sidebar/SideBarContext';
 
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 

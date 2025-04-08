@@ -2,15 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { clientFetch } from './client';
 import { SITE_ROUTES } from '@/lib/siteConfig';
-import { cookies } from 'next/headers';
-import { getCookie } from '@/lib/cookie';
-
-const SESSION_COOKIE_NAME = 'curiosity-session';
 
 export const useUserData = (params?: { shouldRedirect?: boolean }) => {
   const router = useRouter();
-
-  const currentCookie = getCookie(SESSION_COOKIE_NAME);
 
   const query = useQuery({
     queryKey: ['user'],
@@ -48,7 +42,6 @@ export const useUserData = (params?: { shouldRedirect?: boolean }) => {
 
   return {
     user: query.data,
-    hasCookie: !!currentCookie,
     ...query,
   };
 };
