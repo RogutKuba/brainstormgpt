@@ -118,13 +118,17 @@ export const SessionService = {
   },
 
   authenticateSession: async (
-    ctx: Context<AppContext>
+    ctx: Context<AppContext>,
+    params?: { notThrow?: boolean }
   ): Promise<SessionValidationResult> => {
     const sessionId = getCookie(ctx, SESSION_COOKIE_NAME) ?? null;
-    console.log('sessionId', sessionId);
 
     // return no auth if no session cookie
     if (!sessionId) {
+      if (params?.notThrow) {
+        return { session: null, user: null };
+      }
+
       throw new HTTPException(401, { message: 'Unauthorized' });
     }
 
@@ -135,11 +139,20 @@ export const SessionService = {
     );
 
     if (!session) {
+      if (params?.notThrow) {
+        return { session: null, user: null };
+      }
+
       SessionService.deleteSessionTokenCookie(ctx);
+      throw new HTTPException(401, { message: 'Unauthorized' });
     }
 
     if (!user) {
       // return no auth
+      if (params?.notThrow) {
+        return { session: null, user: null };
+      }
+
       throw new HTTPException(401, { message: 'Unauthorized' });
     }
 

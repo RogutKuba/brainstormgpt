@@ -1,22 +1,17 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { googleAuthRouter } from './endpoint/oauth.endpoint';
 import { UserEntity, SessionEntity } from './db/user.db';
 import { authMiddleware } from './middleware/auth.middleware';
 import { workspaceRouter } from './endpoint/workspace.endpoint';
 import { authRouter } from './endpoint/auth.endpoint';
 import { TldrawDurableObject } from './durable-object/TldrawDurableObject';
-import { urlShapeRouter } from './endpoint/shape/urlShape.endpoint';
-import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
-import { streamRouter } from './endpoint/stream.endpoint';
 import { anonWorkspaceRouter } from './endpoint/workspace/anon.endpoint';
-import {
-  connectAuthRouter,
-  connectWorkspaceRouter,
-} from './endpoint/workspace/connect.endpoint';
+import { connectWorkspaceRouter } from './endpoint/workspace/connect.endpoint';
 import { accountRouter } from './endpoint/account.endpoint';
 import { stripeRouter } from './endpoint/webhook/stripe.endpoint';
+import { workspaceActionsRouter } from './endpoint/workspace/actions.endpoint';
+import { ChunkWorkflowParams } from './workflow/Chunk.workflow';
 
 // export durable object and workflows
 export { TldrawDurableObject } from './durable-object/TldrawDurableObject';
@@ -77,13 +72,10 @@ app
       credentials: true,
     })
   )
-  // TODO: refactor to combine into one router for all this workspace stuff
-  .route('/workspace/:workspaceCode/connect/status', connectAuthRouter)
-  .route('/workspace/:workspaceCode/stream', streamRouter)
-  .route('/workspace/:workspaceCode/shape/url', urlShapeRouter)
+  // separate routes for workspace actions since some actions can be taken without authentication
+  .route('/workspace/:workspaceCode', workspaceActionsRouter)
   .route('/workspace/anonymous', anonWorkspaceRouter)
   .route('/auth', authRouter)
-  .route('/auth/google', googleAuthRouter)
   .use(authMiddleware)
   .route('/account', accountRouter)
   .route('/workspace', workspaceRouter);

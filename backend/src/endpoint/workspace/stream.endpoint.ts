@@ -1,19 +1,14 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { AppContext } from '..';
-import { ErrorResponses } from './errors.js';
-import { LLMService } from '../service/LLM.service';
-import {
-  brainstormResultSchema,
-  BrainstormService,
-  brainstormStreamResultSchema,
-} from '../service/Brainstorm.service';
-import { ShapeService } from '../service/Shape.service';
+import { AppContext } from '../../index';
+import { ErrorResponses } from '../errors.js';
+import { BrainstormService } from '../../service/Brainstorm.service';
+import { ShapeService } from '../../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
-import { StreamService } from '../service/Stream.service';
+import { StreamService } from '../../service/Stream.service';
 import { HTTPException } from 'hono/http-exception';
 import { TLShapeId } from '@tldraw/tlschema';
-import { AnalyticsService } from '../service/Analytics.service';
-import { getSession } from '../lib/session';
+import { AnalyticsService } from '../../service/Analytics.service';
+
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
   method: 'post',
@@ -75,7 +70,6 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
     const { workspaceCode } = ctx.req.valid('param');
     const { message, chatHistory, searchType, selectedItems } =
       ctx.req.valid('json');
-    const { user } = getSession(ctx);
 
     if (searchType === 'web' && selectedItems.length !== 1) {
       throw new HTTPException(400, {
@@ -163,16 +157,18 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           ctx.executionCtx.waitUntil(
             new Promise(async () => {
               const analyticsService = new AnalyticsService(ctx);
-              await analyticsService.trackChat({
-                prompt: message,
-                response: JSON.stringify(finalResult),
-                workspaceCode,
-                type: searchType,
-                isPremium: searchType !== 'text',
-                status: 'success',
-                userId: user.id,
-                error: null,
-              });
+              await analyticsService.trackChat(
+                {
+                  prompt: message,
+                  response: JSON.stringify(finalResult),
+                  workspaceCode,
+                  type: searchType,
+                  isPremium: searchType !== 'text',
+                  status: 'success',
+                  error: null,
+                },
+                ctx
+              );
             })
           );
 
@@ -195,16 +191,19 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
           ctx.executionCtx.waitUntil(
             new Promise(async () => {
               const analyticsService = new AnalyticsService(ctx);
-              await analyticsService.trackChat({
-                prompt: message,
-                response: '',
-                workspaceCode,
-                type: searchType,
-                isPremium: searchType !== 'text',
-                status: 'error',
-                userId: user.id,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              });
+              await analyticsService.trackChat(
+                {
+                  prompt: message,
+                  response: '',
+                  workspaceCode,
+                  type: searchType,
+                  isPremium: searchType !== 'text',
+                  status: 'error',
+                  error:
+                    error instanceof Error ? error.message : 'Unknown error',
+                },
+                ctx
+              );
             })
           );
         }
