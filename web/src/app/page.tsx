@@ -7,6 +7,7 @@ import {
   RiBrainLine,
   RiSendPlaneFill,
   RiLoader2Fill,
+  RiBrain2Fill,
 } from '@remixicon/react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -79,13 +80,13 @@ export default function NewChat() {
       {/* Empty state with logo and welcome message */}
       <div className='flex-1 flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-4'>
         <motion.div
-          className='rounded-full bg-blue-100 p-4 mb-6'
+          className='rounded-full bg-blue-100 p-4 mb-2'
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           <div className='w-10 h-10 text-blue-500 flex items-center justify-center text-2xl'>
-            ⌀
+            <RiBrain2Fill className='w-8 h-8' />
           </div>
         </motion.div>
 
@@ -93,14 +94,15 @@ export default function NewChat() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
+          className='text-center'
         >
-          <h1 className='text-2xl font-bold mb-2'>
+          <h1 className='text-4xl font-medium mb-2'>
             {firstName
-              ? `Hey ${firstName}! I'm Curiosity`
-              : "Hey! I'm Curiosity"}
+              ? `Follow your curiosity, ${firstName}`
+              : 'Follow your curiosity'}
           </h1>
           <p className='text-gray-500 mb-12 text-center'>
-            A single question can open a world of discovery
+            Every discovery starts from a single question
           </p>
         </motion.div>
 
