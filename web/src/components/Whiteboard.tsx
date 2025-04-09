@@ -286,47 +286,47 @@ function AiBrainstormBox() {
   );
 }
 
-const CustomMenuPanel = memo(function MenuPanel() {
-  const breakpoint = useBreakpoint();
-  const { isOpen: isSidebarOpen, toggleSidebar } = useSidebar();
+// const CustomMenuPanel = memo(function MenuPanel() {
+//   const breakpoint = useBreakpoint();
+//   const { isOpen: isSidebarOpen, toggleSidebar } = useSidebar();
 
-  const ref = useRef<HTMLDivElement>(null);
-  usePassThroughWheelEvents(ref as React.RefObject<HTMLElement>);
+//   const ref = useRef<HTMLDivElement>(null);
+//   usePassThroughWheelEvents(ref as React.RefObject<HTMLElement>);
 
-  const { MainMenu, QuickActions, ActionsMenu, PageMenu } =
-    useTldrawUiComponents();
-  const editor = useEditor();
+//   const { MainMenu, QuickActions, ActionsMenu, PageMenu } =
+//     useTldrawUiComponents();
+//   const editor = useEditor();
 
-  const showQuickActions =
-    editor.options.actionShortcutsLocation === 'menu'
-      ? true
-      : editor.options.actionShortcutsLocation === 'toolbar'
-      ? false
-      : breakpoint >= PORTRAIT_BREAKPOINT.TABLET;
+//   const showQuickActions =
+//     editor.options.actionShortcutsLocation === 'menu'
+//       ? true
+//       : editor.options.actionShortcutsLocation === 'toolbar'
+//       ? false
+//       : breakpoint >= PORTRAIT_BREAKPOINT.TABLET;
 
-  // Don't render the menu panel at all if sidebar is open or if there are no menu items
-  if (isSidebarOpen || (!MainMenu && !PageMenu && !showQuickActions))
-    return null;
+//   // Don't render the menu panel at all if sidebar is open or if there are no menu items
+//   if (isSidebarOpen || (!MainMenu && !PageMenu && !showQuickActions))
+//     return null;
 
-  return (
-    <div ref={ref} className='tlui-menu-zone'>
-      <div className='tlui-buttons__horizontal'>
-        {/* {MainMenu && <MainMenu />} */}
+//   return (
+//     <div ref={ref} className='tlui-menu-zone'>
+//       <div className='tlui-buttons__horizontal'>
+//         {/* {MainMenu && <MainMenu />} */}
 
-        <TldrawUiButton
-          type='normal'
-          onClick={toggleSidebar}
-          aria-label='Open sidebar'
-        >
-          <RiMenuLine className='w-[15px] h-[15px]' />
-        </TldrawUiButton>
-        <DefaultQuickActions>
-          {showQuickActions ? <UndoRedoGroup /> : null}
-        </DefaultQuickActions>
-      </div>
-    </div>
-  );
-});
+//         <TldrawUiButton
+//           type='normal'
+//           onClick={toggleSidebar}
+//           aria-label='Open sidebar'
+//         >
+//           <RiMenuLine className='w-[15px] h-[15px]' />
+//         </TldrawUiButton>
+//         <DefaultQuickActions>
+//           {showQuickActions ? <UndoRedoGroup /> : null}
+//         </DefaultQuickActions>
+//       </div>
+//     </div>
+//   );
+// });
 
 function InFrontOfTheCanvas() {
   return (
@@ -343,7 +343,7 @@ const customComponents: TLComponents = {
   MainMenu: CustomMainMenu,
   PageMenu: null,
   ActionsMenu: null,
-  MenuPanel: CustomMenuPanel,
+  MenuPanel: null,
   StylePanel: null,
   CursorChatBubble: null,
   Cursor: null,

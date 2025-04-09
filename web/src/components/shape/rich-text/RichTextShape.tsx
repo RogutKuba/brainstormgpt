@@ -10,7 +10,7 @@ import {
 } from 'tldraw';
 import ReactMarkdown from 'react-markdown';
 import { Textarea } from '@/components/ui/textarea';
-import { RiLock2Line, RiLockUnlockLine, RiZoomInLine } from '@remixicon/react';
+import { RiLock2Line, RiLockUnlockLine } from '@remixicon/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useEffect } from 'react';
 import { useChat } from '@/components/chat/ChatContext';
@@ -27,6 +27,7 @@ import { useZoomDialog } from '@/components/zoom-dialog/ZoomDialogContext';
 
 // Define the properties specific to our RichTextShape
 export type RichTextShapeProps = ContentShapeProps & {
+  title: string;
   text: string;
 };
 
@@ -44,6 +45,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return {
       w: 450,
       h: 250,
+      title: 'Rich Text',
       text: '# JavaScript Promises\n\nPromises are objects representing the eventual completion or failure of an asynchronous operation.',
       isLocked: true,
       isExpanded: false,
@@ -89,7 +91,9 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       shape.props;
     const { handleSendMessage } = useChat();
     const workspaceCode = useCurrentWorkspaceCode();
-    const { openZoomDialog } = useZoomDialog();
+    const { openRichTextZoomDialog } = useZoomDialog();
+
+    const title = 'Placeholder Title';
 
     // Get the content shape utilities
     const {
@@ -143,22 +147,15 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
     // Handle zoom dialog open
     const handleOpenZoomDialog = (e: React.MouseEvent) => {
-      if (isEditing) return;
-      e.stopPropagation();
-
-      // Create zoomed content for the dialog
-      const zoomedContent = (
-        <div>
-          <h2 className='text-2xl font-bold mb-4'>
-            {isRoot ? text : 'Content Details'}
-          </h2>
-          <div className='markdown-content prose prose-lg max-w-none'>
-            <ReactMarkdown>{text}</ReactMarkdown>
-          </div>
-        </div>
+      openRichTextZoomDialog(
+        '',
+        {
+          type: 'rich-text',
+          content: text,
+          shapeId: shape.id,
+        },
+        predictions
       );
-
-      openZoomDialog('', zoomedContent);
     };
 
     return (
@@ -175,6 +172,12 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             : ''
         } pointer-events-auto`}
       >
+        {!isRoot ? (
+          <div className='p-4 border-b border-gray-200 text-2xl font-bold'>
+            What is the title of this document?
+          </div>
+        ) : null}
+
         {/* Lock/Unlock button - fixed positioning */}
         <div className='absolute top-2 right-2 z-10 pointer-events-auto'>
           <div
@@ -204,9 +207,9 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         <div
           style={{
             flexGrow: 1,
-            padding: '24px', // Increased padding from 16px to 24px
             position: 'relative',
           }}
+          className='py-4 px-8'
         >
           {isEditing ? (
             <Textarea
@@ -228,19 +231,13 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
           ) : (
             <>
               {isRoot ? (
-                <div
-                  className='markdown-content max-w-none text-center py-4 text-4xl font-bold cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto'
-                  onClick={handleOpenZoomDialog}
-                >
+                <div className='markdown-content max-w-none text-center py-4 text-4xl font-bold cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto'>
                   {text}
                 </div>
               ) : (
                 <div
                   className='markdown-content prose prose-sm max-w-none text-xl mb-4 cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto'
-                  onClick={handleOpenZoomDialog}
-                  onPointerDown={stopEventPropagation}
-                  onTouchStart={stopEventPropagation}
-                  onTouchEnd={stopEventPropagation}
+                  onPointerDown={handleOpenZoomDialog}
                 >
                   <ReactMarkdown>{text}</ReactMarkdown>
                 </div>
@@ -282,21 +279,10 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return;
   }
 
-  onTranslate(
-    initial: RichTextShape,
-    current: RichTextShape
-  ):
-    | void
-    | ({
-        id: TLShapeId;
-        meta?: Partial<JsonObject> | undefined;
-        props?: Partial<RichTextShapeProps> | undefined;
-        type: 'rich-text';
-      } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+  onTranslate(initial: RichTextShape, current: RichTextShape) {
     if (initial.props.isRoot) {
       return initial;
     }
-
     return current;
   }
 

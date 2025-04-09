@@ -58,7 +58,7 @@ export const TreeHighlight = () => {
       editor.updateShape({
         id: arrowId,
         type: 'arrow',
-        props: { color: 'blue', size: 'l' },
+        props: { color: 'blue', size: 'xl' },
       });
     });
   };
