@@ -45,35 +45,14 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return {
       w: 450,
       h: 250,
-      title: 'Rich Text',
-      text: '# JavaScript Promises\n\nPromises are objects representing the eventual completion or failure of an asynchronous operation.',
+      title: 'Your title here',
+      text: '# Your text here\n\n## Your subheading\n\nYour text here',
       isLocked: true,
       isExpanded: false,
-      predictions: [
-        {
-          text: 'How do Promises compare to async/await syntax?',
-          type: 'text',
-        },
-        {
-          text: 'Can you show a flowchart of Promise resolution states?',
-          type: 'image',
-        },
-        {
-          text: 'What are the latest Promise features in modern browsers?',
-          type: 'web',
-        },
-        {
-          text: 'How can Promises be used for better error handling?',
-          type: 'text',
-        },
-        {
-          text: 'What performance considerations exist when using Promises?',
-          type: 'web',
-        },
-      ],
+      predictions: [],
       minCollapsedHeight: 250,
       prevCollapsedHeight: 250,
-      isRoot: true,
+      isRoot: false,
       isHighlighted: false,
     };
   }
@@ -87,13 +66,11 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   }
 
   component(shape: RichTextShape) {
-    const { text, isLocked, predictions, isExpanded, isHighlighted } =
+    const { title, text, isLocked, predictions, isExpanded, isHighlighted } =
       shape.props;
     const { handleSendMessage } = useChat();
     const workspaceCode = useCurrentWorkspaceCode();
     const { openRichTextZoomDialog } = useZoomDialog();
-
-    const title = 'Placeholder Title';
 
     // Get the content shape utilities
     const {
@@ -174,7 +151,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       >
         {!isRoot ? (
           <div className='p-4 border-b border-gray-200 text-2xl font-bold'>
-            What is the title of this document?
+            {title}
           </div>
         ) : null}
 
@@ -243,11 +220,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
                 </div>
               )}
 
-              {renderPredictionsList(
-                predictions,
-                isSelected,
-                onPredictionClick
-              )}
+              {renderPredictionsList(predictions, true, onPredictionClick)}
             </>
           )}
         </div>

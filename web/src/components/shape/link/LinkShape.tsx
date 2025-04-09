@@ -41,6 +41,7 @@ import {
   handleTranslateStart,
 } from '@/components/shape/BaseContentShape';
 import { useChat } from '@/components/chat/ChatContext';
+import { useZoomDialog } from '@/components/zoom-dialog/ZoomDialogContext';
 
 // Define the properties specific to our LinkShape
 export type LinkShapeProps = {
@@ -115,27 +116,23 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
   };
 
   // Helper to detect content type from URL
-  detectContentType(url: string): 'website' | 'youtube' | 'pdf' | 'other' {
-    try {
-      const urlObj = new URL(url);
+  detectContentType(url: string): 'website' | 'youtube' | 'pdf' {
+    const urlObj = new URL(url);
 
-      // Check for YouTube
-      if (
-        urlObj.hostname.includes('youtube.com') ||
-        urlObj.hostname.includes('youtu.be')
-      ) {
-        return 'youtube';
-      }
-
-      // Check for PDF
-      if (urlObj.pathname.toLowerCase().endsWith('.pdf')) {
-        return 'pdf';
-      }
-
-      return 'website';
-    } catch (e) {
-      return 'other';
+    // Check for YouTube
+    if (
+      urlObj.hostname.includes('youtube.com') ||
+      urlObj.hostname.includes('youtu.be')
+    ) {
+      return 'youtube';
     }
+
+    // Check for PDF
+    if (urlObj.pathname.toLowerCase().endsWith('.pdf')) {
+      return 'pdf';
+    }
+
+    return 'website';
   }
 
   // Extract YouTube video ID from URL
@@ -168,12 +165,12 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       predictions,
       isExpanded,
       isDefault,
-      contentType,
     } = shape.props;
 
     const [editing, setEditing] = useState(false);
     const { updateLinkShape } = useUpdateLinkShape();
     const { handleSendMessage } = useChat();
+    const { openLinkZoomDialog } = useZoomDialog();
     const workspaceCode = useCurrentWorkspaceCode();
     const inputRef = useRef<HTMLInputElement>(null);
     const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
@@ -204,6 +201,8 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
         );
       }
     }, [isExpanded, predictions.length, isDefault, isLoading, error]);
+
+    const contentType = this.detectContentType(url);
 
     // Handle prediction click
     const onPredictionClick = async (prediction: {
@@ -272,6 +271,50 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       window.open(url, '_blank', 'noopener,noreferrer');
     };
 
+    const handleOpenZoomDialog = (e: React.MouseEvent) => {
+      e.stopPropagation();
+
+      const dialogTitle = (
+        <div className='flex items-center p-4 gap-4'>
+          {contentType === 'youtube' ? (
+            <RiYoutubeFill className='w-6 h-6 text-red-500' />
+          ) : contentType === 'pdf' ? (
+            <RiFilePdfLine className='w-6 h-6 text-purple-500' />
+          ) : (
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}`}
+              alt={domain}
+              className='w-6 h-6'
+              onClick={stopEventPropagation}
+              onMouseDown={stopEventPropagation}
+              onMouseUp={stopEventPropagation}
+              onDragStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragEnd={stopEventPropagation}
+              onDrag={stopEventPropagation}
+              draggable='false'
+            />
+          )}
+          <div className='text-2xl font-bold'>{title}</div>
+        </div>
+      );
+
+      openLinkZoomDialog(
+        dialogTitle,
+        {
+          type: 'link',
+          url,
+          title,
+          description,
+          previewImageUrl,
+          shapeId: shape.id,
+        },
+        predictions
+      );
+    };
+
     // Render content based on content type
     const renderContent = () => {
       if (isLoading) return null;
@@ -282,15 +325,17 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
           if (!videoId) return renderDefaultContent();
 
           return (
-            <div className='w-full flex-grow flex items-center justify-center bg-black'>
+            <div className='w-full flex-grow flex items-center justify-center bg-black relative'>
+              <div
+                className='absolute top-0 left-0 z-50 pointer-events-auto h-full w-full cursor-pointer'
+                onPointerDown={handleOpenZoomDialog}
+              />
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}`}
                 title={title || 'YouTube video'}
                 allow='accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                 allowFullScreen
                 className='w-full h-full'
-                onClick={stopEventPropagation}
-                onPointerDown={stopEventPropagation}
               ></iframe>
             </div>
           );
@@ -345,7 +390,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
                 display: 'block',
               }}
               onDoubleClick={handleOpenLink}
-              // onPointerDown={stopEventPropagation}
+              onPointerDown={handleOpenZoomDialog}
               // onMouseDown={stopEventPropagation}
               // onMouseUp={stopEventPropagation}
               draggable={false}
@@ -460,7 +505,9 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
               draggable='false'
             />
           )}
-          <div className='text-2xl font-bold'>{title}</div>
+          <div className='text-2xl font-bold'>
+            {title} {contentType ?? 'missing'}
+          </div>
         </div>
 
         {/* Content area based on content type */}
@@ -528,7 +575,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
         {/* Predictions section */}
         {!isDefault && !isLoading && !error
-          ? renderPredictionsList(predictions, isSelected, onPredictionClick, {
+          ? renderPredictionsList(predictions, true, onPredictionClick, {
               container: 'px-4 mt-0',
               activeContainer: 'py-4 mt-2',
             })

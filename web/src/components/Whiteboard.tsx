@@ -62,6 +62,7 @@ import { TreeHighlight } from '@/components/collection/tree/useTreeHighlight';
 import { useSidebar } from '@/components/sidebar/SideBarContext';
 import { ZoomDialogProvider } from '@/components/zoom-dialog/ZoomDialogContext';
 import { ContentZoomDialog } from '@/components/zoom-dialog/ZoomDialog';
+import { CustomLoadingScreen } from '@/components/whiteboard/LoadingScreen';
 
 const ALLOWED_TOOLS = ['select', 'hand', 'eraser', 'arrow'];
 
@@ -348,6 +349,7 @@ const customComponents: TLComponents = {
   CursorChatBubble: null,
   Cursor: null,
   SharePanel: null,
+  // LoadingScreen: CustomLoadingScreen,
 };
 
 const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {

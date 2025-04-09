@@ -329,7 +329,7 @@ export const useContentShape = <
     return (
       <div
         className={cx(
-          'mt-4 border-t pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out',
+          'mt-4 border-t border-gray-400 pt-4 pointer-events-auto overflow-hidden transition-all duration-300 ease-in-out',
           className?.container ?? '',
           isSelected
             ? `max-h-[500px] opacity-100 ${className?.activeContainer}`

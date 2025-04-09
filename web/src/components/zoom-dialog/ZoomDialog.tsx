@@ -120,25 +120,9 @@ const LinkBody = ({ content }: { content: LinkContentType }) => {
 
   return (
     <div className='flex flex-col w-full'>
-      {/* Title section with favicon */}
-      <div className='flex items-center p-4 gap-4 border-b'>
-        {contentType === 'youtube' ? (
-          <RiYoutubeFill className='w-6 h-6 text-red-500' />
-        ) : contentType === 'pdf' ? (
-          <RiFilePdfLine className='w-6 h-6 text-purple-500' />
-        ) : (
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${domain}`}
-            alt={domain}
-            className='w-6 h-6'
-          />
-        )}
-        <div className='text-2xl font-bold'>{content.title || domain}</div>
-      </div>
-
       {/* Content area based on content type */}
       {contentType === 'youtube' && getYoutubeVideoId(content.url) ? (
-        <div className='w-full aspect-video bg-black'>
+        <div className='w-full aspect-video bg-black rounded-xl overflow-hidden'>
           <iframe
             src={`https://www.youtube.com/embed/${getYoutubeVideoId(
               content.url
@@ -146,8 +130,8 @@ const LinkBody = ({ content }: { content: LinkContentType }) => {
             title={content.title || 'YouTube video'}
             allow='accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
             allowFullScreen
-            className='w-full h-full'
-          ></iframe>
+            className='w-full h-full rounded-lg'
+          />
         </div>
       ) : contentType === 'pdf' ? (
         <div className='w-full flex-grow flex flex-col items-center justify-center bg-gray-100 p-8'>
@@ -171,11 +155,18 @@ const LinkBody = ({ content }: { content: LinkContentType }) => {
         </div>
       ) : content.previewImageUrl ? (
         <div className='w-full max-h-[500px] bg-gray-100 flex justify-center overflow-hidden'>
-          <img
-            src={content.previewImageUrl}
-            alt={content.title || 'Preview'}
-            className='object-contain max-h-[500px]'
-          />
+          <a
+            href={content.url}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='w-full h-full flex items-center justify-center'
+          >
+            <img
+              src={content.previewImageUrl}
+              alt={content.title || 'Preview'}
+              className='object-contain max-h-[500px] w-full h-full'
+            />
+          </a>
         </div>
       ) : (
         <div className='flex flex-col items-center justify-center p-8 bg-gray-50'>
@@ -190,7 +181,7 @@ const LinkBody = ({ content }: { content: LinkContentType }) => {
       )}
 
       {/* URL and external link */}
-      <div className='flex items-center justify-between p-4 border-t bg-gray-50'>
+      <div className='flex items-center justify-between p-4 border-t'>
         <div className='text-sm text-gray-600 truncate flex-grow'>
           {content.url}
         </div>
