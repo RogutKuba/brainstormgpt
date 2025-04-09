@@ -118,7 +118,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <Button
           type='submit'
           variant='primary'
-          className='rounded-full w-8 h-8 bg-blue-500 text-white hover:bg-blue-600 flex items-center justify-center'
+          className='rounded-full w-8 h-8 bg-primary text-white hover:bg-primary/80 flex items-center justify-center'
           disabled={!value.trim() || value.trim().length < 3 || disabled}
         >
           {isLoading ? (

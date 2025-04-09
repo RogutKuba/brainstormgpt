@@ -11,16 +11,9 @@ import { CrawlerService } from './Crawler.service';
 
 export class StreamService {
   // SCHEMAS
-  streamedNodeSchema = z
-    .object({
-      text: z.string(),
-      parentId: z.string().nullable(),
-      predictions: z.array(z.string()),
-    })
-    .partial();
-
   nodeMessageSchema = z.object({
     id: z.string(),
+    title: z.string(),
     chunk: z.string(),
     parentId: z.string().nullable(),
     predictions: z.array(
@@ -131,6 +124,7 @@ export class StreamService {
         if (chunk.length > 0) {
           const toSend: z.infer<typeof this.nodeMessageSchema> = {
             id,
+            title: node.title ?? '',
             chunk,
             parentId: node.parentId ?? null,
             predictions: node.predictions ?? [],
@@ -273,6 +267,7 @@ export class StreamService {
       if (chunk.length > 0) {
         const toSend: z.infer<typeof this.nodeMessageSchema> = {
           id,
+          title: parsedContent.title ?? '',
           chunk,
           parentId,
           predictions: parsedContent.predictions || [],
@@ -360,11 +355,13 @@ export class StreamService {
    */
   private parseWebSearchContent(content: string): {
     explanation?: string;
+    title?: string;
     answer?: string;
     predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
   } {
     const result: {
       explanation?: string;
+      title?: string;
       answer?: string;
       predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
     } = {};

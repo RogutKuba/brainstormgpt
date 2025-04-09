@@ -4,6 +4,9 @@ import { ZodObject } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 
 export const LLMService = {
+  STANDARD_MODEL: 'google/gemini-2.0-flash-001',
+  WEB_SEARCH_MODEL: 'perplexity/sonar-pro',
+
   generateMessage: async (params: {
     prompt: string;
     chatHistory: {
@@ -27,7 +30,7 @@ export const LLMService = {
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
       // this model has better throughput so faster
-      model: 'google/gemini-2.5-pro-exp-03-25:free',
+      model: LLMService.STANDARD_MODEL,
       messages: [
         ...chatHistory.map((message) => ({
           role: message.sender,
@@ -41,14 +44,12 @@ export const LLMService = {
       ),
     });
 
-    if (completion.choices[0].finish_reason === 'length') {
-      // Handle the case where the model did not return a complete response
-      throw new Error('Incomplete response');
-    }
+    console.log('completion', completion);
 
     const choice = completion.choices[0];
 
     if (structuredOutput) {
+      console.log('structuredOutput', structuredOutput);
       // @ts-ignore
       return structuredOutput.schema.parse(JSON.parse(choice.message.content));
     }
@@ -84,7 +85,7 @@ export const LLMService = {
 
     const stream = openrouter.beta.chat.completions
       .stream({
-        model: 'google/gemini-2.5-pro-exp-03-25:free',
+        model: LLMService.STANDARD_MODEL,
         messages: [
           ...chatHistory.map((message) => ({
             role: message.sender,
@@ -99,7 +100,6 @@ export const LLMService = {
       })
       .on('refusal.done', () => console.log('request refused'))
       .on('content.delta', ({ snapshot, parsed }) => {
-        // console.log('parsed:', parsed);
         onNewContent(parsed);
       });
 
@@ -131,11 +131,9 @@ export const LLMService = {
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
-    const WEB_SEARCH_MODEL = 'perplexity/sonar-pro';
-
     const stream = openrouter.beta.chat.completions
       .stream({
-        model: WEB_SEARCH_MODEL,
+        model: LLMService.WEB_SEARCH_MODEL,
         messages: [
           ...chatHistory.map((message) => ({
             role: message.sender,

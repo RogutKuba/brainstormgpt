@@ -23,7 +23,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 
 export const ContentZoomDialog = () => {
-  const { open, setOpen, content, title } = useZoomDialog();
+  const { open, setOpen, content, title: rawTitle } = useZoomDialog();
 
   const body = (() => {
     switch (content?.type) {
@@ -32,6 +32,15 @@ export const ContentZoomDialog = () => {
       case 'link':
         return <LinkBody content={content} />;
     }
+  })();
+
+  const title = (() => {
+    if (typeof rawTitle === 'string') {
+      return <div className='text-2xl font-bold'>{rawTitle}</div>;
+    }
+
+    // is already react node
+    return rawTitle;
   })();
 
   return (

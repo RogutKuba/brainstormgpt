@@ -252,6 +252,7 @@ export const useStreamMessage = () => {
 
 const nodeMessageSchema = z.object({
   id: z.string(),
+  title: z.string(),
   chunk: z.string(),
   parentId: z.string().nullable(),
   predictions: z.array(
@@ -293,6 +294,8 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
       const newText = existingShape.props.text + nodeChunk.chunk;
       const { width, height } = calculateNodeSize(newText);
 
+      console.log('setting title', nodeChunk.title);
+
       // the node is an existing node
       // we need to update the node
       editor.updateShape<RichTextShape>({
@@ -303,6 +306,7 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
           minCollapsedHeight: height,
           prevCollapsedHeight: height,
           w: width,
+          title: nodeChunk.title,
           text: existingShape.props.text + nodeChunk.chunk,
         },
       });
@@ -316,6 +320,7 @@ const handleNodeChunk = (rawData: string, editor: Editor) => {
         props: {
           h: height,
           w: width,
+          title: nodeChunk.title,
           text: nodeChunk.chunk,
           isLocked: false,
           isExpanded: true,

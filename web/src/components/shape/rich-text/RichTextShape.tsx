@@ -125,7 +125,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     // Handle zoom dialog open
     const handleOpenZoomDialog = (e: React.MouseEvent) => {
       openRichTextZoomDialog(
-        '',
+        title,
         {
           type: 'rich-text',
           content: text,
@@ -150,7 +150,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
         } pointer-events-auto`}
       >
         {!isRoot ? (
-          <div className='p-4 border-b border-gray-200 text-2xl font-bold'>
+          <div className='py-4 px-8 border-b border-gray-200 text-2xl font-bold'>
             {title}
           </div>
         ) : null}
@@ -232,82 +232,82 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return <rect width={shape.props.w} height={shape.props.h} rx={8} />;
   }
 
-  onTranslateStart(shape: RichTextShape):
-    | void
-    | ({
-        id: TLShapeId;
-        meta?: Partial<JsonObject> | undefined;
-        props?: Partial<RichTextShapeProps> | undefined;
-        type: 'rich-text';
-      } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
-    // Use the standalone function instead of the hook
-    const result = handleTranslateStart(shape);
-    if (result) {
-      return {
-        id: shape.id,
-        type: 'rich-text',
-        props: result.props,
-      };
-    }
-    return;
-  }
+  // onTranslateStart(shape: RichTextShape):
+  //   | void
+  //   | ({
+  //       id: TLShapeId;
+  //       meta?: Partial<JsonObject> | undefined;
+  //       props?: Partial<RichTextShapeProps> | undefined;
+  //       type: 'rich-text';
+  //     } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+  //   // Use the standalone function instead of the hook
+  //   const result = handleTranslateStart(shape);
+  //   if (result) {
+  //     return {
+  //       id: shape.id,
+  //       type: 'rich-text',
+  //       props: result.props,
+  //     };
+  //   }
+  //   return;
+  // }
 
-  onTranslate(initial: RichTextShape, current: RichTextShape) {
-    if (initial.props.isRoot) {
-      return initial;
-    }
-    return current;
-  }
+  // onTranslate(initial: RichTextShape, current: RichTextShape) {
+  //   if (initial.props.isRoot) {
+  //     return initial;
+  //   }
+  //   return current;
+  // }
 
-  onDoubleClick(shape: RichTextShape) {
-    if (shape.props.isRoot) {
-      return;
-    }
+  // onDoubleClick(shape: RichTextShape) {
+  //   if (shape.props.isRoot) {
+  //     return;
+  //   }
 
-    this.editor.setEditingShape(shape.id);
-  }
+  //   this.editor.setEditingShape(shape.id);
+  // }
 
-  override onResize(shape: RichTextShape, info: TLResizeInfo<RichTextShape>) {
-    const resized = resizeBox(shape, info);
+  // override onResize(shape: RichTextShape, info: TLResizeInfo<RichTextShape>) {
+  //   const resized = resizeBox(shape, info);
 
-    // Update minCollapsedHeight if the user resizes to a smaller height
-    if (resized.props.h < shape.props.minCollapsedHeight) {
-      return {
-        ...resized,
-        props: {
-          ...resized.props,
-          minCollapsedHeight: resized.props.h,
-        },
-      };
-    }
+  //   // Update minCollapsedHeight if the user resizes to a smaller height
+  //   if (resized.props.h < shape.props.minCollapsedHeight) {
+  //     return {
+  //       ...resized,
+  //       props: {
+  //         ...resized.props,
+  //         minCollapsedHeight: resized.props.h,
+  //       },
+  //     };
+  //   }
 
-    return resized;
-  }
+  //   return resized;
+  // }
 
-  override onResizeEnd(
-    initial: RichTextShape,
-    current: RichTextShape
-  ):
-    | void
-    | ({
-        id: TLShapeId;
-        meta?: Partial<JsonObject> | undefined;
-        props?: Partial<RichTextShapeProps> | undefined;
-        type: 'rich-text';
-      } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
-    // Use the standalone function instead of the hook
-    const result = handleResizeEnd(current, this.calculateShapeHeight);
+  // override onResizeEnd(
+  //   initial: RichTextShape,
+  //   current: RichTextShape
+  // ):
+  //   | void
+  //   | ({
+  //       id: TLShapeId;
+  //       meta?: Partial<JsonObject> | undefined;
+  //       props?: Partial<RichTextShapeProps> | undefined;
+  //       type: 'rich-text';
+  //     } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
+  //   // Use the standalone function instead of the hook
+  //   const result = handleResizeEnd(current, this.calculateShapeHeight);
 
-    if (result) {
-      return {
-        id: current.id,
-        type: 'rich-text',
-        props: result.props,
-      };
-    }
+  //   if (result) {
+  //     return {
+  //       id: current.id,
+  //       type: 'rich-text',
+  //       props: result.props,
+  //     };
+  //   }
 
-    return;
-  }
+  //   return;
+  // }
 
   // Static method to calculate height that doesn't depend on the editor
   calculateShapeHeight = (shape: RichTextShape): number => {

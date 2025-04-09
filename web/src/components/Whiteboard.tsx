@@ -349,6 +349,14 @@ const customComponents: TLComponents = {
   CursorChatBubble: null,
   Cursor: null,
   SharePanel: null,
+  ContextMenu: null,
+  // () => {
+  //   const editor = useEditor();
+
+  //   editor.setCurrentTool('move');
+
+  //   return null;
+  // },
   // LoadingScreen: CustomLoadingScreen,
 };
 

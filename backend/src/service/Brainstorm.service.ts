@@ -21,6 +21,7 @@ const predictionNodeSchema = z.object({
 const brainstormNodeSchema = z.object({
   id: z.string(),
   type: z.string(),
+  title: z.string(),
   text: z.string(),
   parentId: z.string().nullable().optional(),
   predictions: z.array(predictionNodeSchema),
@@ -130,8 +131,8 @@ However, if you identify a significant gap in the knowledge structure that requi
 IMPORTANT FORMATTING GUIDELINES:
 1. Create CONCISE nodes that spark curiosity rather than exhaustive explanations
 2. Each node should be a brief introduction to a concept (like a Wikipedia preview, not the full article)
-3. Format each node with a clear, descriptive title followed by 1-2 SHORT paragraphs
-4. Use proper markdown formatting with headings (##) for titles
+3. Format each node with 1-2 clear, descriptive paragraphs. Dont include the title in the text, it should be in the title field.
+4. Use proper markdown formatting with headings (###) for subtitles, etc.
 5. Write in a professional, objective tone appropriate for knowledge documentation
 6. Aim for 2-4 sentences per node - be concise and thought-provoking
 7. Focus on introducing key ideas that encourage further exploration
@@ -182,6 +183,7 @@ Your goal is to create a network of concise, intriguing knowledge nodes that pro
           return {
             id: nodeId,
             type: node.type ?? 'text',
+            title: node.title ?? '',
             text: node.text ?? '',
             parentId: node.parentId ?? null,
             predictions: node.predictions ?? [],
@@ -306,7 +308,7 @@ Your response must be structured in the following format:
 
 <explanation>A brief explanation of what you found and how it relates to the user's query</explanation>
 
-<node>## Clear Descriptive Title
+<node>### Clear Descriptive Title
 Your comprehensive, factual answer based on web search results. Synthesize information from multiple sources.
 Include specific facts, figures, and data points when relevant. Be objective and balanced.
 Aim for 4-6 sentences total in markdown format. Be concise but informative.
@@ -418,6 +420,7 @@ IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Ins
         {
           id: mainNodeId,
           type: 'text',
+          title: 'Web Search Results',
           text:
             answerText ||
             'No specific results found. Try refining your search.',
@@ -444,6 +447,7 @@ IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Ins
       id: generateTlShapeId(),
       type: 'link',
       text: citation,
+      title: citation,
       parentId,
       predictions: [],
     }));
@@ -466,8 +470,6 @@ IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Ins
     ctx: Context<AppContext>;
   }): Promise<Array<{ text: string; type: 'text' | 'image' | 'web' }>> => {
     const { prompt, nodeContent, chatHistory, ctx } = params;
-
-    console.log('prompt', prompt);
 
     try {
       const response = await LLMService.generateMessage({

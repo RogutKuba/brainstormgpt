@@ -9,3 +9,12 @@ export const useCurrentWorkspaceCode = () => {
 
   return params.workspaceCode;
 };
+
+/**
+ * Returns the workspace code from the URL params if exists
+ */
+export const useOptionalWorkspaceCode = () => {
+  const params = useParams<{ workspaceCode: string }>();
+
+  return params.workspaceCode;
+};

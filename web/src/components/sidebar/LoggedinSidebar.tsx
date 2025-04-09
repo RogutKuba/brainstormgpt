@@ -135,7 +135,7 @@ export const LoggedInSidebar = () => {
               {/* Workspace Header */}
               <div className='px-4 mb-2 flex items-center justify-between'>
                 <h2 className='text-sm font-semibold text-neutral-400'>
-                  Chat History
+                  Chats
                 </h2>
 
                 <div className='flex gap-1'>

@@ -9,6 +9,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { useDeleteWorkspace } from '@/query/workspace.query';
 import { RiDeleteBin7Line, RiLoader2Line } from '@remixicon/react';
+import { useRouter } from 'next/navigation';
+import { useOptionalWorkspaceCode } from '@/lib/pathUtils';
+import { SITE_ROUTES } from '@/lib/siteConfig';
 
 interface DeleteWorkspaceDialogProps {
   workspaceCode: string;
@@ -21,15 +24,24 @@ export function DeleteWorkspaceDialog({
   workspaceName,
   setOpen,
 }: DeleteWorkspaceDialogProps) {
-  const [loading, setLoading] = useState(false);
-
+  const router = useRouter();
+  const currentWorkspace = useOptionalWorkspaceCode();
   const { deleteWorkspace } = useDeleteWorkspace();
+
+  const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
     setLoading(true);
 
     try {
       await deleteWorkspace(workspaceCode);
+
+      // get current pa
+
+      if (currentWorkspace === workspaceCode) {
+        router.push(SITE_ROUTES.HOME);
+      }
+
       setOpen(false);
     } finally {
       setLoading(false);
