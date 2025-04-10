@@ -39,6 +39,8 @@ import {
   calculateExpandedHeight,
   handleResizeEnd,
   handleTranslateStart,
+  ContentShapeProps,
+  handleTranslate,
 } from '@/components/shape/BaseContentShape';
 import { useChat } from '@/components/chat/ChatContext';
 import { useZoomDialog } from '@/components/zoom-dialog/ZoomDialogContext';
@@ -59,19 +61,9 @@ export type LinkShapeProps = {
     | 'generating-predictions';
   error: string | null;
   previewImageUrl: string | null;
-  isLocked: boolean;
-  isExpanded: boolean;
-  minCollapsedHeight: number;
-  prevCollapsedHeight: number;
-  predictions: Array<{
-    text: string;
-    type: 'text' | 'image' | 'web';
-  }>;
-  isDefault: boolean;
   contentType: 'website' | 'youtube' | 'pdf' | 'other';
-  isRoot?: boolean;
-  isHighlighted?: boolean;
-};
+  isDefault: boolean;
+} & ContentShapeProps;
 
 // Define the shape type by extending TLBaseShape with our props
 export type LinkShape = TLBaseShape<'link', LinkShapeProps>;
@@ -691,31 +683,16 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
     window.open(shape.props.url, '_blank', 'noopener,noreferrer');
   }
 
-  onTranslateStart(shape: LinkShape):
-    | void
-    | ({
-        id: TLShapeId;
-        meta?: Partial<JsonObject> | undefined;
-        props?: Partial<LinkShape> | undefined;
-        type: 'link';
-      } & Partial<Omit<LinkShape, 'props' | 'type' | 'id' | 'meta'>>) {
-    if (shape.props.isDefault) {
-      return {
-        id: shape.id,
-        type: 'link',
-      };
-    }
+  // just to make typescript happy, no "real" operations done here
+  // @ts-ignore
+  override onTranslateStart(shape: LinkShape) {
+    return handleTranslateStart<LinkShape>(shape);
+  }
 
-    // Use the standalone function instead of the hook
-    const result = handleTranslateStart(shape);
-    if (result) {
-      return {
-        id: shape.id,
-        type: 'link',
-        props: result.props,
-      };
-    }
-    return;
+  // just to make typescript happy, no "real" operations done here
+  // @ts-ignore
+  override onTranslate(initial: LinkShape, current: LinkShape) {
+    return handleTranslate<LinkShape>(initial, current);
   }
 
   override onResize(shape: LinkShape, info: TLResizeInfo<LinkShape>) {

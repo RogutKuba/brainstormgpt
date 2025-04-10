@@ -36,6 +36,7 @@ export const SidebarProfile = () => {
 };
 
 export const CollapsedSidebarProfile = () => {
+  const router = useRouter();
   const { user } = useUserData();
 
   const letter = useMemo(() => {
@@ -43,8 +44,15 @@ export const CollapsedSidebarProfile = () => {
   }, [user]);
 
   return (
-    <div className='w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white bg-primary'>
-      <span className='text-sm'>{letter}</span>
+    <div
+      className='mt-auto flex justify-center cursor-pointer'
+      onClick={() => {
+        router.push(SITE_ROUTES.ACCOUNT);
+      }}
+    >
+      <div className='w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-white bg-primary'>
+        <span className='text-sm'>{letter}</span>
+      </div>
     </div>
   );
 };

@@ -314,9 +314,9 @@ export const LoggedInSidebar = () => {
           </>
         ) : (
           // Collapsed sidebar with icons only
-          <div className='flex flex-col items-center h-full py-4'>
+          <div className='flex flex-col h-full py-4'>
             {/* Logo icon */}
-            <Link href={SITE_ROUTES.HOME} className='mb-8'>
+            <Link href={SITE_ROUTES.HOME} className='mb-8 flex justify-center'>
               <RiBrain2Fill className='w-6 h-6 text-blue-400' />
             </Link>
 
@@ -324,13 +324,13 @@ export const LoggedInSidebar = () => {
             <Button
               variant='icon'
               onClick={toggleSidebar}
-              className='mb-6 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
+              className='mb-6 mx-auto text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
             >
               <RiContractLeftLine className='w-5 h-5 rotate-180' />
             </Button>
 
             {/* Add workspace button */}
-            <Link href={SITE_ROUTES.HOME}>
+            <Link href={SITE_ROUTES.HOME} className='flex justify-center'>
               <Button
                 variant='icon'
                 className='mb-6 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'
@@ -340,7 +340,7 @@ export const LoggedInSidebar = () => {
             </Link>
 
             {/* Current workspace indicator (if any) */}
-            {currentWorkspaceCode && workspaces && workspaces.length > 0 && (
+            {workspaces && workspaces.length > 0 && (
               <div className='flex-1 flex flex-col items-center gap-2 overflow-y-auto max-h-[60vh] w-full'>
                 {workspaces.map((workspace, index) => (
                   <div

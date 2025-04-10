@@ -359,6 +359,9 @@ export class StreamService {
     answer?: string;
     predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
   } {
+    // For debugging
+    console.log('content', content);
+
     const result: {
       explanation?: string;
       title?: string;
@@ -366,56 +369,108 @@ export class StreamService {
       predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
     } = {};
 
-    // Extract answer from node tag - only if we have a complete opening tag
-    if (content.includes('<node>')) {
-      // Get everything between <node> and </node> or end of string
-      const nodeRegex = /<node>(.*?)(?:<\/node>|$)/s;
-      const nodeMatch = content.match(nodeRegex);
+    // Extract explanation - handle both complete and partial tags
+    if (content.includes('<explanation>')) {
+      // Try to get content between complete tags first
+      const completeExplanationRegex = /<explanation>([\s\S]*?)<\/explanation>/;
+      const completeMatch = content.match(completeExplanationRegex);
 
-      if (nodeMatch && nodeMatch[1]) {
-        // Clean up the answer - remove any trailing '>' characters that might be part of malformed XML
-        let answer = nodeMatch[1].trim();
-        answer = answer.replace(/>[^<]*$/, ''); // Remove trailing '>' and any text after it
-        result.answer = answer;
+      if (completeMatch && completeMatch[1]) {
+        result.explanation = completeMatch[1].trim();
+      } else {
+        // Handle partial/incomplete explanation tag
+        const partialExplanationRegex = /<explanation>([\s\S]*)$/;
+        const partialMatch = content.match(partialExplanationRegex);
+
+        if (partialMatch && partialMatch[1]) {
+          result.explanation = partialMatch[1].trim();
+        }
       }
-    } else if (
-      !content.includes('<node') &&
-      !content.includes('<explanation') &&
-      !content.includes('<predictions')
-    ) {
-      // If no tags at all, use the whole content as the answer
-      result.answer = content.trim();
     }
 
-    // Extract explanation if present
-    if (content.includes('<explanation>')) {
-      const explanationRegex = /<explanation>(.*?)(?:<\/explanation>|$)/s;
-      const explanationMatch = content.match(explanationRegex);
-      if (explanationMatch && explanationMatch[1]) {
-        result.explanation = explanationMatch[1].trim();
+    // Extract title if present
+    const titleRegex = /<title>([\s\S]*?)(?:<\/title>|$)/;
+    const titleMatch = content.match(titleRegex);
+    if (titleMatch && titleMatch[1]) {
+      result.title = titleMatch[1].trim();
+    }
+
+    // Extract answer from node tag - handle both complete and partial tags
+    if (content.includes('<node>')) {
+      // Try complete node tags first
+      const completeNodeRegex = /<node>([\s\S]*?)<\/node>/;
+      const completeMatch = content.match(completeNodeRegex);
+
+      if (completeMatch && completeMatch[1]) {
+        result.answer = completeMatch[1].trim();
+      } else {
+        // Handle partial/incomplete node tag
+        const partialNodeRegex = /<node>([\s\S]*)$/;
+        const partialMatch = content.match(partialNodeRegex);
+
+        if (partialMatch && partialMatch[1]) {
+          // Clean up the answer - remove any trailing partial tags
+          let answer = partialMatch[1].trim();
+          // Remove any trailing partial XML tags that might be present
+          answer = answer.replace(/<[^>]*$/, '');
+          result.answer = answer;
+        }
       }
     }
 
     // Extract predictions - look for specific format in the content
     // This handles both structured predictions and unstructured text that looks like predictions
-    const predictionRegex = /(?:^|\n)-\s*((?:text|web|image)\|.+?)(?:\n|$)/g;
     const predictions: Array<{ text: string; type: 'text' | 'web' | 'image' }> =
       [];
 
+    // Try to extract predictions from prediction tags first
+    const predictionTagsRegex = /<predictions>([\s\S]*?)(?:<\/predictions>|$)/;
+    const predTagsMatch = content.match(predictionTagsRegex);
+
+    if (predTagsMatch && predTagsMatch[1]) {
+      // Parse structured predictions inside the predictions tag
+      const predLines = predTagsMatch[1]
+        .split('\n')
+        .filter((line) => line.trim());
+
+      for (const line of predLines) {
+        // Look for format like: - type|text
+        const predMatch = line.match(/^\s*-\s*((?:text|web|image)\|.+)$/);
+        if (predMatch && predMatch[1]) {
+          const parts = predMatch[1].split('|');
+          if (parts.length >= 2) {
+            const predType = parts[0].trim() as 'text' | 'web' | 'image';
+            const predText = parts.slice(1).join('|').trim(); // Join in case there are | in the text
+
+            if (predText) {
+              predictions.push({ text: predText, type: predType });
+            }
+          }
+        }
+      }
+    }
+
+    // Also look for predictions in the general content (outside of tags)
+    const predictionRegex = /(?:^|\n)-\s*((?:text|web|image)\|.+?)(?:\n|$)/g;
     let match;
+
     while ((match = predictionRegex.exec(content)) !== null) {
       const predLine = match[1].trim();
       const parts = predLine.split('|');
 
       if (parts.length >= 2) {
         const predType = parts[0].trim() as 'text' | 'web' | 'image';
-        const predText = parts[1].trim();
+        const predText = parts.slice(1).join('|').trim();
 
         if (predText) {
-          predictions.push({
-            text: predText,
-            type: predType,
-          });
+          // Check if this prediction is already added
+          const isDuplicate = predictions.some(
+            (p) => p.type === predType && p.text === predText
+          );
+
+          if (!isDuplicate) {
+            predictions.push({ text: predText, type: predType });
+          }
         }
       }
     }

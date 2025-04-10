@@ -1,12 +1,8 @@
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
-  JsonObject,
   Rectangle2d,
-  resizeBox,
   TLBaseShape,
-  TLResizeInfo,
-  TLShapeId,
 } from 'tldraw';
 import ReactMarkdown from 'react-markdown';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +15,7 @@ import {
   ContentShapeProps,
   calculateExpandedHeight,
   handleResizeEnd,
+  handleTranslate,
   handleTranslateStart,
 } from '@/components/shape/BaseContentShape';
 import { cx } from '@/components/ui/lib/utils';
@@ -137,17 +134,16 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
 
     return (
       <HTMLContainer
-        className={`w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 transition-all duration-200 ${
+        className={cx(
+          'w-full h-full p-0 flex flex-col rounded-lg overflow-hidden bg-white shadow-lg border border-2 transition-all duration-200 pointer-events-auto',
           isRoot
-            ? 'border-primary shadow-[0_0_0_3px_rgba(59,130,246,0.3),0_0_15px_rgba(59,130,246,0.25)]'
+            ? 'border-primary border-2 shadow-[0_0_0_3px_rgba(59,130,246,0.3),0_0_15px_rgba(59,130,246,0.25)]'
             : isLocked
             ? 'border-primary/30 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]'
-            : 'border-gray-200'
-        } ${
-          isHighlighted
-            ? 'border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.4),0_0_30px_rgba(59,130,246,0.35)]'
-            : ''
-        } pointer-events-auto`}
+            : 'border-gray-200',
+          isHighlighted &&
+            'border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.4),0_0_30px_rgba(59,130,246,0.35)] bg-primary/[0.02]'
+        )}
       >
         {!isRoot ? (
           <div className='py-4 px-8 border-b border-gray-200 text-2xl font-bold'>
@@ -232,32 +228,17 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
     return <rect width={shape.props.w} height={shape.props.h} rx={8} />;
   }
 
-  // onTranslateStart(shape: RichTextShape):
-  //   | void
-  //   | ({
-  //       id: TLShapeId;
-  //       meta?: Partial<JsonObject> | undefined;
-  //       props?: Partial<RichTextShapeProps> | undefined;
-  //       type: 'rich-text';
-  //     } & Partial<Omit<RichTextShape, 'props' | 'type' | 'id' | 'meta'>>) {
-  //   // Use the standalone function instead of the hook
-  //   const result = handleTranslateStart(shape);
-  //   if (result) {
-  //     return {
-  //       id: shape.id,
-  //       type: 'rich-text',
-  //       props: result.props,
-  //     };
-  //   }
-  //   return;
-  // }
+  // just to make typescript happy, no "real" operations done here
+  // @ts-ignore
+  override onTranslateStart(shape: RichTextShape) {
+    return handleTranslateStart<RichTextShape>(shape);
+  }
 
-  // onTranslate(initial: RichTextShape, current: RichTextShape) {
-  //   if (initial.props.isRoot) {
-  //     return initial;
-  //   }
-  //   return current;
-  // }
+  // just to make typescript happy, no "real" operations done here
+  // @ts-ignore
+  override onTranslate(initial: RichTextShape, current: RichTextShape) {
+    return handleTranslate<RichTextShape>(initial, current);
+  }
 
   // onDoubleClick(shape: RichTextShape) {
   //   if (shape.props.isRoot) {

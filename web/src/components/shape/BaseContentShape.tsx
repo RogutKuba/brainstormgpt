@@ -15,8 +15,8 @@ export interface ContentShapeProps {
   }>;
   minCollapsedHeight: number;
   prevCollapsedHeight: number;
+  isRoot: boolean;
   isHighlighted?: boolean;
-  isRoot?: boolean;
 }
 
 // Animation duration constant for shape animations
@@ -147,15 +147,31 @@ export const handleTranslateStart = <
     };
   }
 
-  // For non-root shapes, lock during translation but maintain current expansion state
+  // For non-root shapes, lock during translation
   return {
     id: shape.id,
     type: shape.type,
     props: {
       isLocked: true,
-      h: calculateExpandedHeight(shape),
     },
   };
+};
+
+export const handleTranslate = <
+  T extends TLBaseShape<string, ContentShapeProps>
+>(
+  initial: T,
+  current: T
+): {
+  id: TLShapeId;
+  type: string;
+  props: Partial<ContentShapeProps>;
+} | void => {
+  if (initial.props.isRoot) {
+    return initial;
+  }
+
+  return current;
 };
 
 export const useContentShape = <

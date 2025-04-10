@@ -44,12 +44,9 @@ export const LLMService = {
       ),
     });
 
-    console.log('completion', completion);
-
     const choice = completion.choices[0];
 
     if (structuredOutput) {
-      console.log('structuredOutput', structuredOutput);
       // @ts-ignore
       return structuredOutput.schema.parse(JSON.parse(choice.message.content));
     }

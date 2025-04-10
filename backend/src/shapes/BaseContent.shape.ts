@@ -9,6 +9,6 @@ export type BaseContentShapeProps = {
   }>;
   minCollapsedHeight: number;
   prevCollapsedHeight: number;
+  isRoot: boolean;
   isHighlighted?: boolean;
-  isRoot?: boolean;
 };

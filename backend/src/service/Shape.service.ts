@@ -69,6 +69,7 @@ export class ShapeService {
       isExpanded: false,
       predictions,
       isRoot: true,
+      isHighlighted: false,
     };
 
     if (isLink) {
@@ -109,6 +110,7 @@ export class ShapeService {
         type: 'rich-text',
         props: {
           ...baseProps,
+          title: prompt,
           text: prompt,
           w: width,
           h: height,
@@ -383,6 +385,8 @@ export class ShapeService {
         h: height,
         isLocked: false,
         isExpanded: false,
+        isRoot: false,
+        isHighlighted: false,
         minCollapsedHeight: height,
         prevCollapsedHeight: height,
         predictions:
@@ -408,6 +412,7 @@ export class ShapeService {
               error: null,
               previewImageUrl: null,
               isDefault: false,
+              isRoot: false,
             },
             x: 0,
             y: 0,
@@ -424,6 +429,7 @@ export class ShapeService {
             type: 'rich-text',
             props: {
               ...baseProps,
+              title: shapeToCreate.title ?? '',
               text: shapeToCreate.text ?? '',
             },
             x: 0,
