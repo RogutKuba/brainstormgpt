@@ -5,7 +5,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 
 export const LLMService = {
   STANDARD_MODEL: 'google/gemini-2.0-flash-001',
-  WEB_SEARCH_MODEL: 'perplexity/sonar-pro',
+  WEB_SEARCH_MODEL: 'perplexity/sonar',
 
   generateMessage: async (params: {
     prompt: string;

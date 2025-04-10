@@ -201,18 +201,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       text: string;
       type: 'text' | 'image' | 'web';
     }) => {
-      await handlePredictionClick(
-        shape,
-        prediction,
-        this.calculateShapeHeight,
-        handleSendMessage,
-        {
-          searchType: prediction.type,
-          selectedItemIds: [shape.id],
-          workspaceCode,
-          editor: this.editor,
-        }
-      );
+      await handlePredictionClick(shape, prediction, this.calculateShapeHeight);
     };
 
     const domain = (() => {
@@ -294,6 +283,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
       );
 
       openLinkZoomDialog(
+        shape.id,
         dialogTitle,
         {
           type: 'link',

@@ -14,7 +14,6 @@ import {
   useContentShape,
   ContentShapeProps,
   calculateExpandedHeight,
-  handleResizeEnd,
   handleTranslate,
   handleTranslateStart,
 } from '@/components/shape/BaseContentShape';
@@ -65,8 +64,6 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
   component(shape: RichTextShape) {
     const { title, text, isLocked, predictions, isExpanded, isHighlighted } =
       shape.props;
-    const { handleSendMessage } = useChat();
-    const workspaceCode = useCurrentWorkspaceCode();
     const { openRichTextZoomDialog } = useZoomDialog();
 
     // Get the content shape utilities
@@ -105,23 +102,14 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       text: string;
       type: 'text' | 'image' | 'web';
     }) => {
-      await handlePredictionClick(
-        shape,
-        prediction,
-        this.calculateShapeHeight,
-        handleSendMessage,
-        {
-          selectedItemIds: [shape.id],
-          workspaceCode,
-          editor: this.editor,
-          searchType: prediction.type,
-        }
-      );
+      await handlePredictionClick(shape, prediction, this.calculateShapeHeight);
     };
 
     // Handle zoom dialog open
-    const handleOpenZoomDialog = (e: React.MouseEvent) => {
+    const handleOpenZoomDialog = () => {
+      console.log('open zoom dialog from rich.text.shape');
       openRichTextZoomDialog(
+        shape.id,
         title,
         {
           type: 'rich-text',

@@ -359,9 +359,6 @@ export class StreamService {
     answer?: string;
     predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
   } {
-    // For debugging
-    console.log('content', content);
-
     const result: {
       explanation?: string;
       title?: string;
@@ -383,7 +380,11 @@ export class StreamService {
         const partialMatch = content.match(partialExplanationRegex);
 
         if (partialMatch && partialMatch[1]) {
-          result.explanation = partialMatch[1].trim();
+          // Clean up the explanation - remove any trailing partial tags
+          let explanation = partialMatch[1].trim();
+          // Remove any trailing partial XML tags that might be present
+          explanation = explanation.replace(/<[^>]*$/, '');
+          result.explanation = explanation;
         }
       }
     }

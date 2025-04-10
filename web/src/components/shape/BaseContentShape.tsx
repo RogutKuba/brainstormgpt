@@ -2,7 +2,8 @@ import { SyntheticEvent } from 'react';
 import { TLBaseShape, TLShapeId, useEditor } from 'tldraw';
 import { cx } from '@/components/ui/lib/utils';
 import { RiGlobalLine, RiImage2Line, RiQuestionLine } from '@remixicon/react';
-
+import { useChat } from '@/components/chat/ChatContext';
+import { useCurrentWorkspaceCode } from '@/lib/pathUtils';
 // Define the common properties for content shapes with predictions
 export interface ContentShapeProps {
   h: number;
@@ -178,6 +179,8 @@ export const useContentShape = <
   T extends TLBaseShape<string, ContentShapeProps>
 >() => {
   const editor = useEditor();
+  const { handleSendMessage } = useChat();
+  const currentWorkspaceCode = useCurrentWorkspaceCode();
 
   // Helper to stop event propagation
   const stopEventPropagation = (e: SyntheticEvent) => e.stopPropagation();
@@ -273,9 +276,7 @@ export const useContentShape = <
       text: string;
       type: 'text' | 'image' | 'web';
     },
-    calculateHeightFn: (shape: T) => number,
-    handleSendMessage: (params: MessageHandlerParams) => Promise<void>,
-    messageParams: Omit<MessageHandlerParams, 'message'>
+    calculateHeightFn: (shape: T) => number
   ) => {
     // Get updated predictions array by filtering out the clicked prediction
     const updatedPredictions = shape.props.predictions.filter(
@@ -322,8 +323,11 @@ export const useContentShape = <
     // Handle sending the message
     await handleSendMessage({
       message: prediction.text,
-      ...messageParams,
-    } as MessageHandlerParams);
+      searchType: prediction.type,
+      selectedItemIds: [shape.id],
+      workspaceCode: currentWorkspaceCode,
+      editor,
+    });
   };
 
   // Render predictions list

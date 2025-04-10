@@ -308,19 +308,23 @@ Your response must be structured in the following format:
 
 <explanation>A brief explanation of what you found and how it relates to the user's query</explanation>
 
-<node>### Clear Descriptive Title
+<title>Clear Descriptive Title</title>
+
+<node>
 Your comprehensive, factual answer based on web search results. Synthesize information from multiple sources.
 Include specific facts, figures, and data points when relevant. Be objective and balanced.
-Aim for 4-6 sentences total in markdown format. Be concise but informative.
+Aim for 4-6 sentences total in markdown format (you can include subheadings and lists, but only h4 and h5). Be concise but informative.
 </node>
 
 <predictions>
-- web|What are the latest developments in this area?
 - text|How does this concept relate to [related concept]?
+- web|What are the latest developments in this area?
 - image|Can you visualize this process or concept?
 </predictions>
 
-IMPORTANT: Do not include citation numbers like [1] or [2] in your response. Instead, incorporate the information naturally into your text.`;
+IMPORTANT: 
+1. Do not include citation numbers like [1] or [2] in your response. Instead, incorporate the information naturally into your text.
+2. Make sure to wrap each section in the appropriate XML tags as shown above.`;
 
     try {
       response = await LLMService.streamWebSearch({

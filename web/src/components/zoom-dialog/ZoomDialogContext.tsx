@@ -24,18 +24,23 @@ interface PredictionsType {
 export interface ZoomDialogContextType {
   open: boolean;
   setOpen: (open: boolean) => void;
+  shapeId: TLShapeId | null;
+  setShapeId: (shapeId: TLShapeId | null) => void;
   title: React.ReactNode | null;
   content:
     | ((RichTextContentType | LinkContentType) & {
         predictions: PredictionsType[];
       })
     | null;
+  removePrediction: (index: number) => void;
   openRichTextZoomDialog: (
+    shapeId: TLShapeId,
     title: React.ReactNode,
     content: RichTextContentType,
     predictions: PredictionsType[]
   ) => void;
   openLinkZoomDialog: (
+    shapeId: TLShapeId,
     title: React.ReactNode,
     content: LinkContentType,
     predictions: PredictionsType[]
@@ -54,13 +59,15 @@ export const ZoomDialogProvider: React.FC<{ children: React.ReactNode }> = ({
   const [content, setContent] = useState<
     ZoomDialogContextType['content'] | null
   >(null);
-  const [predictions, setPredictions] = useState<PredictionsType[]>([]);
+  const [shapeId, setShapeId] = useState<TLShapeId | null>(null);
 
   const openRichTextZoomDialog = (
+    shapeId: TLShapeId,
     title: React.ReactNode,
     content: RichTextContentType,
     predictions: PredictionsType[]
   ) => {
+    setShapeId(shapeId);
     setTitle(title);
     setContent({
       ...content,
@@ -70,10 +77,12 @@ export const ZoomDialogProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const openLinkZoomDialog = (
+    shapeId: TLShapeId,
     title: React.ReactNode,
     content: LinkContentType,
     predictions: PredictionsType[]
   ) => {
+    setShapeId(shapeId);
     setTitle(title);
     setContent({
       ...content,
@@ -82,13 +91,25 @@ export const ZoomDialogProvider: React.FC<{ children: React.ReactNode }> = ({
     setOpen(true);
   };
 
+  const removePrediction = (index: number) => {
+    if (!content) return;
+
+    setContent({
+      ...content,
+      predictions: content.predictions.filter((_, i) => i !== index),
+    });
+  };
+
   return (
     <ZoomDialogContext.Provider
       value={{
         open,
         setOpen,
+        shapeId,
+        setShapeId,
         title,
         content,
+        removePrediction,
         openRichTextZoomDialog,
         openLinkZoomDialog,
       }}

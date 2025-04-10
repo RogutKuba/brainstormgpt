@@ -9,7 +9,6 @@ import {
 import { useZoomDialog } from '@/components/zoom-dialog/ZoomDialogContext';
 import {
   RiCloseLine,
-  RiYoutubeFill,
   RiFilePdfLine,
   RiExternalLinkLine,
   RiGlobalLine,
@@ -21,9 +20,25 @@ import {
   LinkContentType,
 } from '@/components/zoom-dialog/ZoomDialogContext';
 import ReactMarkdown from 'react-markdown';
+import {
+  ContentShapeProps,
+  useContentShape,
+} from '@/components/shape/BaseContentShape';
+import { TLBaseShape, TLShapeId, useEditor } from 'tldraw';
 
 export const ContentZoomDialog = () => {
-  const { open, setOpen, content, title: rawTitle } = useZoomDialog();
+  const {
+    open,
+    setOpen,
+    shapeId,
+    setShapeId,
+    content,
+    removePrediction,
+    title: rawTitle,
+  } = useZoomDialog();
+
+  const { handlePredictionClick } = useContentShape();
+  const editor = useEditor();
 
   const body = (() => {
     switch (content?.type) {
@@ -43,8 +58,29 @@ export const ContentZoomDialog = () => {
     return rawTitle;
   })();
 
+  const onPredictionClick = (params: { index: number; shapeId: TLShapeId }) => {
+    const shape = editor.getShape(params.shapeId) as TLBaseShape<
+      string,
+      ContentShapeProps
+    > | null;
+    const prediction = content?.predictions[params.index];
+
+    if (!shape || !prediction) return;
+
+    handlePredictionClick(shape, prediction, () => 500);
+
+    removePrediction(params.index);
+  };
+
+  const handleOnOpenChange = (open: boolean) => {
+    setOpen(open);
+    if (!open) {
+      setShapeId(null);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOnOpenChange}>
       <DialogContent className='max-w-4xl'>
         <DialogHeader className='flex flex-row items-center justify-between'>
           <DialogTitle>{title}</DialogTitle>
@@ -55,15 +91,22 @@ export const ContentZoomDialog = () => {
           </DialogClose>
         </DialogHeader>
 
-        <div className='overflow-y-auto max-h-[80vh]'>
-          {body}
-          {content?.predictions && content.predictions.length > 0 && (
-            <PredictionsList
-              predictions={content.predictions}
-              onPredictionClick={() => {}}
-            />
-          )}
-        </div>
+        {content && shapeId ? (
+          <div className='overflow-y-auto max-h-[80vh]'>
+            {body}
+            {content?.predictions && content.predictions.length > 0 && (
+              <PredictionsList
+                predictions={content.predictions}
+                onPredictionClick={(index) =>
+                  onPredictionClick({
+                    index,
+                    shapeId,
+                  })
+                }
+              />
+            )}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
@@ -213,10 +256,7 @@ const PredictionsList = ({
   onPredictionClick,
 }: {
   predictions: Array<{ text: string; type: 'text' | 'image' | 'web' }>;
-  onPredictionClick: (prediction: {
-    text: string;
-    type: 'text' | 'image' | 'web';
-  }) => void;
+  onPredictionClick: (index: number) => void;
 }) => {
   if (!predictions || predictions.length === 0) return null;
 
@@ -224,11 +264,11 @@ const PredictionsList = ({
     <div className='mt-6 border-t pt-4'>
       <h3 className='text-md font-medium mb-3'>Related questions</h3>
       <ul className='space-y-2'>
-        {predictions.map((prediction) => (
+        {predictions.map((prediction, index) => (
           <li
             key={prediction.text}
             className='flex items-center gap-2 hover:bg-gray-50 p-2 rounded cursor-pointer transition-colors'
-            onClick={() => onPredictionClick(prediction)}
+            onClick={() => onPredictionClick(index)}
           >
             {/* Icon based on prediction type */}
             <div className='flex items-center h-5'>

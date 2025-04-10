@@ -430,6 +430,7 @@ const RawWhiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
     >
       {editor && (
         <CollectionProvider editor={editor} collections={collections}>
+          <ContentZoomDialog />
           <GraphLayout />
           <TreeHighlight />
         </CollectionProvider>
@@ -489,7 +490,6 @@ export const Whiteboard = ({ workspaceCode }: { workspaceCode: string }) => {
 
   return (
     <ZoomDialogProvider>
-      <ContentZoomDialog />
       <RawWhiteboard workspaceCode={workspaceCode} />
     </ZoomDialogProvider>
   );
