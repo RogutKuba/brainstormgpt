@@ -15,7 +15,7 @@ export type BrainStormResult = {
 
 const predictionNodeSchema = z.object({
   text: z.string(),
-  type: z.enum(['text', 'image', 'web']),
+  type: z.enum(['text', 'web']),
 });
 
 const brainstormNodeSchema = z.object({
@@ -144,13 +144,11 @@ For each node, include 3-5 predictions of follow-up questions or exploration pat
 2. A 'type' field that must be one of:
    - 'text': For questions that can be answered with text-based explanations
    - 'web': For questions that would benefit from web search to find current or factual information
-   - 'image': For requests to visualize concepts
 
 PREDICTION TYPE GUIDELINES:
 - PRIORITIZE 'text' type predictions (aim for at least 2-3 text predictions per node)
 - Use 'text' for conceptual questions, explanations, theoretical discussions, and most follow-up questions
 - Use 'web' sparingly and only when truly necessary for fact-checking, current events, statistics, or when external sources would be clearly valuable
-- Use 'image' very selectively and only when a concept would be significantly better understood through visualization
 
 For extending existing ideas, use parent IDs from this list of deepest shapes: ${deepestShapeIds.join(
         ', '
@@ -319,7 +317,6 @@ Aim for 4-6 sentences total in markdown format (you can include subheadings and 
 <predictions>
 - text|How does this concept relate to [related concept]?
 - web|What are the latest developments in this area?
-- image|Can you visualize this process or concept?
 </predictions>
 
 IMPORTANT: 
@@ -360,8 +357,7 @@ IMPORTANT:
     // Extract content from the response
     let explanation = '';
     let answerText = '';
-    let predictions: Array<{ text: string; type: 'text' | 'web' | 'image' }> =
-      [];
+    let predictions: Array<{ text: string; type: 'text' | 'web' }> = [];
 
     if (
       response?.choices?.length > 0 &&
@@ -401,7 +397,7 @@ IMPORTANT:
 
             return {
               text: parts[0].trim(),
-              type: (parts[1]?.trim() || 'text') as 'text' | 'web' | 'image',
+              type: (parts[1]?.trim() || 'text') as 'text' | 'web',
             };
           });
       }
@@ -472,7 +468,7 @@ IMPORTANT:
       sender: 'user' | 'system';
     }[];
     ctx: Context<AppContext>;
-  }): Promise<Array<{ text: string; type: 'text' | 'image' | 'web' }>> => {
+  }): Promise<Array<{ text: string; type: 'text' | 'web' }>> => {
     const { prompt, nodeContent, chatHistory, ctx } = params;
 
     try {
@@ -498,7 +494,6 @@ GUIDELINES FOR GOOD PREDICTIONS:
 8. Each prediction should have a 'type' that indicates the best way to explore it:
    - 'text' for conceptual questions that can be answered with explanations (use this for most conceptual questions)
    - 'web' for questions that would benefit from web search for factual information (use sparingly, only for fact-checking)
-   - 'image' for concepts that would be better understood through visualization (use very selectively)
 
 Format your response as structured output with an array of prediction objects, each containing 'text' and 'type' fields.`,
         chatHistory,
@@ -509,7 +504,7 @@ Format your response as structured output with an array of prediction objects, e
             predictions: z.array(
               z.object({
                 text: z.string(),
-                type: z.enum(['text', 'image', 'web']),
+                type: z.enum(['text', 'web']),
               })
             ),
           }),
@@ -518,7 +513,7 @@ Format your response as structured output with an array of prediction objects, e
 
       // Type assertion for the response
       const typedResponse = response as {
-        predictions: Array<{ text: string; type: 'text' | 'image' | 'web' }>;
+        predictions: Array<{ text: string; type: 'text' | 'web' }>;
       };
 
       return typedResponse.predictions || [];

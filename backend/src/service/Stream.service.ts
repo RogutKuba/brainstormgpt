@@ -19,7 +19,7 @@ export class StreamService {
     predictions: z.array(
       z.object({
         text: z.string(),
-        type: z.enum(['text', 'image', 'web']),
+        type: z.enum(['text', 'web']),
       })
     ),
   });
@@ -28,7 +28,7 @@ export class StreamService {
     id: z.string(),
     chunk: z.string(),
     parentId: z.string().nullable(),
-    type: z.enum(['text', 'image', 'web']),
+    type: z.enum(['text', 'web']),
     index: z.number(),
   });
 
@@ -62,7 +62,7 @@ export class StreamService {
         predIndex: number;
         predId: string;
         predChunk: string;
-        predType: 'text' | 'web' | 'image';
+        predType: 'text' | 'web';
       }>;
     }
   > = new Map();
@@ -183,7 +183,7 @@ export class StreamService {
     shapes: (LinkShape | RichTextShape | TLArrowShape)[];
     context: string;
     bindings: TLArrowBinding[];
-    searchType: 'text' | 'web' | 'image';
+    searchType: 'text' | 'web';
     workspaceCode: string;
     ctx: Context<AppContext>;
   }) => {
@@ -206,7 +206,7 @@ export class StreamService {
           props: ['text', 'predictions'],
         },
       });
-    } else if (searchType === 'web' || searchType === 'image') {
+    } else if (searchType === 'web') {
       // TODO: fix this so that we actually upsert all shapes instead of just creating links
       const nonTextShapes = shapes.filter(
         (shape) => shape.type !== 'rich-text'
@@ -357,13 +357,13 @@ export class StreamService {
     explanation?: string;
     title?: string;
     answer?: string;
-    predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
+    predictions?: Array<{ text: string; type: 'text' | 'web' }>;
   } {
     const result: {
       explanation?: string;
       title?: string;
       answer?: string;
-      predictions?: Array<{ text: string; type: 'text' | 'web' | 'image' }>;
+      predictions?: Array<{ text: string; type: 'text' | 'web' }>;
     } = {};
 
     // Extract explanation - handle both complete and partial tags
@@ -421,8 +421,7 @@ export class StreamService {
 
     // Extract predictions - look for specific format in the content
     // This handles both structured predictions and unstructured text that looks like predictions
-    const predictions: Array<{ text: string; type: 'text' | 'web' | 'image' }> =
-      [];
+    const predictions: Array<{ text: string; type: 'text' | 'web' }> = [];
 
     // Try to extract predictions from prediction tags first
     const predictionTagsRegex = /<predictions>([\s\S]*?)(?:<\/predictions>|$)/;
@@ -436,11 +435,11 @@ export class StreamService {
 
       for (const line of predLines) {
         // Look for format like: - type|text
-        const predMatch = line.match(/^\s*-\s*((?:text|web|image)\|.+)$/);
+        const predMatch = line.match(/^\s*-\s*((?:text|web)\|.+)$/);
         if (predMatch && predMatch[1]) {
           const parts = predMatch[1].split('|');
           if (parts.length >= 2) {
-            const predType = parts[0].trim() as 'text' | 'web' | 'image';
+            const predType = parts[0].trim() as 'text' | 'web';
             const predText = parts.slice(1).join('|').trim(); // Join in case there are | in the text
 
             if (predText) {
@@ -452,7 +451,7 @@ export class StreamService {
     }
 
     // Also look for predictions in the general content (outside of tags)
-    const predictionRegex = /(?:^|\n)-\s*((?:text|web|image)\|.+?)(?:\n|$)/g;
+    const predictionRegex = /(?:^|\n)-\s*((?:text|web)\|.+?)(?:\n|$)/g;
     let match;
 
     while ((match = predictionRegex.exec(content)) !== null) {
@@ -460,7 +459,7 @@ export class StreamService {
       const parts = predLine.split('|');
 
       if (parts.length >= 2) {
-        const predType = parts[0].trim() as 'text' | 'web' | 'image';
+        const predType = parts[0].trim() as 'text' | 'web';
         const predText = parts.slice(1).join('|').trim();
 
         if (predText) {

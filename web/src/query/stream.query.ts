@@ -41,7 +41,7 @@ export const useStreamMessage = () => {
   const streamMessage = useCallback(
     async (params: {
       message: string;
-      searchType: 'text' | 'web' | 'image';
+      searchType: 'text' | 'web';
       chatHistory: { content: string; sender: 'user' | 'system' }[];
       selectedItems: string[];
       workspaceCode: string;
@@ -258,7 +258,7 @@ const nodeMessageSchema = z.object({
   predictions: z.array(
     z.object({
       text: z.string(),
-      type: z.enum(['text', 'image', 'web']),
+      type: z.enum(['text', 'web']),
     })
   ),
 });
@@ -266,7 +266,7 @@ const nodeMessageSchema = z.object({
 const predictionMessageSchema = z.object({
   id: z.string(),
   index: z.number().optional(),
-  type: z.enum(['text', 'image', 'web']),
+  type: z.enum(['text', 'web']),
   chunk: z.string(),
   parentId: z.string().nullable(),
 });
