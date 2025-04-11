@@ -6,8 +6,9 @@ import { ShapeService } from '../../service/Shape.service';
 import { RoomSnapshot } from '@tldraw/sync-core';
 import { StreamService } from '../../service/Stream.service';
 import { HTTPException } from 'hono/http-exception';
-import { TLShapeId } from '@tldraw/tlschema';
+import { TLShape, TLShapeId } from '@tldraw/tlschema';
 import { AnalyticsService } from '../../service/Analytics.service';
+import { LinkShape } from '../../shapes/Link.shape';
 
 // SEND MESSAGE ROUTE
 const sendMessageRoute = createRoute({
@@ -26,7 +27,7 @@ const sendMessageRoute = createRoute({
             message: z.string().min(3).openapi({
               description: 'Message to send',
             }),
-            searchType: z.enum(['text', 'web', 'image']).openapi({
+            searchType: z.enum(['text', 'web']).openapi({
               description: 'Type of message',
             }),
             selectedItems: z.array(z.string()).openapi({
@@ -119,8 +120,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                   ctx,
                 });
               case 'web':
-              case 'image':
-                return BrainstormService.streamWebSearch({
+                const result = await BrainstormService.streamWebSearch({
                   prompt: message,
                   chatHistory,
                   parentId: parentId as TLShapeId,
@@ -129,6 +129,29 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                   streamService,
                   ctx,
                 });
+
+                const existingLinks = new Set<string>(
+                  snapshot.documents
+                    .filter((record) => {
+                      if (record.state.typeName !== 'shape') return false;
+                      const shape = record.state as TLShape;
+                      return shape.type === 'link';
+                    })
+                    .map((record) => (record.state as LinkShape).props.url)
+                );
+
+                console.log('all-nodes', result.nodes);
+
+                // make sure we are not adding duplicate links
+                const filteredNodes = result.nodes.filter(
+                  (node) =>
+                    node.type !== 'link' && !existingLinks.has(node.text)
+                );
+
+                return {
+                  ...result,
+                  nodes: filteredNodes,
+                };
               default:
                 throw new Error('Invalid search type');
             }

@@ -7,7 +7,7 @@ import { chatTable } from '../db/chat.db';
 import { ChatEntity } from '../db/chat.db';
 import { generateId } from '../lib/id';
 import { and, eq, gte, count } from 'drizzle-orm';
-import { getSession } from '../lib/session';
+import { getSessionUnsafe } from '../lib/session';
 import { SessionService } from './Session.service';
 
 /**
@@ -26,7 +26,7 @@ export class AnalyticsService {
     ctx: Context<AppContext>
   ) {
     const userId = await (async () => {
-      const { user: sessionUser } = getSession(ctx, { notThrow: true });
+      const { user: sessionUser } = getSessionUnsafe(ctx);
       if (sessionUser) {
         return sessionUser.id;
       }

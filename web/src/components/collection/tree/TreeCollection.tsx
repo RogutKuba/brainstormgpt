@@ -190,11 +190,32 @@ export class TreeCollection extends BaseCollection {
    */
   override onRemove(shapes: TLShape[]) {
     const removedIds = new Set(shapes.map((s) => s.id));
+    const arrowsToDelete = new Set<TLShapeId>();
 
-    // Remove shapes from our maps
+    // First identify all arrows connected to removed shapes
+    for (const id of removedIds) {
+      // Find arrows where this shape is source or target
+      for (const arrowId of this.arrowMap.keys()) {
+        const source = this.arrowSources.get(arrowId);
+        const target = this.arrowTargets.get(arrowId);
+
+        if (source === id || target === id) {
+          arrowsToDelete.add(arrowId);
+        }
+      }
+    }
+
+    // Delete connected arrows from the editor
+    if (arrowsToDelete.size > 0) {
+      this.editor.deleteShapes([...arrowsToDelete]);
+    }
+
+    // Clean up internal data structures
     for (const id of removedIds) {
       this.shapes.delete(id);
       this.arrowMap.delete(id);
+      this.arrowSources.delete(id);
+      this.arrowTargets.delete(id);
 
       // Clean up parent-child relationships
       const children = this.nodeChildren.get(id);

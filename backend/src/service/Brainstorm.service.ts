@@ -427,8 +427,9 @@ IMPORTANT:
           parentId,
           predictions,
         },
+        // add all citations here, will filter out duplicates and limit later
         ...BrainstormService.handleWebSearchCitations({
-          citations: citations.slice(0, 3),
+          citations: citations,
           parentId: mainNodeId,
         }),
       ],
