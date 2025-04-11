@@ -11,6 +11,7 @@ export const chatTable = pgTable(
     response: text('response').notNull(),
     type: text('type').notNull(),
     isPremium: boolean('is_premium').notNull().default(false),
+    newCitations: boolean('new_citations').notNull().default(false),
     // status can be success, error, pending, processing
     status: text('status').notNull(),
     error: jsonb('error'),

@@ -187,6 +187,9 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                   workspaceCode,
                   type: searchType,
                   isPremium: searchType !== 'text',
+                  newCitations: finalResult?.nodes.some(
+                    (node) => node.type === 'link'
+                  ),
                   status: 'success',
                   error: null,
                 },
@@ -221,6 +224,7 @@ export const streamRouter = new OpenAPIHono<AppContext>().openapi(
                   workspaceCode,
                   type: searchType,
                   isPremium: searchType !== 'text',
+                  newCitations: false,
                   status: 'error',
                   error:
                     error instanceof Error ? error.message : 'Unknown error',

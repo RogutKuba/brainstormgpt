@@ -187,22 +187,14 @@ const LinkBody = ({ content }: { content: LinkContentType }) => {
         </div>
       ) : contentType === 'pdf' ? (
         <div className='w-full flex-grow flex flex-col items-center justify-center bg-gray-100 p-8'>
-          <div className='flex flex-col items-center justify-center p-6 text-center'>
-            <RiFilePdfLine className='w-16 h-16 text-red-500 mb-4' />
-            <h3 className='text-lg font-semibold mb-1'>
-              {content.title || 'PDF Document'}
-            </h3>
-            <p className='text-sm text-gray-600 mb-3'>
-              {content.description || 'PDF Document'}
-            </p>
-            <a
-              href={content.url}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='px-4 py-2 bg-red-100 text-red-800 rounded-md text-sm font-medium hover:bg-red-200 transition-colors'
-            >
-              Open PDF
-            </a>
+          {/* PDF Viewer with iframe */}
+          <div className='w-full aspect-[4/3] mb-4 rounded-lg overflow-hidden shadow-md'>
+            <iframe
+              src={`${content.url}#toolbar=0&navpanes=0`}
+              title={content.title || 'PDF Document'}
+              className='w-full h-full border-0'
+              loading='lazy'
+            />
           </div>
         </div>
       ) : content.previewImageUrl ? (

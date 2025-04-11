@@ -161,9 +161,7 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
     const [editing, setEditing] = useState(false);
     const { updateLinkShape } = useUpdateLinkShape();
-    const { handleSendMessage } = useChat();
     const { openLinkZoomDialog } = useZoomDialog();
-    const workspaceCode = useCurrentWorkspaceCode();
     const inputRef = useRef<HTMLInputElement>(null);
     const isSelected = this.editor.getSelectedShapeIds().includes(shape.id);
 
@@ -325,18 +323,20 @@ export class LinkShapeUtil extends BaseBoxShapeUtil<LinkShape> {
 
         case 'pdf': {
           return (
-            <div className='w-full flex-grow flex flex-col items-center justify-center bg-gray-100 cursor-pointer'>
-              <div className='flex flex-col items-center justify-center p-6 text-center'>
-                <RiFilePdfLine className='w-16 h-16 text-red-500 mb-4' />
-                <h3 className='text-lg font-semibold mb-1'>
-                  {title || 'PDF Document'}
-                </h3>
-                <p className='text-sm text-gray-600 mb-3'>
-                  {description || 'Double-click to open PDF'}
-                </p>
-                <div className='px-4 py-2 bg-red-100 text-red-800 rounded-md text-sm font-medium'>
-                  PDF Document
+            <div className='w-full flex-grow flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 cursor-pointer'>
+              <div
+                className='flex flex-col items-center justify-center p-6 text-center w-full max-w-md transition-all duration-200'
+                onPointerDown={handleOpenZoomDialog}
+              >
+                <div className='relative mb-6'>
+                  <RiFilePdfLine className='w-20 h-20 text-red-600 drop-shadow-md' />
+                  <div className='absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-sm'>
+                    <RiExternalLinkLine className='w-5 h-5 text-gray-600' />
+                  </div>
                 </div>
+                <h3 className='text-xl font-semibold mb-2 text-gray-800'>
+                  Click to preview PDF
+                </h3>
               </div>
             </div>
           );
